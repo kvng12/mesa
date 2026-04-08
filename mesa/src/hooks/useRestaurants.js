@@ -11,7 +11,6 @@ export function useRestaurants() {
   useEffect(() => {
     fetchAll();
 
-    // Realtime: restaurant open/closed + menu item availability
     const channel = supabase
       .channel("restaurants-live")
       .on(
@@ -27,7 +26,7 @@ export function useRestaurants() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "menu_items" },
         (payload) => {
-          // Patch is_available on the nested menu item without a full refetch
+          // Patch the nested menu item directly — no full refetch needed
           setRestaurants((prev) =>
             prev.map((r) => ({
               ...r,
@@ -38,6 +37,26 @@ export function useRestaurants() {
                     ? { ...item, is_available: payload.new.is_available, image_url: payload.new.image_url }
                     : item
                 ),
+              })),
+            }))
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "menu_items" },
+        () => fetchAll()   // new item added — refetch to get it in the right category
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "menu_items" },
+        (payload) => {
+          setRestaurants((prev) =>
+            prev.map((r) => ({
+              ...r,
+              menu_categories: (r.menu_categories || []).map((cat) => ({
+                ...cat,
+                menu_items: (cat.menu_items || []).filter((item) => item.id !== payload.old.id),
               })),
             }))
           );
@@ -126,6 +145,33 @@ export function useOwnerRestaurant(restaurantId) {
     return { url: urlData.publicUrl, error: null };
   }
 
+  // ── Restaurant logo upload ───────────────────────────────────
+  async function uploadLogo(file) {
+    const ext      = file.name.split(".").pop();
+    const fileName = `${restaurantId}/logo-${Date.now()}.${ext}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from("restaurant-logos")
+      .upload(fileName, file, { cacheControl: "3600", upsert: true, contentType: file.type });
+
+    if (uploadErr) return { url: null, error: uploadErr };
+
+    const { data: urlData } = supabase.storage
+      .from("restaurant-logos")
+      .getPublicUrl(fileName);
+
+    const url = urlData.publicUrl;
+
+    // Save URL to restaurants table
+    const { error: updateErr } = await supabase
+      .from("restaurants")
+      .update({ logo_url: url })
+      .eq("id", restaurantId);
+
+    if (updateErr) return { url: null, error: updateErr };
+    return { url, error: null };
+  }
+
   async function createPost({ postType, text }) {
     setSaving(true);
     const { data, error } = await supabase
@@ -137,5 +183,5 @@ export function useOwnerRestaurant(restaurantId) {
     return { data, error };
   }
 
-  return { saving, toggleOpen, toggleItem, updateItemImage, uploadFoodImage, createPost };
+  return { saving, toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost };
 }

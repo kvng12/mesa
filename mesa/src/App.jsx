@@ -1,6 +1,5 @@
-// src/App.jsx — MESA with Cart, Checkout & Reservations
+// src/App.jsx — Chowli Food Marketplace
 
-import React from "react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth }                            from "./hooks/useAuth";
 import { useRestaurants, useOwnerRestaurant } from "./hooks/useRestaurants";
@@ -20,6 +19,7 @@ import ReviewModal                            from "./screens/ReviewModal";
 import RegisterRestaurant                     from "./screens/RegisterRestaurant";
 import AdminPanel                             from "./screens/AdminPanel";
 import { useProfile }                         from "./hooks/useProfile";
+import { supabase } from "./lib/supabase";
 import { useReviews }                         from "./hooks/useReviews";
 import { useRegistration }                    from "./hooks/useRegistration";
 
@@ -98,7 +98,7 @@ function StoryUploadCard({ restaurantId, restaurant }) {
       <div style={{ padding: "16px 16px 4px", fontSize: 13, fontWeight: 800, color: DARK }}>Post a Story</div>
       <div style={{ padding: "4px 16px 14px", fontSize: 11, color: "#888" }}>Visible to customers for 24 hours</div>
       <div style={{ padding: "0 16px 16px" }}>
-        <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: "none" }} />
         {!preview
           ? <div onClick={() => fileRef.current?.click()} style={{ height: 140, background: BG, borderRadius: 14, border: "1.5px dashed #EBEBEB", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}>
               <span style={{ fontSize: 28 }}>📷</span>
@@ -133,7 +133,12 @@ function VCard({ r, onClick }) {
   const all = (r.menu_categories || []).flatMap(c => c.menu_items || []);
   return (
     <div onClick={onClick} style={{ background: "#fff", borderRadius: 20, padding: 14, display: "flex", gap: 14, cursor: "pointer", border: "1px solid #F0EDE8", opacity: r.is_open ? 1 : 0.55 }}>
-      <div style={{ width: 80, height: 80, borderRadius: 16, background: `linear-gradient(135deg, ${r.bg_from}, ${r.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flexShrink: 0 }}>{r.icon}</div>
+      <div style={{ width: 80, height: 80, borderRadius: 16, background: `linear-gradient(135deg, ${r.bg_from}, ${r.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flexShrink: 0, overflow: "hidden" }}>
+        {r.logo_url
+          ? <img src={r.logo_url} alt={r.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : r.icon
+        }
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: DARK, marginBottom: 4 }}>{r.name}</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
@@ -156,7 +161,10 @@ function HCard({ r, onClick }) {
       <div style={{ width: "100%", height: 120, background: `linear-gradient(140deg, ${r.bg_from}, ${r.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 46, position: "relative" }}>
         {r.badge && <div style={{ position: "absolute", top: 10, left: 10, background: CORAL, color: "#fff", fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 20 }}>{r.badge}</div>}
         {r.is_open && <div style={{ position: "absolute", top: 10, right: 10, width: 9, height: 9, borderRadius: "50%", background: "#22C55E", border: "2px solid #fff" }} />}
-        {r.icon}
+        {r.logo_url
+          ? <img src={r.logo_url} alt={r.name} style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "3px solid rgba(255,255,255,0.4)", boxShadow: "0 2px 12px rgba(0,0,0,0.2)" }} />
+          : <span>{r.icon}</span>
+        }
       </div>
       <div style={{ padding: "12px 14px 14px" }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: DARK, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
@@ -195,23 +203,27 @@ function PostCard({ post, liked, onLike, onViewRest }) {
 }
 
 
-// ── DashMenuItem — dashboard food item with image upload + big toggle ──
-function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
-  const [uploading, setUploading]   = React.useState(false);
-  const [localUrl, setLocalUrl]     = React.useState(null);
-  const [localAvail, setLocalAvail] = React.useState(item.is_available);
-  const fileRef                     = React.useRef();
 
-  // Keep in sync if parent re-renders with fresh DB data
-  React.useEffect(() => { setLocalAvail(item.is_available); }, [item.is_available]);
-
-  async function handleToggle() {
-    setLocalAvail(v => !v); // instant optimistic flip
-    await onToggle();       // DB call runs in background
+// ── LogoFileInput — hidden file input for logo upload in the header ──
+function LogoFileInput({ ownerR, uploadLogo }) {
+  const fileRef = useRef();
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadLogo(file);
   }
+  return (
+    <input id="logo-file-input" ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+  );
+}
 
-  const imgSrc  = localUrl || item.image_url;
-  const isAvail = localAvail;
+// ── DashMenuItem — dashboard food item with image upload + big toggle ──
+function DashMenuItem({ item, restaurantId, onToggle, onDelete, onImageUploaded }) {
+  const [uploading, setUploading] = useState(false);
+  const [localUrl, setLocalUrl]   = useState(null);
+  const fileRef                   = useRef();
+
+  const imgSrc = localUrl || item.image_url;
 
   async function handleFile(e) {
     const file = e.target.files?.[0];
@@ -226,7 +238,7 @@ function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
   }
 
   return (
-    <div style={{ background: "#fff", borderRadius: 16, marginBottom: 10, border: `2px solid ${isAvail ? "#F0EDE8" : "#FECACA"}`, overflow: "hidden", transition: "border-color 0.25s" }}>
+    <div style={{ background: "#fff", borderRadius: 16, marginBottom: 10, border: `2px solid ${item.is_available ? "#F0EDE8" : "#FECACA"}`, overflow: "hidden", transition: "border-color 0.25s" }}>
       <div style={{ display: "flex", alignItems: "stretch", gap: 0 }}>
 
         {/* Image column — tappable to upload */}
@@ -236,7 +248,7 @@ function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
         >
           {imgSrc ? (
             <img src={imgSrc} alt={item.name}
-              style={{ width: 80, height: "100%", minHeight: 80, objectFit: "cover", display: "block", opacity: isAvail ? 1 : 0.5 }} />
+              style={{ width: 80, height: "100%", minHeight: 80, objectFit: "cover", display: "block", opacity: item.is_available ? 1 : 0.5 }} />
           ) : (
             <div style={{ width: 80, height: 80, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
               <span style={{ fontSize: 20 }}>📷</span>
@@ -248,6 +260,7 @@ function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
               <div style={{ fontSize: 16 }}>⏳</div>
             </div>
           )}
+          {/* Edit overlay on hover */}
           {imgSrc && (
             <div style={{ position: "absolute", bottom: 4, right: 4, background: "rgba(0,0,0,0.5)", borderRadius: 6, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>✏️</div>
           )}
@@ -256,31 +269,37 @@ function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
 
         {/* Info column */}
         <div style={{ flex: 1, padding: "12px 14px", minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: isAvail ? "#1C1C1E" : "#C0C0C0", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: isAvail ? "#FF6240" : "#EDE9E4" }}>₦{Number(item.price).toLocaleString()}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: item.is_available ? "#1C1C1E" : "#C0C0C0", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: item.is_available ? "#FF6240" : "#EDE9E4", marginBottom: 6 }}>₦{Number(item.price).toLocaleString()}</div>
+          {onDelete && (
+            <button onClick={e => { e.stopPropagation(); onDelete(); }}
+              style={{ fontSize: 10, fontWeight: 700, color: "#DC2626", background: "#FEF2F2", border: "none", borderRadius: 8, padding: "3px 8px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Delete
+            </button>
+          )}
         </div>
 
-        {/* Toggle column */}
+        {/* Toggle column — big thumb-friendly switch */}
         <div
-          onClick={handleToggle}
+          onClick={onToggle}
           style={{
             width: 72, flexShrink: 0,
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             gap: 5, cursor: "pointer",
-            background: isAvail ? "#F0FDF4" : "#FEF2F2",
-            borderLeft: `1px solid ${isAvail ? "#BBF7D0" : "#FECACA"}`,
+            background: item.is_available ? "#F0FDF4" : "#FEF2F2",
+            borderLeft: `1px solid ${item.is_available ? "#BBF7D0" : "#FECACA"}`,
             transition: "background 0.25s",
             padding: "8px 0",
           }}
         >
           <div style={{
             width: 36, height: 20, borderRadius: 10,
-            background: isAvail ? "#16A34A" : "#E0E0E0",
+            background: item.is_available ? "#16A34A" : "#E0E0E0",
             position: "relative", transition: "background 0.25s",
           }}>
             <div style={{
               position: "absolute",
-              left: isAvail ? 18 : 2,
+              left: item.is_available ? 18 : 2,
               top: 2,
               width: 16, height: 16, borderRadius: "50%",
               background: "#fff",
@@ -288,11 +307,149 @@ function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
               boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
             }} />
           </div>
-          <span style={{ fontSize: 9, fontWeight: 800, color: isAvail ? "#16A34A" : "#DC2626", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-            {isAvail ? "On" : "Off"}
+          <span style={{ fontSize: 9, fontWeight: 800, color: item.is_available ? "#16A34A" : "#DC2626", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+            {item.is_available ? "On" : "Off"}
           </span>
         </div>
 
+      </div>
+    </div>
+  );
+}
+
+
+// ── Default menu categories for new restaurants ──
+const DEFAULT_MENU_CATS = [
+  { label: "Main Dish", icon: "🍽️" },
+  { label: "Rice & Swallow", icon: "🍚" },
+  { label: "Soups & Stews", icon: "🍲" },
+  { label: "Grills & Skewers", icon: "🔥" },
+  { label: "Snacks & Sides", icon: "🥐" },
+  { label: "Drinks", icon: "🥤" },
+  { label: "Desserts", icon: "🍰" },
+  { label: "Specials", icon: "✨" },
+];
+
+// ── Add Menu Item Modal ──
+function AddMenuItemModal({ ownerR, onClose, onAdded }) {
+  const [name, setName]         = useState("");
+  const [price, setPrice]       = useState("");
+  const [catMode, setCatMode]   = useState("existing"); // "existing" | "new"
+  const [selCatId, setSelCatId] = useState(ownerR?.menu_categories?.[0]?.id || "");
+  const [newCatName, setNewCatName] = useState("");
+  const [customCat, setCustomCat]   = useState("");
+  const [saving, setSaving]     = useState(false);
+  const [err, setErr]           = useState("");
+
+  const cats = ownerR?.menu_categories || [];
+
+  async function submit() {
+    if (!name.trim()) { setErr("Item name is required"); return; }
+    if (!price || isNaN(Number(price)) || Number(price) <= 0) { setErr("Enter a valid price"); return; }
+    setSaving(true); setErr("");
+
+    try {
+      let categoryId = selCatId;
+
+      // Create new category if needed
+      if (catMode === "new") {
+        const catName = customCat || newCatName;
+        if (!catName.trim()) { setErr("Category name is required"); setSaving(false); return; }
+        const { data: newCat, error: catErr } = await supabase
+          .from("menu_categories")
+          .insert({ restaurant_id: ownerR.id, name: catName.trim(), sort_order: cats.length })
+          .select().single();
+        if (catErr) throw catErr;
+        categoryId = newCat.id;
+      }
+
+      const { error: itemErr } = await supabase
+        .from("menu_items")
+        .insert({
+          menu_category_id: categoryId,
+          name: name.trim(),
+          price: Number(price),
+          is_available: true,
+          sort_order: 0,
+        });
+      if (itemErr) throw itemErr;
+
+      onAdded();
+      onClose();
+    } catch (e) {
+      setErr(e.message || "Something went wrong");
+    }
+    setSaving(false);
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 500, display: "flex", alignItems: "flex-end", maxWidth: 430, margin: "0 auto" }}>
+      <div style={{ background: "#fff", borderRadius: "24px 24px 0 0", padding: "24px 20px 40px", width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Add Menu Item</div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", background: BG, border: "none", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+
+        {/* Item name */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.6px" }}>Item Name</div>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Jollof Rice + Chicken"
+            style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 12, background: BG, outline: "none", fontSize: 14, color: DARK, padding: "12px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }} />
+        </div>
+
+        {/* Price */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.6px" }}>Price (₦)</div>
+          <input value={price} onChange={e => setPrice(e.target.value)} placeholder="e.g. 1500" type="number" inputMode="numeric"
+            style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 12, background: BG, outline: "none", fontSize: 14, color: DARK, padding: "12px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }} />
+        </div>
+
+        {/* Category */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.6px" }}>Category</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            {["existing", "new"].map(m => (
+              <button key={m} onClick={() => setCatMode(m)}
+                style={{ flex: 1, padding: "9px", borderRadius: 12, border: `1.5px solid ${catMode === m ? CORAL : "#EBEBEB"}`, background: catMode === m ? "#FFF0ED" : "#fff", color: catMode === m ? CORAL : "#888", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                {m === "existing" ? "Existing category" : "+ New category"}
+              </button>
+            ))}
+          </div>
+
+          {catMode === "existing" ? (
+            cats.length === 0
+              ? <div style={{ fontSize: 13, color: "#B0B0B0", padding: "10px 0" }}>No categories yet — create one below</div>
+              : <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {cats.map(c => (
+                    <button key={c.id} onClick={() => setSelCatId(c.id)}
+                      style={{ textAlign: "left", padding: "11px 14px", borderRadius: 12, border: `1.5px solid ${selCatId === c.id ? CORAL : "#EBEBEB"}`, background: selCatId === c.id ? "#FFF0ED" : BG, color: selCatId === c.id ? CORAL : DARK, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 10, fontWeight: 600 }}>Pick a default or type your own:</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                {DEFAULT_MENU_CATS.map(dc => (
+                  <button key={dc.label} onClick={() => { setCustomCat(""); setNewCatName(dc.label); }}
+                    style={{ padding: "7px 12px", borderRadius: 20, border: `1.5px solid ${newCatName === dc.label && !customCat ? CORAL : "#EBEBEB"}`, background: newCatName === dc.label && !customCat ? "#FFF0ED" : "#fff", color: newCatName === dc.label && !customCat ? CORAL : "#555", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                    {dc.icon} {dc.label}
+                  </button>
+                ))}
+              </div>
+              <input value={customCat} onChange={e => { setCustomCat(e.target.value); setNewCatName(""); }} placeholder="Or type a custom category name..."
+                style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 12, background: BG, outline: "none", fontSize: 13, color: DARK, padding: "11px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }} />
+            </div>
+          )}
+        </div>
+
+        {err && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 12, padding: "8px 12px", background: "#FEF2F2", borderRadius: 10 }}>{err}</div>}
+
+        <button onClick={submit} disabled={saving}
+          style={{ width: "100%", padding: 14, background: saving ? "#ccc" : CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: saving ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          {saving ? "Adding..." : "Add to Menu"}
+        </button>
       </div>
     </div>
   );
@@ -311,9 +468,9 @@ function BottomNav({ tab, setTab, cartCount }) {
       {items.map(({ id, label, SVG, badge }) => {
         const active = tab === id || (tab === "detail" && id === "home");
         return (
-          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, border: "none", background: "transparent", cursor: "pointer", padding: "2px 0", fontFamily: "'Plus Jakarta Sans', sans-serif", position: "relative" }} className="nav-btn">
+          <button key={id} onClick={() => setTab(id)} className="nav-btn" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, border: "none", background: "transparent", cursor: "pointer", padding: "2px 0", fontFamily: "'Plus Jakarta Sans', sans-serif", position: "relative" }}>
             <SVG active={active} />
-            {badge > 0 && <div className="badgePop" style={{ position: "absolute", top: -2, right: "18%", background: CORAL, color: "#fff", fontSize: 9, fontWeight: 800, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff", animation: "badgePop 0.3s cubic-bezier(.36,.07,.19,.97) both" }}>{badge > 9 ? "9+" : badge}</div>}
+            {badge > 0 && <div style={{ position: "absolute", top: -2, right: "18%", background: CORAL, color: "#fff", fontSize: 9, fontWeight: 800, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>{badge > 9 ? "9+" : badge}</div>}
             <span style={{ fontSize: 10, fontWeight: 600, color: active ? CORAL : "#B0B0B0" }}>{label}</span>
             {active && <div className="tab-dot" style={{ width: 4, height: 4, borderRadius: "50%", background: CORAL }} />}
           </button>
@@ -368,17 +525,36 @@ export default function App() {
 
   // Confirm "clear cart?" when switching restaurant
   const [pendingItem, setPendingItem] = useState(null); // { menuItem, restaurant }
+  const [showAddItem, setShowAddItem]   = useState(false);
 
   useEffect(() => {
     if (appState !== "splash") return;
-    const timer = setTimeout(() => setAppState(localStorage.getItem("mesa_onboarded") ? "app" : "onboarding"), 1800);
+    const timer = setTimeout(() => setAppState(localStorage.getItem("chowli_onboarded") ? "app" : "onboarding"), 1800);
     return () => clearTimeout(timer);
   }, [appState]);
+
+  // ── Fix 3: Hardware back button — go back instead of exiting ──
+  useEffect(() => {
+    function handlePopState() {
+      if (showProfile)        { setShowProfile(false);    history.pushState(null, ""); return; }
+      if (showRegister)       { setShowRegister(false);   history.pushState(null, ""); return; }
+      if (activeStoryGroup)   { setActiveStoryGroup(null);history.pushState(null, ""); return; }
+      if (reviewTarget)       { setReviewTarget(null);    history.pushState(null, ""); return; }
+      if (showReservation)    { setShowReservation(null); history.pushState(null, ""); return; }
+      if (pendingItem)        { setPendingItem(null);     history.pushState(null, ""); return; }
+      if (tab === "detail")   { setTab("home");           history.pushState(null, ""); return; }
+      if (tab === "cart")     { setTab("home");           history.pushState(null, ""); return; }
+      if (tab !== "home")     { setTab("home");           history.pushState(null, ""); return; }
+    }
+    history.pushState(null, "");
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [tab, showProfile, showRegister, activeStoryGroup, reviewTarget, showReservation, pendingItem]);
 
   const selected  = restaurants.find(r => r.id === selectedId);
   const ownerR    = restaurants.find(r => r.id === ownerRId) || restaurants.find(r => r.owner_id === user?.id);
   const openCount = restaurants.filter(r => r.is_open).length;
-  const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, createPost, saving } = useOwnerRestaurant(ownerR?.id);
+  const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, saving } = useOwnerRestaurant(ownerR?.id);
   const { orders: incomingOrders, fetchOrders: fetchIncoming, updateStatus } = useIncomingOrders(ownerR?.id);
 
   const filtered = restaurants.filter(r => {
@@ -418,26 +594,21 @@ export default function App() {
     setPostText(""); setComposing(false);
   }
 
+  // ── Splash ───────────────────────────────────────────────
   if (appState === "splash") return (
     <div style={{ position: "fixed", inset: 0, background: CORAL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", maxWidth: 430, margin: "0 auto" }}>
       <style>{`
-        @keyframes splashBounce { 0%{transform:scale(0.5);opacity:0} 60%{transform:scale(1.15)} 80%{transform:scale(0.95)} 100%{transform:scale(1);opacity:1} }
-        @keyframes splashFade { 0%{opacity:0;transform:translateY(10px)} 100%{opacity:1;transform:translateY(0)} }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes popIn { 0%{transform:scale(0.8);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
-        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
-        @keyframes floatUp { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-        @keyframes slideInCard { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes tabDot { 0%{transform:scale(0)} 60%{transform:scale(1.4)} 100%{transform:scale(1)} }
+        @keyframes splashPop { 0%{transform:scale(0.4) rotate(-10deg);opacity:0} 60%{transform:scale(1.18) rotate(3deg)} 80%{transform:scale(0.95) rotate(-1deg)} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+        @keyframes splashSlide { 0%{opacity:0;transform:translateY(16px)} 100%{opacity:1;transform:translateY(0)} }
+        @keyframes splashSub { 0%{opacity:0} 100%{opacity:0.75} }
       `}</style>
-      <div style={{ width: 90, height: 90, background: "rgba(255,255,255,0.15)", borderRadius: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44, marginBottom: 20, animation: "splashBounce 0.7s cubic-bezier(.36,.07,.19,.97) both" }}>🍗</div>
-      <div style={{ fontSize: 38, fontWeight: 800, color: "#fff", letterSpacing: -1, fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashFade 0.5s 0.4s both" }}>Chowli</div>
-      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 6, fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashFade 0.5s 0.6s both" }}>Your local food market</div>
+      <div style={{ width: 96, height: 96, background: "rgba(255,255,255,0.18)", borderRadius: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 50, marginBottom: 22, animation: "splashPop 0.7s cubic-bezier(.36,.07,.19,.97) both" }}>🍗</div>
+      <div style={{ fontSize: 42, fontWeight: 800, color: "#fff", letterSpacing: -1.5, fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashSlide 0.5s 0.45s both" }}>Chowli</div>
+      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 8, fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashSub 0.6s 0.7s both" }}>Your local food market</div>
     </div>
   );
 
-  if (appState === "onboarding") return <Onboarding onDone={() => { localStorage.setItem("mesa_onboarded", "1"); setAppState("app"); }} />;
+  if (appState === "onboarding") return <Onboarding onDone={() => { localStorage.setItem("chowli_onboarded", "1"); setAppState("app"); }} />;
 
   const authWrap = children => <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh" }}><style>{`* { box-sizing:border-box; margin:0; padding:0; }`}</style>{children}</div>;
   if (authMode === "login")  return authWrap(
@@ -470,7 +641,7 @@ export default function App() {
 
   if (authLoading || restLoading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: BG, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <div style={{ textAlign: "center" }}><div style={{ fontSize: 36, marginBottom: 12, animation: "floatUp 1.4s ease-in-out infinite" }}>🍗</div><div style={{ fontSize: 14, color: "#888" }}>Loading Chowli...</div></div>
+      <div style={{ textAlign: "center" }}><div style={{ fontSize: 36, marginBottom: 12, animation: "floatUp 1.4s ease-in-out infinite" }}>🍗</div><div style={{ fontSize: 14, color: "#888", fontWeight: 600 }}>Loading Chowli...</div></div>
     </div>
   );
 
@@ -487,32 +658,61 @@ export default function App() {
         .story-row { display: flex; gap: 14px; padding: 18px 20px 4px; overflow-x: auto; scrollbar-width: none; }
         .story-row::-webkit-scrollbar { display: none; }
         input, textarea, button { font-family: 'Plus Jakarta Sans', sans-serif; }
-        @keyframes splashBounce { 0%{transform:scale(0.5);opacity:0} 60%{transform:scale(1.15)} 80%{transform:scale(0.95)} 100%{transform:scale(1);opacity:1} }
-        @keyframes splashFade { 0%{opacity:0;transform:translateY(10px)} 100%{opacity:1;transform:translateY(0)} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes popIn { 0%{transform:scale(0.8);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
-        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
+
+        /* ── Animations ── */
         @keyframes floatUp { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
-        @keyframes slideInCard { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes popIn { 0%{transform:scale(0.8);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+        @keyframes slideInCard { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
         @keyframes tabDot { 0%{transform:scale(0)} 60%{transform:scale(1.5)} 100%{transform:scale(1)} }
-        @keyframes cartBounce { 0%,100%{transform:translateX(-50%) translateY(0)} 30%{transform:translateX(-50%) translateY(-6px)} 60%{transform:translateX(-50%) translateY(-2px)} }
-        @keyframes badgePop { 0%{transform:scale(0)} 70%{transform:scale(1.3)} 100%{transform:scale(1)} }
-        .vlist > *:nth-child(1){animation:slideInCard 0.35s 0.05s both}
-        .vlist > *:nth-child(2){animation:slideInCard 0.35s 0.1s both}
-        .vlist > *:nth-child(3){animation:slideInCard 0.35s 0.15s both}
-        .vlist > *:nth-child(4){animation:slideInCard 0.35s 0.2s both}
-        .vlist > *:nth-child(5){animation:slideInCard 0.35s 0.25s both}
-        .vlist > *:nth-child(n+6){animation:slideInCard 0.35s 0.3s both}
-        .story-ring-wrap{animation:popIn 0.4s cubic-bezier(.36,.07,.19,.97) both}
-        .hscroll > *:nth-child(1){animation:slideInCard 0.35s 0.05s both}
-        .hscroll > *:nth-child(2){animation:slideInCard 0.35s 0.12s both}
-        .hscroll > *:nth-child(3){animation:slideInCard 0.35s 0.19s both}
-        .hscroll > *:nth-child(4){animation:slideInCard 0.35s 0.26s both}
-        .open-badge{animation:pulse 2.2s ease-in-out infinite}
+        @keyframes cartBounce { 0%,100%{transform:translateX(-50%) translateY(0)} 35%{transform:translateX(-50%) translateY(-7px)} 65%{transform:translateX(-50%) translateY(-2px)} }
+        @keyframes pulseBadge { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+        .vlist > *:nth-child(1){animation:slideInCard 0.32s 0.05s both}
+        .vlist > *:nth-child(2){animation:slideInCard 0.32s 0.10s both}
+        .vlist > *:nth-child(3){animation:slideInCard 0.32s 0.15s both}
+        .vlist > *:nth-child(4){animation:slideInCard 0.32s 0.20s both}
+        .vlist > *:nth-child(n+5){animation:slideInCard 0.32s 0.25s both}
+        .story-ring-wrap{animation:popIn 0.38s cubic-bezier(.36,.07,.19,.97) both}
         .cart-bar{animation:cartBounce 0.5s cubic-bezier(.36,.07,.19,.97)}
-        .tab-dot{animation:tabDot 0.3s cubic-bezier(.36,.07,.19,.97) both}
-        .nav-btn:active{transform:scale(0.88);transition:transform 0.1s}
-        .add-btn:active{transform:scale(0.92);transition:transform 0.12s}
+        .open-badge{animation:pulseBadge 2.4s ease-in-out infinite}
+        .tab-dot{animation:tabDot 0.28s cubic-bezier(.36,.07,.19,.97) both}
+        .nav-btn:active{transform:scale(0.86);transition:transform 0.1s}
+
+        /* ── Open Now marquee ── */
+        @keyframes marquee {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .marquee-track {
+          display: flex;
+          gap: 14px;
+          width: max-content;
+          animation: marquee 28s linear infinite;
+          padding-bottom: 4px;
+        }
+        .marquee-track:hover { animation-play-state: paused; }
+        .marquee-outer {
+          overflow: hidden;
+          padding: 0 20px;
+          cursor: default;
+          -webkit-mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+        }
+
+        /* ── Name bounce ── */
+        @keyframes nameBounce {
+          0%   { transform: translateY(0);    opacity: 1; }
+          15%  { transform: translateY(-7px); opacity: 1; }
+          30%  { transform: translateY(0);    opacity: 1; }
+          45%  { transform: translateY(-4px); opacity: 1; }
+          60%  { transform: translateY(0);    opacity: 1; }
+          75%  { transform: translateY(-2px); opacity: 1; }
+          100% { transform: translateY(0);    opacity: 1; }
+        }
+        .name-bounce {
+          display: inline-block;
+          animation: nameBounce 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
       `}</style>
 
       <div className="mesa">
@@ -543,6 +743,15 @@ export default function App() {
             order={reviewTarget}
             onClose={() => setReviewTarget(null)}
             onSubmit={submitReview}
+          />
+        )}
+
+        {/* ── Add menu item modal ── */}
+        {showAddItem && ownerR && (
+          <AddMenuItemModal
+            ownerR={ownerR}
+            onClose={() => setShowAddItem(false)}
+            onAdded={() => { setShowAddItem(false); }}
           />
         )}
 
@@ -590,37 +799,55 @@ export default function App() {
         {/* ══════════ HOME ══════════ */}
         {tab === "home" && (
           <>
-            <div style={{ background: "#fff", padding: "max(env(safe-area-inset-top), 52px) 20px 20px", borderBottom: "1px solid #F0EDE8" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            {/* ── Chowli-style vibrant gradient header ── */}
+            <div style={{ background: `linear-gradient(135deg, ${CORAL} 0%, #FF8C42 60%, #FFAF60 100%)`, padding: "max(env(safe-area-inset-top), 52px) 20px 24px", position: "relative", overflow: "hidden" }}>
+              {/* Decorative blobs */}
+              <div style={{ position: "absolute", top: -30, right: -30, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
+              <div style={{ position: "absolute", bottom: -20, left: 40, width: 90, height: 90, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div onClick={() => user ? setShowProfile(true) : setAuthMode("login")} style={{ width: 44, height: 44, borderRadius: "50%", background: `linear-gradient(135deg, ${CORAL}, #FF8C6B)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#fff", cursor: "pointer" }}>
+                  <div onClick={() => user ? setShowProfile(true) : setAuthMode("login")}
+                    style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(255,255,255,0.22)", border: "2.5px solid rgba(255,255,255,0.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: "#fff", cursor: "pointer", backdropFilter: "blur(4px)" }}>
                     {user ? (profile?.full_name?.[0]?.toUpperCase() || "U") : "👤"}
                   </div>
                   <div>
-                    <div style={{ fontSize: 12, color: "#888", fontWeight: 500 }}>{greet()},</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>{user ? `${profile?.full_name?.split(" ")[0] || "there"}! 👋` : "Guest 👋"}</div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>{greet()},</div>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: "#fff" }}>
+                      <span className="name-bounce" key={user?.id || "guest"}>
+                        {user ? `${profile?.full_name?.split(" ")[0] || "there"}! 👋` : "Guest 👋"}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: CORAL, background: "#FFF0ED", padding: "4px 10px", borderRadius: 20 }} className="open-badge">{openCount} open</div>
-                  <button
-                    onClick={() => setTab("search")}
-                    style={{ width: 38, height: 38, borderRadius: "50%", background: BG, border: "1px solid #EBEBEB", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                    aria-label="Search"
-                  >
+                  <div className="open-badge" style={{ fontSize: 11, fontWeight: 700, color: CORAL, background: "#fff", padding: "4px 12px", borderRadius: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>{openCount} open</div>
+                  <button onClick={() => setTab("search")}
+                    style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.22)", border: "1.5px solid rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                    aria-label="Search">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <circle cx="11" cy="11" r="7" stroke="#888" strokeWidth="2"/>
-                      <path d="M21 21l-3.5-3.5" stroke="#888" strokeWidth="2" strokeLinecap="round"/>
+                      <circle cx="11" cy="11" r="7" stroke="#fff" strokeWidth="2.2"/>
+                      <path d="M21 21l-3.5-3.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
                     </svg>
                   </button>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 14 }}>
-                <span style={{ color: CORAL }}>📍</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: DARK }}>Tambuwal, Sokoto</span>
-                <span style={{ fontSize: 10, color: "#888" }}>▾</span>
+
+              {/* Location row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
+                <span style={{ fontSize: 14 }}>📍</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Tambuwal, Sokoto</span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>▾</span>
               </div>
 
+              {/* Category pills on the header itself */}
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", marginBottom: 2 }}>
+                {CATS.map(c => (
+                  <button key={c} onClick={() => setActiveCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 20, border: "none", background: activeCat === c ? "#fff" : "rgba(255,255,255,0.18)", color: activeCat === c ? CORAL : "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "background 0.2s" }}>
+                    <span style={{ fontSize: 13 }}>{CAT_ICONS[c]}</span>{c}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {storyGroups.length > 0 && (
@@ -633,9 +860,6 @@ export default function App() {
               </>
             )}
 
-            <div style={{ display: "flex", gap: 10, padding: "18px 20px 4px", overflowX: "auto", scrollbarWidth: "none" }}>
-              {CATS.map(c => <button key={c} onClick={() => setActiveCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, border: "none", background: activeCat === c ? CORAL : "#fff", color: activeCat === c ? "#fff" : "#555", fontWeight: 700, fontSize: 12, cursor: "pointer" }}><span style={{ fontSize: 14 }}>{CAT_ICONS[c]}</span>{c}</button>)}
-            </div>
 
             {(() => { const f = restaurants.find(r => r.is_open && r.badge); if (!f) return null; return (
               <div onClick={() => goDetail(f.id)} style={{ margin: "18px 20px 0", borderRadius: 20, background: `linear-gradient(135deg, ${f.bg_from}, ${f.bg_to})`, padding: "20px", position: "relative", overflow: "hidden", cursor: "pointer" }}>
@@ -650,7 +874,14 @@ export default function App() {
               <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Open Now</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: CORAL }}>{openNow.length} spots</span>
             </div>
-            <div className="hscroll">{openNow.map(r => <HCard key={r.id} r={r} onClick={() => goDetail(r.id)} />)}</div>
+            <div className="marquee-outer">
+              <div className="marquee-track">
+                {/* First set */}
+                {openNow.map(r => <HCard key={r.id + "-a"} r={r} onClick={() => goDetail(r.id)} />)}
+                {/* Duplicate for seamless loop */}
+                {openNow.map(r => <HCard key={r.id + "-b"} r={r} onClick={() => goDetail(r.id)} />)}
+              </div>
+            </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 12px" }}>
               <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>{activeCat === "All" ? "All Restaurants" : activeCat}</span>
@@ -702,7 +933,17 @@ export default function App() {
           <>
             <div style={{ width: "100%", height: 240, background: `linear-gradient(155deg, ${selected.bg_from}, ${selected.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 80, position: "relative" }}>
               <button onClick={() => setTab("home")} style={{ position: "absolute", top: "max(env(safe-area-inset-top), 48px)", left: 16, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.92)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, fontWeight: 700 }}>←</button>
-              {(() => { const sg = storyGroups.find(g => g.restaurant.id === selected.id); return <span onClick={sg ? () => setActiveStoryGroup(sg) : undefined} style={{ filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.25))", cursor: sg ? "pointer" : "default", outline: sg ? `3px solid ${CORAL}` : "none", borderRadius: "50%", padding: sg ? 4 : 0 }}>{selected.icon}</span>; })()}
+              {(() => {
+                const sg = storyGroups.find(g => g.restaurant.id === selected.id);
+                const ringStyle = sg ? { outline: `3px solid ${CORAL}`, outlineOffset: 3, cursor: "pointer" } : { cursor: "default" };
+                return selected.logo_url
+                  ? <img src={selected.logo_url} alt={selected.name} onClick={sg ? () => setActiveStoryGroup(sg) : undefined}
+                      style={{ width: 100, height: 100, borderRadius: "50%", objectFit: "cover", border: "4px solid rgba(255,255,255,0.35)", boxShadow: "0 4px 20px rgba(0,0,0,0.25)", ...ringStyle }} />
+                  : <span onClick={sg ? () => setActiveStoryGroup(sg) : undefined}
+                      style={{ filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.25))", fontSize: 80, borderRadius: "50%", padding: sg ? 4 : 0, ...ringStyle }}>
+                      {selected.icon}
+                    </span>;
+              })()}
             </div>
 
             <div style={{ background: "#fff", borderRadius: "28px 28px 0 0", marginTop: -28, padding: "24px 20px 0", position: "relative", zIndex: 2, minHeight: "calc(100vh - 212px)" }}>
@@ -854,32 +1095,46 @@ export default function App() {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", padding: "0 32px", textAlign: "center" }}>
             <div style={{ fontSize: 56, marginBottom: 16 }}>🙋</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: DARK, marginBottom: 8 }}>Not an owner account</div>
-            <div style={{ fontSize: 14, color: "#888" }}>Contact the MESA team to register your restaurant.</div>
+            <div style={{ fontSize: 14, color: "#888" }}>Contact the Chowli team to register your restaurant.</div>
           </div>
         )}
 
         {tab === "store" && user && isOwner && ownerR && (
           <>
-            <div style={{ background: "#fff", padding: "max(env(safe-area-inset-top), 52px) 20px 20px", borderBottom: "1px solid #F0EDE8" }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 2 }}>My Store</div>
-              <div style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>Manage your presence on MESA</div>
+            {/* ── Compact store hero header ── */}
+            <div style={{ background: `linear-gradient(135deg, ${ownerR.bg_from || CORAL}, ${ownerR.bg_to || "#FF8C6B"})`, padding: "max(env(safe-area-inset-top), 52px) 20px 20px", position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: -20, right: -20, width: 110, height: 110, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                {/* Restaurant photo — tappable to change */}
+                <div style={{ position: "relative", flexShrink: 0 }} onClick={() => document.getElementById("logo-file-input")?.click()}>
+                  <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "2.5px solid rgba(255,255,255,0.5)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, cursor: "pointer" }}>
+                    {ownerR.logo_url
+                      ? <img src={ownerR.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : ownerR.icon}
+                  </div>
+                  <div style={{ position: "absolute", bottom: 0, right: 0, width: 20, height: 20, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>✏️</div>
+                  <LogoFileInput ownerR={ownerR} uploadLogo={uploadLogo} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 3 }}>{ownerR.name}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)" }}>Manage your presence on Chowli</div>
+                </div>
+                {/* Open/closed toggle inline */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                  <Toggle checked={ownerR.is_open} onChange={() => toggleOpen(ownerR.is_open)} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: ownerR.is_open ? "#fff" : "rgba(255,255,255,0.6)" }}>{ownerR.is_open ? "Open" : "Closed"}</span>
+                </div>
+              </div>
               {restaurants.filter(r => r.owner_id === user.id).length > 1 && (
-                <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none" }}>
+                <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", marginTop: 14 }}>
                   {restaurants.filter(r => r.owner_id === user.id).map(r => (
-                    <button key={r.id} onClick={() => setOwnerRId(r.id)} style={{ flexShrink: 0, padding: "8px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", border: "1.5px solid", borderColor: (ownerRId || ownerR.id) === r.id ? CORAL : "#EBEBEB", background: (ownerRId || ownerR.id) === r.id ? "#FFF0ED" : "#fff", color: (ownerRId || ownerR.id) === r.id ? CORAL : "#888", whiteSpace: "nowrap" }}>{r.icon} {r.name.split(" ")[0]}</button>
+                    <button key={r.id} onClick={() => setOwnerRId(r.id)} style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer", border: "1.5px solid", borderColor: (ownerRId || ownerR.id) === r.id ? "#fff" : "rgba(255,255,255,0.3)", background: (ownerRId || ownerR.id) === r.id ? "#fff" : "rgba(255,255,255,0.15)", color: (ownerRId || ownerR.id) === r.id ? CORAL : "#fff", whiteSpace: "nowrap" }}>{r.icon} {r.name.split(" ")[0]}</button>
                   ))}
                 </div>
               )}
             </div>
 
             <div style={{ padding: "16px 20px" }}>
-              {/* Status */}
-              <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: 20, marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div><div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 4 }}>Store Status</div><div style={{ fontSize: 26, fontWeight: 800, color: ownerR.is_open ? "#16A34A" : "#DC2626" }}>{ownerR.is_open ? "Open" : "Closed"}</div></div>
-                  <Toggle checked={ownerR.is_open} onChange={() => toggleOpen(ownerR.is_open)} />
-                </div>
-              </div>
 
               {/* Stats */}
               {(() => { const all = (ownerR.menu_categories || []).flatMap(c => c.menu_items || []); return (
@@ -957,7 +1212,13 @@ export default function App() {
               )}
 
               <div style={{ height: 1, background: "#F0EDE8", margin: "4px 0 16px" }} />
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Menu</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1 }}>Menu</div>
+                <button onClick={() => setShowAddItem(true)}
+                  style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700, color: "#fff", background: CORAL, border: "none", borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  + Add Item
+                </button>
+              </div>
               {(ownerR.menu_categories || []).map(cat => (
                 <div key={cat.id} style={{ marginBottom: 18 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#888", padding: "8px 0", borderBottom: "1px solid #F0EDE8", marginBottom: 8 }}>{cat.name}</div>
@@ -967,6 +1228,10 @@ export default function App() {
                       item={item}
                       restaurantId={ownerR.id}
                       onToggle={() => toggleItem(item.id, item.is_available)}
+                      onDelete={async () => {
+                        if (!window.confirm("Delete " + item.name + "?")) return;
+                        await supabase.from("menu_items").delete().eq("id", item.id);
+                      }}
                       onImageUploaded={async (file) => {
                         const { url, error } = await uploadFoodImage(file, ownerR.id, item.id);
                         if (!error && url) await updateItemImage(item.id, url);
