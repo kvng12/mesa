@@ -87,35 +87,42 @@ export function useStoryUpload(restaurantId) {
   const [uploading, setUploading] = useState(false);
   const [error, setError]         = useState(null);
 
-  async function uploadStory({ file, caption }) {
+async function uploadStory({ file, caption }) {
     if (!file || !restaurantId) return { error: "Missing file or restaurant" };
+
+    // Guard: 10MB max (Supabase free tier limit)
+    if (file.size > 10 * 1024 * 1024) {
+      return { data: null, error: "Image too large — please use a photo under 10MB." };
+    }
 
     setUploading(true);
     setError(null);
 
     try {
-      // 1. Upload image to Supabase Storage (bucket: "stories")
-      const ext      = file.name.split(".").pop();
-      const fileName = `${restaurantId}/${Date.now()}.${ext}`;
+      // Safely extract extension — mobile camera files sometimes report
+      // names like "image" with no dot, so fall back to jpeg
+      const rawExt  = file.name?.split(".").pop()?.toLowerCase();
+      const ext     = rawExt && rawExt.length <= 4 && rawExt !== file.name
+        ? rawExt
+        : file.type.split("/")[1] || "jpg";
+      const fileName = `${restaurantId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
       const { error: uploadErr } = await supabase.storage
         .from("stories")
         .upload(fileName, file, {
           cacheControl: "3600",
-          upsert: false,
-          contentType: file.type,
+          upsert: true,          // was false — caused errors on filename collision
+          contentType: file.type || "image/jpeg",
         });
 
       if (uploadErr) throw uploadErr;
 
-      // 2. Get the public URL
       const { data: urlData } = supabase.storage
         .from("stories")
         .getPublicUrl(fileName);
 
       const imageUrl = urlData.publicUrl;
 
-      // 3. Insert story row (expires in 24h by default via DB default)
       const { data, error: insertErr } = await supabase
         .from("stories")
         .insert({
@@ -133,8 +140,9 @@ export function useStoryUpload(restaurantId) {
 
     } catch (err) {
       setUploading(false);
-      setError(err.message);
-      return { data: null, error: err.message };
+      const msg = err?.message || "Upload failed — check your internet connection.";
+      setError(msg);
+      return { data: null, error: msg };
     }
   }
 

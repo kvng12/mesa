@@ -98,7 +98,7 @@ function StoryUploadCard({ restaurantId, restaurant }) {
       <div style={{ padding: "16px 16px 4px", fontSize: 13, fontWeight: 800, color: DARK }}>Post a Story</div>
       <div style={{ padding: "4px 16px 14px", fontSize: 11, color: "#888" }}>Visible to customers for 24 hours</div>
       <div style={{ padding: "0 16px 16px" }}>
-        <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: "none" }} />
+        <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
         {!preview
           ? <div onClick={() => fileRef.current?.click()} style={{ height: 140, background: BG, borderRadius: 14, border: "1.5px dashed #EBEBEB", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}>
               <span style={{ fontSize: 28 }}>📷</span>
@@ -197,11 +197,21 @@ function PostCard({ post, liked, onLike, onViewRest }) {
 
 // ── DashMenuItem — dashboard food item with image upload + big toggle ──
 function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
-  const [uploading, setUploading] = React.useState(false);
-  const [localUrl, setLocalUrl]   = React.useState(null);
-  const fileRef                   = React.useRef();
+  const [uploading, setUploading]   = React.useState(false);
+  const [localUrl, setLocalUrl]     = React.useState(null);
+  const [localAvail, setLocalAvail] = React.useState(item.is_available);
+  const fileRef                     = React.useRef();
 
-  const imgSrc = localUrl || item.image_url;
+  // Keep in sync if parent re-renders with fresh DB data
+  React.useEffect(() => { setLocalAvail(item.is_available); }, [item.is_available]);
+
+  async function handleToggle() {
+    setLocalAvail(v => !v); // instant optimistic flip
+    await onToggle();       // DB call runs in background
+  }
+
+  const imgSrc  = localUrl || item.image_url;
+  const isAvail = localAvail;
 
   async function handleFile(e) {
     const file = e.target.files?.[0];
@@ -216,7 +226,7 @@ function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
   }
 
   return (
-    <div style={{ background: "#fff", borderRadius: 16, marginBottom: 10, border: `2px solid ${item.is_available ? "#F0EDE8" : "#FECACA"}`, overflow: "hidden", transition: "border-color 0.25s" }}>
+    <div style={{ background: "#fff", borderRadius: 16, marginBottom: 10, border: `2px solid ${isAvail ? "#F0EDE8" : "#FECACA"}`, overflow: "hidden", transition: "border-color 0.25s" }}>
       <div style={{ display: "flex", alignItems: "stretch", gap: 0 }}>
 
         {/* Image column — tappable to upload */}
@@ -226,7 +236,7 @@ function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
         >
           {imgSrc ? (
             <img src={imgSrc} alt={item.name}
-              style={{ width: 80, height: "100%", minHeight: 80, objectFit: "cover", display: "block", opacity: item.is_available ? 1 : 0.5 }} />
+              style={{ width: 80, height: "100%", minHeight: 80, objectFit: "cover", display: "block", opacity: isAvail ? 1 : 0.5 }} />
           ) : (
             <div style={{ width: 80, height: 80, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
               <span style={{ fontSize: 20 }}>📷</span>
@@ -238,7 +248,6 @@ function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
               <div style={{ fontSize: 16 }}>⏳</div>
             </div>
           )}
-          {/* Edit overlay on hover */}
           {imgSrc && (
             <div style={{ position: "absolute", bottom: 4, right: 4, background: "rgba(0,0,0,0.5)", borderRadius: 6, width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>✏️</div>
           )}
@@ -247,31 +256,31 @@ function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
 
         {/* Info column */}
         <div style={{ flex: 1, padding: "12px 14px", minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: item.is_available ? "#1C1C1E" : "#C0C0C0", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: item.is_available ? "#FF6240" : "#EDE9E4" }}>₦{Number(item.price).toLocaleString()}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: isAvail ? "#1C1C1E" : "#C0C0C0", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: isAvail ? "#FF6240" : "#EDE9E4" }}>₦{Number(item.price).toLocaleString()}</div>
         </div>
 
-        {/* Toggle column — big thumb-friendly switch */}
+        {/* Toggle column */}
         <div
-          onClick={onToggle}
+          onClick={handleToggle}
           style={{
             width: 72, flexShrink: 0,
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             gap: 5, cursor: "pointer",
-            background: item.is_available ? "#F0FDF4" : "#FEF2F2",
-            borderLeft: `1px solid ${item.is_available ? "#BBF7D0" : "#FECACA"}`,
+            background: isAvail ? "#F0FDF4" : "#FEF2F2",
+            borderLeft: `1px solid ${isAvail ? "#BBF7D0" : "#FECACA"}`,
             transition: "background 0.25s",
             padding: "8px 0",
           }}
         >
           <div style={{
             width: 36, height: 20, borderRadius: 10,
-            background: item.is_available ? "#16A34A" : "#E0E0E0",
+            background: isAvail ? "#16A34A" : "#E0E0E0",
             position: "relative", transition: "background 0.25s",
           }}>
             <div style={{
               position: "absolute",
-              left: item.is_available ? 18 : 2,
+              left: isAvail ? 18 : 2,
               top: 2,
               width: 16, height: 16, borderRadius: "50%",
               background: "#fff",
@@ -279,8 +288,8 @@ function DashMenuItem({ item, restaurantId, onToggle, onImageUploaded }) {
               boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
             }} />
           </div>
-          <span style={{ fontSize: 9, fontWeight: 800, color: item.is_available ? "#16A34A" : "#DC2626", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-            {item.is_available ? "On" : "Off"}
+          <span style={{ fontSize: 9, fontWeight: 800, color: isAvail ? "#16A34A" : "#DC2626", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+            {isAvail ? "On" : "Off"}
           </span>
         </div>
 
@@ -302,11 +311,11 @@ function BottomNav({ tab, setTab, cartCount }) {
       {items.map(({ id, label, SVG, badge }) => {
         const active = tab === id || (tab === "detail" && id === "home");
         return (
-          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, border: "none", background: "transparent", cursor: "pointer", padding: "2px 0", fontFamily: "'Plus Jakarta Sans', sans-serif", position: "relative" }}>
+          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, border: "none", background: "transparent", cursor: "pointer", padding: "2px 0", fontFamily: "'Plus Jakarta Sans', sans-serif", position: "relative" }} className="nav-btn">
             <SVG active={active} />
-            {badge > 0 && <div style={{ position: "absolute", top: -2, right: "18%", background: CORAL, color: "#fff", fontSize: 9, fontWeight: 800, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>{badge > 9 ? "9+" : badge}</div>}
+            {badge > 0 && <div className="badgePop" style={{ position: "absolute", top: -2, right: "18%", background: CORAL, color: "#fff", fontSize: 9, fontWeight: 800, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff", animation: "badgePop 0.3s cubic-bezier(.36,.07,.19,.97) both" }}>{badge > 9 ? "9+" : badge}</div>}
             <span style={{ fontSize: 10, fontWeight: 600, color: active ? CORAL : "#B0B0B0" }}>{label}</span>
-            {active && <div style={{ width: 4, height: 4, borderRadius: "50%", background: CORAL }} />}
+            {active && <div className="tab-dot" style={{ width: 4, height: 4, borderRadius: "50%", background: CORAL }} />}
           </button>
         );
       })}
@@ -409,12 +418,22 @@ export default function App() {
     setPostText(""); setComposing(false);
   }
 
-  // ── Splash ───────────────────────────────────────────────
   if (appState === "splash") return (
     <div style={{ position: "fixed", inset: 0, background: CORAL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", maxWidth: 430, margin: "0 auto" }}>
-      <div style={{ width: 90, height: 90, background: "rgba(255,255,255,0.15)", borderRadius: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44, marginBottom: 20 }}>🍽️</div>
-      <div style={{ fontSize: 38, fontWeight: 800, color: "#fff", letterSpacing: -1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>MESA</div>
-      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 6, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Your local food market</div>
+      <style>{`
+        @keyframes splashBounce { 0%{transform:scale(0.5);opacity:0} 60%{transform:scale(1.15)} 80%{transform:scale(0.95)} 100%{transform:scale(1);opacity:1} }
+        @keyframes splashFade { 0%{opacity:0;transform:translateY(10px)} 100%{opacity:1;transform:translateY(0)} }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes popIn { 0%{transform:scale(0.8);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
+        @keyframes floatUp { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+        @keyframes slideInCard { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes tabDot { 0%{transform:scale(0)} 60%{transform:scale(1.4)} 100%{transform:scale(1)} }
+      `}</style>
+      <div style={{ width: 90, height: 90, background: "rgba(255,255,255,0.15)", borderRadius: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44, marginBottom: 20, animation: "splashBounce 0.7s cubic-bezier(.36,.07,.19,.97) both" }}>🍗</div>
+      <div style={{ fontSize: 38, fontWeight: 800, color: "#fff", letterSpacing: -1, fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashFade 0.5s 0.4s both" }}>Chowli</div>
+      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 6, fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashFade 0.5s 0.6s both" }}>Your local food market</div>
     </div>
   );
 
@@ -451,7 +470,7 @@ export default function App() {
 
   if (authLoading || restLoading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: BG, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <div style={{ textAlign: "center" }}><div style={{ fontSize: 36, marginBottom: 12 }}>🍽️</div><div style={{ fontSize: 14, color: "#888" }}>Loading MESA...</div></div>
+      <div style={{ textAlign: "center" }}><div style={{ fontSize: 36, marginBottom: 12, animation: "floatUp 1.4s ease-in-out infinite" }}>🍗</div><div style={{ fontSize: 14, color: "#888" }}>Loading Chowli...</div></div>
     </div>
   );
 
@@ -468,6 +487,32 @@ export default function App() {
         .story-row { display: flex; gap: 14px; padding: 18px 20px 4px; overflow-x: auto; scrollbar-width: none; }
         .story-row::-webkit-scrollbar { display: none; }
         input, textarea, button { font-family: 'Plus Jakarta Sans', sans-serif; }
+        @keyframes splashBounce { 0%{transform:scale(0.5);opacity:0} 60%{transform:scale(1.15)} 80%{transform:scale(0.95)} 100%{transform:scale(1);opacity:1} }
+        @keyframes splashFade { 0%{opacity:0;transform:translateY(10px)} 100%{opacity:1;transform:translateY(0)} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes popIn { 0%{transform:scale(0.8);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
+        @keyframes floatUp { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+        @keyframes slideInCard { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes tabDot { 0%{transform:scale(0)} 60%{transform:scale(1.5)} 100%{transform:scale(1)} }
+        @keyframes cartBounce { 0%,100%{transform:translateX(-50%) translateY(0)} 30%{transform:translateX(-50%) translateY(-6px)} 60%{transform:translateX(-50%) translateY(-2px)} }
+        @keyframes badgePop { 0%{transform:scale(0)} 70%{transform:scale(1.3)} 100%{transform:scale(1)} }
+        .vlist > *:nth-child(1){animation:slideInCard 0.35s 0.05s both}
+        .vlist > *:nth-child(2){animation:slideInCard 0.35s 0.1s both}
+        .vlist > *:nth-child(3){animation:slideInCard 0.35s 0.15s both}
+        .vlist > *:nth-child(4){animation:slideInCard 0.35s 0.2s both}
+        .vlist > *:nth-child(5){animation:slideInCard 0.35s 0.25s both}
+        .vlist > *:nth-child(n+6){animation:slideInCard 0.35s 0.3s both}
+        .story-ring-wrap{animation:popIn 0.4s cubic-bezier(.36,.07,.19,.97) both}
+        .hscroll > *:nth-child(1){animation:slideInCard 0.35s 0.05s both}
+        .hscroll > *:nth-child(2){animation:slideInCard 0.35s 0.12s both}
+        .hscroll > *:nth-child(3){animation:slideInCard 0.35s 0.19s both}
+        .hscroll > *:nth-child(4){animation:slideInCard 0.35s 0.26s both}
+        .open-badge{animation:pulse 2.2s ease-in-out infinite}
+        .cart-bar{animation:cartBounce 0.5s cubic-bezier(.36,.07,.19,.97)}
+        .tab-dot{animation:tabDot 0.3s cubic-bezier(.36,.07,.19,.97) both}
+        .nav-btn:active{transform:scale(0.88);transition:transform 0.1s}
+        .add-btn:active{transform:scale(0.92);transition:transform 0.12s}
       `}</style>
 
       <div className="mesa">
@@ -557,7 +602,7 @@ export default function App() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: CORAL, background: "#FFF0ED", padding: "4px 10px", borderRadius: 20 }}>{openCount} open</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: CORAL, background: "#FFF0ED", padding: "4px 10px", borderRadius: 20 }} className="open-badge">{openCount} open</div>
                   <button
                     onClick={() => setTab("search")}
                     style={{ width: 38, height: 38, borderRadius: "50%", background: BG, border: "1px solid #EBEBEB", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
@@ -584,7 +629,7 @@ export default function App() {
                   <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Live Now</span>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0" }}>{storyGroups.length} active</span>
                 </div>
-                <div className="story-row">{storyGroups.map(g => <StoryRing key={g.restaurant.id} group={g} onClick={() => setActiveStoryGroup(g)} />)}</div>
+                <div className="story-row">{storyGroups.map(g => <div key={g.restaurant.id} className="story-ring-wrap"><StoryRing group={g} onClick={() => setActiveStoryGroup(g)} /></div>)}</div>
               </>
             )}
 
@@ -743,7 +788,7 @@ export default function App() {
                   ))}
                   {/* Floating cart bar */}
                   {cart.restaurantId === selected.id && cart.totalItems > 0 && (
-                    <div style={{ position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 40px)", maxWidth: 390, background: CORAL, borderRadius: 16, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", zIndex: 50, boxShadow: "0 4px 20px rgba(255,98,64,0.4)" }}
+                    <div className="cart-bar" style={{ position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 40px)", maxWidth: 390, background: CORAL, borderRadius: 16, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", zIndex: 50, boxShadow: "0 4px 20px rgba(255,98,64,0.4)" }}
                       onClick={() => setTab("cart")}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 8, padding: "2px 8px", fontSize: 12, fontWeight: 800, color: "#fff" }}>{cart.totalItems}</div>

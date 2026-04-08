@@ -11,15 +11,35 @@ export function useRestaurants() {
   useEffect(() => {
     fetchAll();
 
-    // Realtime: open/closed status broadcasts instantly
+    // Realtime: restaurant open/closed + menu item availability
     const channel = supabase
-      .channel("restaurants-open-status")
+      .channel("restaurants-live")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "restaurants" },
         (payload) => {
           setRestaurants((prev) =>
             prev.map((r) => r.id === payload.new.id ? { ...r, ...payload.new } : r)
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "menu_items" },
+        (payload) => {
+          // Patch is_available on the nested menu item without a full refetch
+          setRestaurants((prev) =>
+            prev.map((r) => ({
+              ...r,
+              menu_categories: (r.menu_categories || []).map((cat) => ({
+                ...cat,
+                menu_items: (cat.menu_items || []).map((item) =>
+                  item.id === payload.new.id
+                    ? { ...item, is_available: payload.new.is_available, image_url: payload.new.image_url }
+                    : item
+                ),
+              })),
+            }))
           );
         }
       )

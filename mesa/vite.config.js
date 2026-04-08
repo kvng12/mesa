@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "icons/*.png"],
       manifest: {
-        name: "MESA — Your Local Food Market",
-        short_name: "MESA",
+        name: "Chowli — Your Local Food Market",
+        short_name: "Chowli",
         description: "Find restaurants, browse menus, and get live updates — all in one place.",
         theme_color: "#FF4B4B",
         background_color: "#F7F5F2",
