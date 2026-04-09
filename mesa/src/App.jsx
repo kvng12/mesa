@@ -1,5 +1,6 @@
 // src/App.jsx — Chowli Food Marketplace
 
+import React from "react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth }                            from "./hooks/useAuth";
 import { useRestaurants, useOwnerRestaurant } from "./hooks/useRestaurants";
@@ -602,10 +603,10 @@ function OwnerChatList({ restaurantId, ownerId, onSelectChat, onClose }) {
 
 // ── PaymentSettingsCard — restaurant payment method toggles ──
 function PaymentSettingsCard({ ownerR, togglePaymentMethod }) {
-  const [localOnline, setLocalOnline] = React.useState(ownerR?.accepts_online !== false);
-  const [localCash,   setLocalCash]   = React.useState(ownerR?.accepts_cash   !== false);
+  const [localOnline, setLocalOnline] = useState(ownerR?.accepts_online !== false);
+  const [localCash,   setLocalCash]   = useState(ownerR?.accepts_cash   !== false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setLocalOnline(ownerR?.accepts_online !== false);
     setLocalCash(ownerR?.accepts_cash !== false);
   }, [ownerR?.accepts_online, ownerR?.accepts_cash]);

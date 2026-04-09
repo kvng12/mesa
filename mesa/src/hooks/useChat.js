@@ -1,22 +1,27 @@
 // src/hooks/useChat.js
 // In-app chat between customers and restaurants.
-// Each conversation is uniquely identified by (customer_id, restaurant_id).
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
 // ── Single conversation (customer ↔ restaurant) ──────────────
 export function useChat({ userId, restaurantId }) {
-  const [messages, setMessages]       = useState([]);
+  const [messages, setMessages]         = useState([]);
   const [conversation, setConversation] = useState(null);
-  const [loading, setLoading]         = useState(true);
-  const [sending, setSending]         = useState(false);
-  const channelRef                    = useRef(null);
+  const [loading, setLoading]           = useState(true);
+  const [sending, setSending]           = useState(false);
+  const channelRef    = useRef(null);
+  const subscribedRef = useRef(false);
 
   useEffect(() => {
     if (!userId || !restaurantId) return;
+    if (subscribedRef.current) return;
+    subscribedRef.current = true;
+
     initConversation();
+
     return () => {
+      subscribedRef.current = false;
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -27,7 +32,6 @@ export function useChat({ userId, restaurantId }) {
   async function initConversation() {
     setLoading(true);
 
-    // Get or create conversation row
     let { data: conv } = await supabase
       .from("conversations")
       .select("*")
@@ -47,7 +51,6 @@ export function useChat({ userId, restaurantId }) {
     if (!conv) { setLoading(false); return; }
     setConversation(conv);
 
-    // Fetch message history
     const { data: msgs } = await supabase
       .from("messages")
       .select("*")
@@ -58,18 +61,21 @@ export function useChat({ userId, restaurantId }) {
     setMessages(msgs || []);
     setLoading(false);
 
-    // Mark messages as read
     await markRead(conv.id, userId);
 
-    // Subscribe to new messages
+    // Build full channel with all listeners BEFORE calling .subscribe()
     channelRef.current = supabase
-      .channel(`chat-${conv.id}`)
+      .channel(`chat-${conv.id}-${Date.now()}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conv.id}` },
+        {
+          event:  "INSERT",
+          schema: "public",
+          table:  "messages",
+          filter: `conversation_id=eq.${conv.id}`,
+        },
         (payload) => {
           setMessages(prev => [...prev, payload.new]);
-          // Mark as read immediately if the window is open
           markRead(conv.id, userId);
         }
       )
@@ -84,14 +90,16 @@ export function useChat({ userId, restaurantId }) {
       .from("messages")
       .insert({
         conversation_id: conversation.id,
-        sender_id: userId,
-        text: text.trim(),
+        sender_id:       userId,
+        text:            text.trim(),
       });
 
-    // Update conversation's last_message_at
     await supabase
       .from("conversations")
-      .update({ last_message_at: new Date().toISOString(), last_message: text.trim() })
+      .update({
+        last_message_at: new Date().toISOString(),
+        last_message:    text.trim(),
+      })
       .eq("id", conversation.id);
 
     setSending(false);
@@ -116,16 +124,27 @@ export function useOwnerChats(restaurantId) {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading]             = useState(true);
   const [unreadCount, setUnreadCount]     = useState(0);
+  const channelRef    = useRef(null);
+  const subscribedRef = useRef(false);
 
   useEffect(() => {
     if (!restaurantId) return;
+    if (subscribedRef.current) return;
+    subscribedRef.current = true;
+
     fetchConversations();
 
-    const channel = supabase
-      .channel(`owner-chats-${restaurantId}`)
+    // Build all listeners BEFORE .subscribe()
+    channelRef.current = supabase
+      .channel(`owner-chats-${restaurantId}-${Date.now()}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "conversations", filter: `restaurant_id=eq.${restaurantId}` },
+        {
+          event:  "*",
+          schema: "public",
+          table:  "conversations",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
         () => fetchConversations()
       )
       .on(
@@ -133,9 +152,19 @@ export function useOwnerChats(restaurantId) {
         { event: "INSERT", schema: "public", table: "messages" },
         () => fetchConversations()
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.warn("Owner chats channel error");
+        }
+      });
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      subscribedRef.current = false;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, [restaurantId]);
 
   async function fetchConversations() {
@@ -150,7 +179,6 @@ export function useOwnerChats(restaurantId) {
 
     setConversations(data || []);
 
-    // Count unread messages sent by customers
     const { count } = await supabase
       .from("messages")
       .select("*", { count: "exact", head: true })
@@ -167,23 +195,41 @@ export function useOwnerChats(restaurantId) {
 
 // ── Unread count for customer (badge on chat button) ─────────
 export function useUnreadCount(userId) {
-  const [count, setCount] = useState(0);
+  const [count, setCount]   = useState(0);
+  const channelRef          = useRef(null);
+  const subscribedRef       = useRef(false);
 
   useEffect(() => {
     if (!userId) return;
+    if (subscribedRef.current) return;
+    subscribedRef.current = true;
+
     fetchCount();
 
-    const channel = supabase
-      .channel(`unread-${userId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => fetchCount())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, () => fetchCount())
+    channelRef.current = supabase
+      .channel(`unread-${userId}-${Date.now()}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        () => fetchCount()
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        () => fetchCount()
+      )
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      subscribedRef.current = false;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, [userId]);
 
   async function fetchCount() {
-    // Get conversations where user is the customer
     const { data: convs } = await supabase
       .from("conversations")
       .select("id")
