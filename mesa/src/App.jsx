@@ -22,6 +22,8 @@ import { useProfile }                         from "./hooks/useProfile";
 import { supabase } from "./lib/supabase";
 import { useReviews }                         from "./hooks/useReviews";
 import { useRegistration }                    from "./hooks/useRegistration";
+import { useChat, useOwnerChats, useUnreadCount } from "./hooks/useChat";
+import { usePushNotifications } from "./hooks/usePushNotifications";
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -455,6 +457,226 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
   );
 }
 
+
+// ════════════════════════════════════════════════════════════
+//  CHAT SCREEN — Customer ↔ Restaurant
+// ════════════════════════════════════════════════════════════
+function ChatScreen({ user, restaurant, onClose }) {
+  const { messages, loading, sending, sendMessage } = useChat({
+    userId: user?.id,
+    restaurantId: restaurant?.id,
+  });
+  const [text, setText] = useState("");
+  const bottomRef       = useRef();
+  const inputRef        = useRef();
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  async function handleSend() {
+    if (!text.trim() || sending) return;
+    const msg = text;
+    setText("");
+    await sendMessage(msg);
+  }
+
+  function handleKey(e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 300, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      {/* Header */}
+      <div style={{ background: `linear-gradient(135deg, ${restaurant.bg_from || CORAL}, ${restaurant.bg_to || "#FF8C6B"})`, padding: "max(env(safe-area-inset-top), 52px) 16px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+        <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>←</button>
+        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.4)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+          {restaurant.logo_url ? <img src={restaurant.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : restaurant.icon}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{restaurant.name}</div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)" }}>{restaurant.is_open ? "Open now" : "Closed"}</div>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 10, background: "#F7F5F2" }}>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "40px 0", color: "#B0B0B0", fontSize: 13 }}>Loading...</div>
+        ) : messages.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px 20px" }}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>💬</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 4 }}>Start a conversation</div>
+            <div style={{ fontSize: 12, color: "#B0B0B0", lineHeight: 1.6 }}>Ask about the menu, availability, or anything else</div>
+          </div>
+        ) : messages.map((msg, i) => {
+          const isMine = msg.sender_id === user?.id;
+          const showTime = i === 0 || new Date(msg.created_at) - new Date(messages[i-1].created_at) > 300000;
+          return (
+            <div key={msg.id}>
+              {showTime && (
+                <div style={{ textAlign: "center", fontSize: 10, color: "#C0C0C0", margin: "4px 0 8px", fontWeight: 600 }}>
+                  {new Date(msg.created_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
+                <div style={{
+                  maxWidth: "78%", padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                  background: isMine ? CORAL : "#fff",
+                  color: isMine ? "#fff" : DARK,
+                  fontSize: 14, lineHeight: 1.5, fontWeight: 500,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                }}>
+                  {msg.text}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div style={{ padding: "12px 14px", paddingBottom: "calc(12px + env(safe-area-inset-bottom))", background: "#fff", borderTop: "1px solid #F0EDE8", display: "flex", gap: 10, alignItems: "flex-end" }}>
+        <textarea
+          ref={inputRef}
+          value={text}
+          onChange={e => setText(e.target.value.slice(0, 500))}
+          onKeyDown={handleKey}
+          placeholder="Type a message..."
+          rows={1}
+          style={{ flex: 1, border: "1.5px solid #EBEBEB", borderRadius: 20, padding: "10px 14px", fontSize: 14, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", outline: "none", resize: "none", lineHeight: 1.5, maxHeight: 100, overflowY: "auto", background: "#F7F5F2" }}
+        />
+        <button onClick={handleSend} disabled={!text.trim() || sending}
+          style={{ width: 42, height: 42, borderRadius: "50%", background: text.trim() ? CORAL : "#E0E0E0", border: "none", cursor: text.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M22 2L11 13" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Owner Chat List — shows all customer conversations ──
+function OwnerChatList({ restaurantId, ownerId, onSelectChat, onClose }) {
+  const { conversations, loading } = useOwnerChats(restaurantId);
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 300, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div style={{ background: CORAL, padding: "max(env(safe-area-inset-top), 52px) 20px 18px", display: "flex", alignItems: "center", gap: 12 }}>
+        <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+        <div style={{ fontSize: 17, fontWeight: 800, color: "#fff" }}>Customer Messages</div>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", background: "#F7F5F2" }}>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "40px", color: "#B0B0B0" }}>Loading...</div>
+        ) : conversations.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 20px" }}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>💬</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>No messages yet</div>
+            <div style={{ fontSize: 12, color: "#B0B0B0", marginTop: 4 }}>Customers can message you from your restaurant page</div>
+          </div>
+        ) : conversations.map(conv => (
+          <div key={conv.id} onClick={() => onSelectChat(conv)}
+            style={{ background: "#fff", borderBottom: "1px solid #F0EDE8", padding: "14px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 46, height: 46, borderRadius: "50%", background: `linear-gradient(135deg, ${CORAL}, #FF8C6B)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+              {conv.profiles?.full_name?.[0]?.toUpperCase() || "?"}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 2 }}>{conv.profiles?.full_name || "Customer"}</div>
+              <div style={{ fontSize: 12, color: "#888", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{conv.last_message || "No messages yet"}</div>
+            </div>
+            {conv.last_message_at && (
+              <div style={{ fontSize: 10, color: "#C0C0C0", flexShrink: 0 }}>
+                {timeAgo(conv.last_message_at)}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+// ── PaymentSettingsCard — restaurant payment method toggles ──
+function PaymentSettingsCard({ ownerR, togglePaymentMethod }) {
+  const [localOnline, setLocalOnline] = React.useState(ownerR?.accepts_online !== false);
+  const [localCash,   setLocalCash]   = React.useState(ownerR?.accepts_cash   !== false);
+
+  React.useEffect(() => {
+    setLocalOnline(ownerR?.accepts_online !== false);
+    setLocalCash(ownerR?.accepts_cash !== false);
+  }, [ownerR?.accepts_online, ownerR?.accepts_cash]);
+
+  async function toggle(method, current, setLocal) {
+    setLocal(v => !v); // optimistic
+    await togglePaymentMethod(method, current);
+  }
+
+  const methods = [
+    {
+      key:     "accepts_online",
+      local:   localOnline,
+      setLocal: setLocalOnline,
+      icon:    "💳",
+      label:   "Online payment",
+      sub:     "Customers pay with card via Paystack",
+      color:   "#2563EB",
+      bg:      "#EFF6FF",
+    },
+    {
+      key:     "accepts_cash",
+      local:   localCash,
+      setLocal: setLocalCash,
+      icon:    "💵",
+      label:   "Cash payment",
+      sub:     "Pay on pickup or delivery",
+      color:   "#16A34A",
+      bg:      "#F0FDF4",
+    },
+  ];
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: "16px 18px", marginBottom: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 14 }}>Payment Methods</div>
+      {methods.map(m => (
+        <div key={m.key} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 0", borderBottom: "1px solid #F7F5F2" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: m.local ? m.bg : "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, transition: "background 0.2s", flexShrink: 0 }}>
+            {m.icon}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: m.local ? "#1C1C1E" : "#C0C0C0", marginBottom: 2, transition: "color 0.2s" }}>{m.label}</div>
+            <div style={{ fontSize: 11, color: "#B0B0B0" }}>{m.sub}</div>
+          </div>
+          <div
+            onClick={() => toggle(m.key, m.local, m.setLocal)}
+            style={{
+              width: 48, height: 26, borderRadius: 13, flexShrink: 0,
+              background: m.local ? "#16A34A" : "#E0E0E0",
+              position: "relative", cursor: "pointer", transition: "background 0.25s",
+            }}
+          >
+            <div style={{
+              position: "absolute", top: 3,
+              left: m.local ? 24 : 3,
+              width: 20, height: 20, borderRadius: "50%",
+              background: "#fff", transition: "left 0.25s",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+            }} />
+          </div>
+        </div>
+      ))}
+      {!localOnline && !localCash && (
+        <div style={{ fontSize: 11, color: "#DC2626", fontWeight: 600, marginTop: 10, padding: "8px 10px", background: "#FEF2F2", borderRadius: 10 }}>
+          ⚠️ At least one payment method must be enabled
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BottomNav({ tab, setTab, cartCount }) {
   const items = [
     { id: "home",   label: "Home",   SVG: HomeSVG   },
@@ -500,6 +722,9 @@ export default function App() {
   const { orders: customerOrders, refetch: refetchOrders } = useOrders(user?.id);
   const { reviewedOrderIds, submitReview }   = useReviews(user?.id);
   const { application, submitting: regSub, error: regErr, submitApplication } = useRegistration(user?.id);
+  const chatUnread = useUnreadCount(user?.id);
+  usePushNotifications(user?.id); // request permission + save FCM token
+  const { unreadCount: ownerUnread } = useOwnerChats(isOwner ? ownerR?.id : null);
 
   const [appState, setAppState]       = useState("splash");
   const [authMode, setAuthMode]       = useState(null);
@@ -526,6 +751,9 @@ export default function App() {
   // Confirm "clear cart?" when switching restaurant
   const [pendingItem, setPendingItem] = useState(null); // { menuItem, restaurant }
   const [showAddItem, setShowAddItem]   = useState(false);
+  const [activeChat, setActiveChat]     = useState(null); // restaurant object for customer chat
+  const [showOwnerChats, setShowOwnerChats] = useState(false);
+  const [ownerChatTarget, setOwnerChatTarget] = useState(null); // conv for owner reply
 
   useEffect(() => {
     if (appState !== "splash") return;
@@ -541,6 +769,9 @@ export default function App() {
       if (activeStoryGroup)   { setActiveStoryGroup(null);history.pushState(null, ""); return; }
       if (reviewTarget)       { setReviewTarget(null);    history.pushState(null, ""); return; }
       if (showReservation)    { setShowReservation(null); history.pushState(null, ""); return; }
+      if (activeChat)         { setActiveChat(null);      history.pushState(null, ""); return; }
+      if (showOwnerChats)     { setShowOwnerChats(false); history.pushState(null, ""); return; }
+      if (ownerChatTarget)    { setOwnerChatTarget(null); history.pushState(null, ""); return; }
       if (pendingItem)        { setPendingItem(null);     history.pushState(null, ""); return; }
       if (tab === "detail")   { setTab("home");           history.pushState(null, ""); return; }
       if (tab === "cart")     { setTab("home");           history.pushState(null, ""); return; }
@@ -549,12 +780,12 @@ export default function App() {
     history.pushState(null, "");
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [tab, showProfile, showRegister, activeStoryGroup, reviewTarget, showReservation, pendingItem]);
+  }, [tab, showProfile, showRegister, activeStoryGroup, reviewTarget, showReservation, pendingItem, activeChat, showOwnerChats, ownerChatTarget]);
 
   const selected  = restaurants.find(r => r.id === selectedId);
   const ownerR    = restaurants.find(r => r.id === ownerRId) || restaurants.find(r => r.owner_id === user?.id);
   const openCount = restaurants.filter(r => r.is_open).length;
-  const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, saving } = useOwnerRestaurant(ownerR?.id);
+  const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, saving, togglePaymentMethod } = useOwnerRestaurant(ownerR?.id);
   const { orders: incomingOrders, fetchOrders: fetchIncoming, updateStatus } = useIncomingOrders(ownerR?.id);
 
   const filtered = restaurants.filter(r => {
@@ -586,6 +817,28 @@ export default function App() {
     if (id === "store" && isOwner) fetchIncoming();
     if (id === "orders") refetchOrders();
     setTab(id);
+  }
+
+  // ── Reorder — repopulate cart from a past order ──────────
+  function handleReorder(order) {
+    if (!order?.order_items?.length) return;
+    const restaurant = order.restaurants;
+    if (!restaurant) return;
+
+    if (cart.restaurantId && cart.restaurantId !== restaurant.id) {
+      // Different restaurant — would need to clear cart
+      // Set pendingReorder so the existing clear-cart dialog handles it
+      cart.clearCart();
+    }
+
+    order.order_items.forEach(item => {
+      // Reconstruct a minimal menuItem shape from the order snapshot
+      const menuItem = { id: item.menu_item_id || item.id, name: item.name, price: item.price };
+      for (let i = 0; i < item.quantity; i++) {
+        cart.addItem(menuItem, restaurant);
+      }
+    });
+    setTab("cart");
   }
 
   async function submitPost() {
@@ -755,6 +1008,34 @@ export default function App() {
           />
         )}
 
+        {/* ── Customer chat overlay ── */}
+        {activeChat && user && (
+          <ChatScreen
+            user={user}
+            restaurant={activeChat}
+            onClose={() => setActiveChat(null)}
+          />
+        )}
+
+        {/* ── Owner chat list overlay ── */}
+        {showOwnerChats && ownerR && (
+          <OwnerChatList
+            restaurantId={ownerR.id}
+            ownerId={user?.id}
+            onSelectChat={(conv) => { setOwnerChatTarget(conv); setShowOwnerChats(false); }}
+            onClose={() => setShowOwnerChats(false)}
+          />
+        )}
+
+        {/* ── Owner reply to specific customer ── */}
+        {ownerChatTarget && ownerR && (
+          <ChatScreen
+            user={user}
+            restaurant={ownerR}
+            onClose={() => setOwnerChatTarget(null)}
+          />
+        )}
+
         {/* ── Story viewer overlay ── */}
         {activeStoryGroup && <StoryViewer group={activeStoryGroup} onClose={() => setActiveStoryGroup(null)} onViewed={markViewed} />}
 
@@ -766,6 +1047,8 @@ export default function App() {
             onClose={() => setTab("home")}
             onSignIn={() => setAuthMode("login")}
             onOrderPlaced={() => { refetchOrders(); setTab("orders"); }}
+            acceptsOnline={(() => { const r = restaurants.find(r => r.id === cart.restaurantId); return r?.accepts_online !== false; })()}
+            acceptsCash={(() => { const r = restaurants.find(r => r.id === cart.restaurantId); return r?.accepts_cash !== false; })()}
           />
         )}
 
@@ -963,6 +1246,10 @@ export default function App() {
                   style={{ flex: 1, padding: "12px", background: "#FFF0ED", color: CORAL, border: "1.5px solid #FFD0C0", borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
                   📅 Reserve a table
                 </button>
+                <button onClick={() => user ? setActiveChat(selected) : setAuthMode("login")}
+                  style={{ padding: "12px 16px", background: "#EFF6FF", color: "#2563EB", border: "1.5px solid #BFDBFE", borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                  💬 Chat
+                </button>
                 {cart.restaurantId === selected.id && cart.totalItems > 0 && (
                   <button onClick={() => setTab("cart")}
                     style={{ padding: "12px 16px", background: CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
@@ -1119,6 +1406,13 @@ export default function App() {
                   <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 3 }}>{ownerR.name}</div>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)" }}>Manage your presence on Chowli</div>
                 </div>
+                {/* Messages button */}
+                <button onClick={() => setShowOwnerChats(true)}
+                  style={{ position: "relative", width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                  💬
+                  {ownerUnread > 0 && <div style={{ position: "absolute", top: -2, right: -2, width: 16, height: 16, borderRadius: "50%", background: "#DC2626", border: "2px solid #fff", fontSize: 9, fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>{ownerUnread > 9 ? "9+" : ownerUnread}</div>}
+                </button>
+
                 {/* Open/closed toggle inline */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
                   <Toggle checked={ownerR.is_open} onChange={() => toggleOpen(ownerR.is_open)} />
@@ -1147,6 +1441,9 @@ export default function App() {
                   ))}
                 </div>
               ); })()}
+
+              {/* ── Payment method settings ── */}
+              <PaymentSettingsCard ownerR={ownerR} togglePaymentMethod={togglePaymentMethod} />
 
               {/* ── Incoming orders ── */}
               {incomingOrders.length > 0 && (
@@ -1247,7 +1544,7 @@ export default function App() {
         {/* ══════════ ORDERS ══════════ */}
         {tab === "orders" && (
           user
-            ? <OrdersPage user={user} onBrowse={() => setTab("home")} onReview={(order) => setReviewTarget(order)} reviewedOrderIds={reviewedOrderIds} />
+            ? <OrdersPage user={user} onBrowse={() => setTab("home")} onReview={(order) => setReviewTarget(order)} reviewedOrderIds={reviewedOrderIds} onReorder={handleReorder} />
             : (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", padding: "0 32px", textAlign: "center" }}>
                 <div style={{ fontSize: 56, marginBottom: 16 }}>🧾</div>

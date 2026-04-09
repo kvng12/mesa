@@ -172,6 +172,16 @@ export function useOwnerRestaurant(restaurantId) {
     return { url, error: null };
   }
 
+  // ── Toggle which payment methods the restaurant accepts ──────
+  async function togglePaymentMethod(method, currentValue) {
+    // method: "accepts_online" | "accepts_cash"
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ [method]: !currentValue })
+      .eq("id", restaurantId);
+    return { error };
+  }
+
   async function createPost({ postType, text }) {
     setSaving(true);
     const { data, error } = await supabase
@@ -183,5 +193,5 @@ export function useOwnerRestaurant(restaurantId) {
     return { data, error };
   }
 
-  return { saving, toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost };
+  return { saving, toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, togglePaymentMethod };
 }
