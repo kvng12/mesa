@@ -724,7 +724,6 @@ export default function App() {
   const { application, submitting: regSub, error: regErr, submitApplication } = useRegistration(user?.id);
   const chatUnread = useUnreadCount(user?.id);
   usePushNotifications(user?.id); // request permission + save FCM token
-  const { unreadCount: ownerUnread } = useOwnerChats(isOwner ? ownerR?.id : null);
 
   const [appState, setAppState]       = useState("splash");
   const [authMode, setAuthMode]       = useState(null);
@@ -786,6 +785,7 @@ export default function App() {
   const ownerR    = restaurants.find(r => r.id === ownerRId) || restaurants.find(r => r.owner_id === user?.id);
   const openCount = restaurants.filter(r => r.is_open).length;
   const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, saving, togglePaymentMethod } = useOwnerRestaurant(ownerR?.id);
+  const { unreadCount: ownerUnread } = useOwnerChats(ownerR?.id || null);
   const { orders: incomingOrders, fetchOrders: fetchIncoming, updateStatus } = useIncomingOrders(ownerR?.id);
 
   const filtered = restaurants.filter(r => {
