@@ -6,12 +6,12 @@ importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-com
 
 // Replace with your Firebase config values
 firebase.initializeApp({
-  apiKey:            self.FIREBASE_API_KEY            || "YOUR_API_KEY",
-  authDomain:        self.FIREBASE_AUTH_DOMAIN        || "YOUR_PROJECT.firebaseapp.com",
-  projectId:         self.FIREBASE_PROJECT_ID         || "YOUR_PROJECT_ID",
-  storageBucket:     self.FIREBASE_STORAGE_BUCKET     || "YOUR_PROJECT.appspot.com",
-  messagingSenderId: self.FIREBASE_MESSAGING_SENDER_ID || "YOUR_SENDER_ID",
-  appId:             self.FIREBASE_APP_ID             || "YOUR_APP_ID",
+  apiKey: "AIzaSyAtFv7xwXR8UYSdmCeR0vJZvCbwMCO-fXo",
+  authDomain: "chowli.firebaseapp.com",
+  projectId: "chowli",
+  storageBucket: "chowli.firebasestorage.app",
+  messagingSenderId: "299109164372",
+  appId: "1:299109164372:web:e8013ba62a4ad4fba794c1",
 });
 
 const messaging = firebase.messaging();
