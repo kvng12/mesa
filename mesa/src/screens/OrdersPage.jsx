@@ -79,7 +79,7 @@ function StatusProgress({ status }) {
 }
 
 // ── Single order card ─────────────────────────────────────────
-function OrderCard({ order, onReview, reviewedOrderIds }) {
+function OrderCard({ order, onReview, reviewedOrderIds, onReorder }) {
   const r  = order.restaurants;
   const sc = STATUS[order.status] || STATUS.pending;
   const items = order.order_items || [];
@@ -203,7 +203,22 @@ function OrderCard({ order, onReview, reviewedOrderIds }) {
             ✓ Reviewed — thank you!
           </div>
         )}
-        {/* Future: reorder button, tracking link, payment receipt — Stage 3 */}
+        {/* Reorder button — completed orders only */}
+        {order.status === "completed" && onReorder && (
+          <button
+            onClick={() => onReorder(order)}
+            style={{
+              width: "100%", marginTop: 10, padding: "11px",
+              background: "#F7F5F2", color: DARK,
+              border: "1.5px solid #EBEBEB", borderRadius: 12,
+              fontSize: 12, fontWeight: 800, cursor: "pointer",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+          >
+            🔄 Reorder
+          </button>
+        )}
       </div>
     </div>
   );
@@ -258,7 +273,7 @@ function Skeleton() {
 // ════════════════════════════════════════════════════════════
 //  ORDERS PAGE
 // ════════════════════════════════════════════════════════════
-export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds = new Set() }) {
+export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds = new Set(), onReorder }) {
   const { orders, loading, error, refetch } = useOrders(user?.id);
 
   // Group orders into active (non-final) and past (completed/cancelled)
@@ -318,7 +333,7 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
           <div style={{ fontSize: 12, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>
             Active · {activeOrders.length}
           </div>
-          {activeOrders.map(order => <OrderCard key={order.id} order={order} onReview={onReview} reviewedOrderIds={reviewedOrderIds} />)}
+          {activeOrders.map(order => <OrderCard key={order.id} order={order} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} />)}
         </div>
       )}
 
@@ -328,7 +343,7 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
           <div style={{ fontSize: 12, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>
             Past orders · {pastOrders.length}
           </div>
-          {pastOrders.map(order => <OrderCard key={order.id} order={order} onReview={onReview} reviewedOrderIds={reviewedOrderIds} />)}
+          {pastOrders.map(order => <OrderCard key={order.id} order={order} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} />)}
         </div>
       )}
 

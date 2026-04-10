@@ -1,6 +1,5 @@
 // src/App.jsx — Chowli Food Marketplace
 
-import React from "react";
 import { useState, useEffect, useRef } from "react";
 import { useAuth }                            from "./hooks/useAuth";
 import { useRestaurants, useOwnerRestaurant } from "./hooks/useRestaurants";
@@ -24,6 +23,7 @@ import { supabase } from "./lib/supabase";
 import { useReviews }                         from "./hooks/useReviews";
 import { useRegistration }                    from "./hooks/useRegistration";
 import { useChat, useOwnerChats, useUnreadCount } from "./hooks/useChat";
+import AnalyticsScreen from "./screens/AnalyticsScreen";
 import { usePushNotifications } from "./hooks/usePushNotifications";
 
 const CORAL = "#FF6240";
@@ -678,6 +678,59 @@ function PaymentSettingsCard({ ownerR, togglePaymentMethod }) {
   );
 }
 
+
+// ── Offline / slow connection detection ──────────────────────
+function useOnlineStatus() {
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const on  = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online",  on);
+    window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+  }, []);
+  return online;
+}
+
+function OfflineBanner() {
+  return (
+    <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: "#1C1C1E", color: "#fff", fontSize: 12, fontWeight: 700, textAlign: "center", padding: "10px 16px", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <span>📡</span> No internet connection — showing cached data
+    </div>
+  );
+}
+
+// ── Skeleton cards for home loading state ─────────────────────
+function VCardSkeleton() {
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, padding: 14, display: "flex", gap: 14, border: "1px solid #F0EDE8" }}>
+      <div className="skeleton" style={{ width: 80, height: 80, borderRadius: 16, flexShrink: 0 }} />
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, paddingTop: 4 }}>
+        <div className="skeleton" style={{ height: 14, width: "70%", borderRadius: 6 }} />
+        <div className="skeleton" style={{ height: 10, width: "40%", borderRadius: 6 }} />
+        <div className="skeleton" style={{ height: 10, width: "90%", borderRadius: 6 }} />
+        <div style={{ display: "flex", gap: 6 }}>
+          <div className="skeleton" style={{ height: 18, width: 50, borderRadius: 10 }} />
+          <div className="skeleton" style={{ height: 18, width: 60, borderRadius: 10 }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HCardSkeleton() {
+  return (
+    <div style={{ flexShrink: 0, width: 190, background: "#fff", borderRadius: 20, overflow: "hidden", border: "1px solid #F0EDE8" }}>
+      <div className="skeleton" style={{ width: "100%", height: 120, borderRadius: 0 }} />
+      <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+        <div className="skeleton" style={{ height: 13, width: "80%", borderRadius: 6 }} />
+        <div className="skeleton" style={{ height: 10, width: "50%", borderRadius: 6 }} />
+        <div className="skeleton" style={{ height: 10, width: "60%", borderRadius: 6 }} />
+      </div>
+    </div>
+  );
+}
+
 function BottomNav({ tab, setTab, cartCount }) {
   const items = [
     { id: "home",   label: "Home",   SVG: HomeSVG   },
@@ -724,6 +777,7 @@ export default function App() {
   const { reviewedOrderIds, submitReview }   = useReviews(user?.id);
   const { application, submitting: regSub, error: regErr, submitApplication } = useRegistration(user?.id);
   const chatUnread = useUnreadCount(user?.id);
+  const isOnline   = useOnlineStatus();
   usePushNotifications(user?.id); // request permission + save FCM token
 
   const [appState, setAppState]       = useState("splash");
@@ -751,6 +805,7 @@ export default function App() {
   // Confirm "clear cart?" when switching restaurant
   const [pendingItem, setPendingItem] = useState(null); // { menuItem, restaurant }
   const [showAddItem, setShowAddItem]   = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [activeChat, setActiveChat]     = useState(null); // restaurant object for customer chat
   const [showOwnerChats, setShowOwnerChats] = useState(false);
   const [ownerChatTarget, setOwnerChatTarget] = useState(null); // conv for owner reply
@@ -769,6 +824,7 @@ export default function App() {
       if (activeStoryGroup)   { setActiveStoryGroup(null);history.pushState(null, ""); return; }
       if (reviewTarget)       { setReviewTarget(null);    history.pushState(null, ""); return; }
       if (showReservation)    { setShowReservation(null); history.pushState(null, ""); return; }
+      if (showAnalytics)      { setShowAnalytics(false);  history.pushState(null, ""); return; }
       if (activeChat)         { setActiveChat(null);      history.pushState(null, ""); return; }
       if (showOwnerChats)     { setShowOwnerChats(false); history.pushState(null, ""); return; }
       if (ownerChatTarget)    { setOwnerChatTarget(null); history.pushState(null, ""); return; }
@@ -780,7 +836,7 @@ export default function App() {
     history.pushState(null, "");
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [tab, showProfile, showRegister, activeStoryGroup, reviewTarget, showReservation, pendingItem, activeChat, showOwnerChats, ownerChatTarget]);
+  }, [tab, showProfile, showRegister, activeStoryGroup, reviewTarget, showReservation, pendingItem, activeChat, showOwnerChats, ownerChatTarget, showAnalytics]);
 
   const selected  = restaurants.find(r => r.id === selectedId);
   const ownerR    = restaurants.find(r => r.id === ownerRId) || restaurants.find(r => r.owner_id === user?.id);
@@ -893,7 +949,7 @@ export default function App() {
   );
   if (authMode === "forgot") return authWrap(<ForgotScreen signInWithMagicLink={signInWithMagicLink} onBack={() => setAuthMode("login")} />);
 
-  if (authLoading || restLoading) return (
+  if (authLoading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: BG, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <div style={{ textAlign: "center" }}><div style={{ fontSize: 36, marginBottom: 12, animation: "floatUp 1.4s ease-in-out infinite" }}>🍗</div><div style={{ fontSize: 14, color: "#888", fontWeight: 600 }}>Loading Chowli...</div></div>
     </div>
@@ -912,6 +968,10 @@ export default function App() {
         .story-row { display: flex; gap: 14px; padding: 18px 20px 4px; overflow-x: auto; scrollbar-width: none; }
         .story-row::-webkit-scrollbar { display: none; }
         input, textarea, button { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        /* ── Skeleton shimmer ── */
+        @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+        .skeleton { background: linear-gradient(90deg, #F0EDE8 25%, #E8E4DF 50%, #F0EDE8 75%); background-size: 400px 100%; animation: shimmer 1.4s ease-in-out infinite; border-radius: 8px; }
 
         /* ── Animations ── */
         @keyframes floatUp { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
@@ -970,6 +1030,7 @@ export default function App() {
       `}</style>
 
       <div className="mesa">
+        {!isOnline && <OfflineBanner />}
 
         {/* ── Profile overlay ── */}
         {showProfile && (
@@ -997,6 +1058,15 @@ export default function App() {
             order={reviewTarget}
             onClose={() => setReviewTarget(null)}
             onSubmit={submitReview}
+          />
+        )}
+
+        {/* ── Analytics overlay ── */}
+        {showAnalytics && ownerR && (
+          <AnalyticsScreen
+            restaurantId={ownerR.id}
+            restaurantName={ownerR.name}
+            onClose={() => setShowAnalytics(false)}
           />
         )}
 
@@ -1158,22 +1228,27 @@ export default function App() {
               <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Open Now</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: CORAL }}>{openNow.length} spots</span>
             </div>
-            <div className="marquee-outer">
-              <div className="marquee-track">
-                {/* First set */}
-                {openNow.map(r => <HCard key={r.id + "-a"} r={r} onClick={() => goDetail(r.id)} />)}
-                {/* Duplicate for seamless loop */}
-                {openNow.map(r => <HCard key={r.id + "-b"} r={r} onClick={() => goDetail(r.id)} />)}
-              </div>
-            </div>
+            {restLoading
+              ? <div className="hscroll">{[1,2,3].map(i => <HCardSkeleton key={i} />)}</div>
+              : <div className="marquee-outer">
+                  <div className="marquee-track">
+                    {openNow.map(r => <HCard key={r.id + "-a"} r={r} onClick={() => goDetail(r.id)} />)}
+                    {openNow.map(r => <HCard key={r.id + "-b"} r={r} onClick={() => goDetail(r.id)} />)}
+                  </div>
+                </div>
+            }
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 12px" }}>
               <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>{activeCat === "All" ? "All Restaurants" : activeCat}</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: CORAL }}>{filtered.length} total</span>
             </div>
             <div className="vlist">
-              {filtered.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0" }}><div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div><div style={{ fontSize: 14, color: "#B0B0B0", fontWeight: 600 }}>Nothing found</div></div>
-                : filtered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} />)}
+              {restLoading
+                ? [1,2,3].map(i => <VCardSkeleton key={i} />)
+                : filtered.length === 0
+                  ? <div style={{ textAlign: "center", padding: "40px 0" }}><div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div><div style={{ fontSize: 14, color: "#B0B0B0", fontWeight: 600 }}>Nothing found</div></div>
+                  : filtered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} />)
+              }
             </div>
             <div style={{ height: 12 }} />
           </>
@@ -1407,6 +1482,12 @@ export default function App() {
                   <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 3 }}>{ownerR.name}</div>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)" }}>Manage your presence on Chowli</div>
                 </div>
+                {/* Analytics button */}
+                <button onClick={() => setShowAnalytics(true)}
+                  style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+                  📊
+                </button>
+
                 {/* Messages button */}
                 <button onClick={() => setShowOwnerChats(true)}
                   style={{ position: "relative", width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
