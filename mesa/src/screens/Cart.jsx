@@ -134,29 +134,40 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
     setOrderErr("");
 
     if (effectivePayment === "online") {
-      // Open Paystack popup
-      const handler = window.PaystackPop?.setup({
-        key:    import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-        email:  user.email,
-        amount: cart.subtotal * 100, // kobo
+      if (!window.PaystackPop) {
+        setOrderErr("Paystack is still loading. Please try again in a moment.");
+        setPlacingOrder(false);
+        return;
+      }
+
+      const ref = `chowli-${Date.now()}`;
+
+      // Store order details for use in callback
+      const orderDetails = { fulfillment, address, note, userId: user.id, ref };
+
+      const handler = window.PaystackPop.newTransaction({
+        key:      import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+        email:    user.email,
+        amount:   cart.subtotal * 100,
         currency: "NGN",
-        ref:    `chowli-${Date.now()}`,
-        onClose: () => setPlacingOrder(false),
-        callback: async (response) => {
+        ref,
+        onSuccess: async (response) => {
           const { data, error } = await cart.placeOrder({
-            fulfillment,
-            paymentMethod: "online",
-            deliveryAddress: address,
-            note,
-            userId: user.id,
+            fulfillment:       orderDetails.fulfillment,
+            paymentMethod:     "online",
+            deliveryAddress:   orderDetails.address,
+            note:              orderDetails.note,
+            userId:            orderDetails.userId,
             paystackReference: response.reference,
           });
           setPlacingOrder(false);
           if (error) { setOrderErr(error); return; }
           setOrderSuccess({ orderId: data?.id, method: "online" });
         },
+        onCancel: () => {
+          setPlacingOrder(false);
+        },
       });
-      handler?.openIframe();
     } else {
       // Cash order
       const { data, error } = await cart.placeOrder({
