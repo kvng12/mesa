@@ -66,7 +66,7 @@ export function useCart() {
   const subtotal    = items.reduce((s, i) => s + i.menuItem.price * i.quantity, 0);
 
   // Place the order — inserts into orders + order_items
-  async function placeOrder({ fulfillment, paymentMethod, deliveryAddress, note, userId }) {
+  async function placeOrder({ fulfillment, paymentMethod, deliveryAddress, note, userId, paystackReference }) {
     if (!items.length || !restaurantId || !userId) return { error: "Missing data" };
 
     setSubmitting(true);
@@ -77,12 +77,14 @@ export function useCart() {
       const { data: order, error: orderErr } = await supabase
         .from("orders")
         .insert({
-          customer_id:    userId,
-          restaurant_id:  restaurantId,
+          customer_id:       userId,
+          restaurant_id:     restaurantId,
           fulfillment,
-          payment_method: paymentMethod,
-          delivery_address: fulfillment === "delivery" ? deliveryAddress : null,
-          note: note || null,
+          payment_method:    paymentMethod,
+          payment_status:    paymentMethod === "online" ? "pending" : "cash",
+          delivery_address:  fulfillment === "delivery" ? deliveryAddress : null,
+          note:              note || null,
+          paystack_reference: paystackReference || null,
         })
         .select()
         .single();

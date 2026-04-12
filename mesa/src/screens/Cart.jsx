@@ -1,5 +1,17 @@
 // src/screens/Cart.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+// Load Paystack JS SDK dynamically
+function usePaystack() {
+  useEffect(() => {
+    if (window.PaystackPop) return; // already loaded
+    const script = document.createElement("script");
+    script.src = "https://js.paystack.co/v1/inline.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => document.body.removeChild(script);
+  }, []);
+}
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -91,7 +103,9 @@ export function ReservationScreen({ restaurant, user, onClose, onSignIn, makeRes
 
 // ── Cart Screen ───────────────────────────────────────────────
 export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlaced, acceptsOnline = true, acceptsCash = true }) {
+  usePaystack(); // load Paystack SDK
   const [fulfillment, setFulfillment]   = useState("pickup");
+  const [orderSuccess, setOrderSuccess] = useState(null); // { orderId, method }
   const [paymentMethod, setPaymentMethod] = useState(
     acceptsCash ? "cash" : "online"  // default to cash if available, else online
   );
@@ -129,7 +143,6 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
         ref:    `chowli-${Date.now()}`,
         onClose: () => setPlacingOrder(false),
         callback: async (response) => {
-          // Place order with Paystack reference
           const { data, error } = await cart.placeOrder({
             fulfillment,
             paymentMethod: "online",
@@ -140,7 +153,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
           });
           setPlacingOrder(false);
           if (error) { setOrderErr(error); return; }
-          onOrderPlaced(data);
+          setOrderSuccess({ orderId: data?.id, method: "online" });
         },
       });
       handler?.openIframe();
@@ -155,11 +168,31 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
       });
       setPlacingOrder(false);
       if (error) { setOrderErr(error); return; }
-      onOrderPlaced(data);
+      setOrderSuccess({ orderId: data?.id, method: "cash" });
     }
   }
 
   const subtotal = cart.subtotal;
+
+  // ── Order success screen ──────────────────────────────────
+  if (orderSuccess) return (
+    <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 200, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 32px", textAlign: "center", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div style={{ fontSize: 64, marginBottom: 20, animation: "successPop 0.5s cubic-bezier(.36,.07,.19,.97) both" }}>🎉</div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: DARK, marginBottom: 10 }}>Order placed!</div>
+      <div style={{ fontSize: 14, color: "#888", lineHeight: 1.7, marginBottom: 8 }}>
+        {orderSuccess.method === "online"
+          ? "Your payment was successful. The restaurant has been notified."
+          : "Your order has been sent to the restaurant. Pay when you pick up or receive delivery."}
+      </div>
+      <div style={{ fontSize: 11, color: "#B0B0B0", marginBottom: 32 }}>
+        Order #{orderSuccess.orderId?.slice(0, 8).toUpperCase()}
+      </div>
+      <button onClick={() => onOrderPlaced({ id: orderSuccess.orderId })}
+        style={{ width: "100%", padding: 16, background: CORAL, color: "#fff", border: "none", borderRadius: 16, fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        Track My Order
+      </button>
+    </div>
+  );
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 200, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
