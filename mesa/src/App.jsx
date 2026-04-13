@@ -500,11 +500,16 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
 // ════════════════════════════════════════════════════════════
 //  CHAT SCREEN — Customer ↔ Restaurant
 // ════════════════════════════════════════════════════════════
-function ChatScreen({ user, restaurant, conversationId, onClose }) {
+function ChatScreen({ user, restaurant, conversationId, customerId, onClose }) {
+  // customerId: when owner opens a customer's conversation, this is the customer's user ID.
+  // It is used as userId for the conversation LOOKUP, while user.id stays as the actual sender.
+  const lookupUserId = customerId || user?.id;
+
   const { messages, loading, sending, sendMessage } = useChat({
-    userId:         user?.id,
-    restaurantId:   restaurant?.id,
-    conversationId: conversationId || null,
+    userId:           lookupUserId,
+    restaurantId:     restaurant?.id,
+    conversationId:   conversationId || null,
+    senderIdOverride: user?.id,       // always send as the actual logged-in user
   });
   const [text, setText] = useState("");
   const bottomRef       = useRef();
@@ -1321,6 +1326,7 @@ export default function App() {
                 : "Customer Chat",
             }}
             conversationId={ownerChatTarget.id}
+            customerId={ownerChatTarget.customer_id}
             onClose={() => setOwnerChatTarget(null)}
           />
         )}

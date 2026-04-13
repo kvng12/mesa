@@ -1,18 +1,37 @@
 // src/hooks/useChat.js
 // In-app chat between customers and restaurants.
 
+// ─────────────────────────────────────────────────────────────
+// SQL that must be run once in Supabase before this works:
+//
+//   ALTER TABLE messages ADD COLUMN IF NOT EXISTS read BOOLEAN DEFAULT false;
+//   ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+//   ALTER PUBLICATION supabase_realtime ADD TABLE conversations;
+// ─────────────────────────────────────────────────────────────
+
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
 // ── Single conversation (customer ↔ restaurant) ──────────────
-// Pass conversationId to load an existing conv directly (owner reply flow)
-export function useChat({ userId, restaurantId, conversationId: forcedConvId = null }) {
+// userId       – used to LOOK UP the conversation (customer_id column)
+// restaurantId – used to look up the conversation (restaurant_id column)
+// conversationId – skip lookup, open a specific conversation directly
+// senderIdOverride – who actually sends the message (owner's real user.id)
+export function useChat({
+  userId,
+  restaurantId,
+  conversationId: forcedConvId = null,
+  senderIdOverride = null,
+}) {
   const [messages, setMessages]         = useState([]);
   const [conversation, setConversation] = useState(null);
   const [loading, setLoading]           = useState(true);
   const [sending, setSending]           = useState(false);
   const channelRef    = useRef(null);
   const subscribedRef = useRef(false);
+
+  // The user who actually writes the messages (owner sends as themselves, not as customer)
+  const actualSenderId = senderIdOverride || userId;
 
   useEffect(() => {
     if (!userId) return;
@@ -37,7 +56,7 @@ export function useChat({ userId, restaurantId, conversationId: forcedConvId = n
     let conv = null;
 
     if (forcedConvId) {
-      // Owner opening a specific customer conversation by ID
+      // Direct lookup by conversation ID (owner opening a specific chat)
       const { data } = await supabase
         .from("conversations")
         .select("*")
@@ -45,7 +64,7 @@ export function useChat({ userId, restaurantId, conversationId: forcedConvId = n
         .single();
       conv = data;
     } else {
-      // Customer: find or create conversation with this restaurant
+      // Find conversation by customer_id + restaurant_id, create if missing
       let { data } = await supabase
         .from("conversations")
         .select("*")
@@ -77,7 +96,7 @@ export function useChat({ userId, restaurantId, conversationId: forcedConvId = n
     setMessages(msgs || []);
     setLoading(false);
 
-    await markRead(conv.id, userId);
+    await markRead(conv.id);
 
     channelRef.current = supabase
       .channel(`chat-${conv.id}-${Date.now()}`)
@@ -91,11 +110,10 @@ export function useChat({ userId, restaurantId, conversationId: forcedConvId = n
         },
         (payload) => {
           setMessages(prev => {
-            // Deduplicate by id
             if (prev.find(m => m.id === payload.new.id)) return prev;
             return [...prev, payload.new];
           });
-          markRead(conv.id, userId);
+          markRead(conv.id);
         }
       )
       .subscribe();
@@ -109,7 +127,7 @@ export function useChat({ userId, restaurantId, conversationId: forcedConvId = n
       .from("messages")
       .insert({
         conversation_id: conversation.id,
-        sender_id:       userId,
+        sender_id:       actualSenderId,   // owner sends as themselves
         text:            text.trim(),
       });
 
@@ -127,12 +145,13 @@ export function useChat({ userId, restaurantId, conversationId: forcedConvId = n
     return { error };
   }
 
-  async function markRead(convId, uid) {
+  // Mark all messages in this conversation as read, excluding ones sent by this user
+  async function markRead(convId) {
     await supabase
       .from("messages")
       .update({ read: true })
       .eq("conversation_id", convId)
-      .neq("sender_id", uid)
+      .neq("sender_id", actualSenderId)
       .eq("read", false);
   }
 
@@ -174,7 +193,7 @@ export function useOwnerChats(restaurantId) {
       )
       .subscribe((status) => {
         if (status === "CHANNEL_ERROR") {
-          console.warn("Owner chats channel error");
+          console.warn("Owner chats channel error — check realtime publication");
         }
       });
 
@@ -188,35 +207,25 @@ export function useOwnerChats(restaurantId) {
   }, [restaurantId]);
 
   async function fetchConversations() {
-    // Fetch conversations with customer profile info
-    const { data: convData, error } = await supabase
+    // Use profiles!customer_id join (correct FK reference)
+    const { data, error } = await supabase
       .from("conversations")
-      .select("*")
+      .select(`
+        *,
+        profiles!customer_id(full_name, phone)
+      `)
       .eq("restaurant_id", restaurantId)
       .order("last_message_at", { ascending: false, nullsFirst: false });
 
-    if (error) { setLoading(false); return; }
-    const convs = convData || [];
-
-    // Fetch customer profiles separately to avoid FK name issues
-    const customerIds = [...new Set(convs.map(c => c.customer_id).filter(Boolean))];
-    let profileMap = {};
-    if (customerIds.length > 0) {
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, phone")
-        .in("id", customerIds);
-      (profiles || []).forEach(p => { profileMap[p.id] = p; });
+    if (error) {
+      console.warn("fetchConversations error:", error.message);
+      setLoading(false);
+      return;
     }
 
-    const enriched = convs.map(c => ({
-      ...c,
-      profiles: profileMap[c.customer_id] || null,
-    }));
+    const convs = data || [];
+    setConversations(convs);
 
-    setConversations(enriched);
-
-    // Count unread messages not sent by any customer (i.e., messages awaiting owner's read)
     if (convs.length > 0) {
       const { count } = await supabase
         .from("messages")
