@@ -18,6 +18,7 @@ import ProfilePage                            from "./screens/ProfilePage";
 import ReviewModal                            from "./screens/ReviewModal";
 import RegisterRestaurant                     from "./screens/RegisterRestaurant";
 import AdminPanel                             from "./screens/AdminPanel";
+import FeedScreen                             from "./screens/FeedScreen";
 import { useProfile }                         from "./hooks/useProfile";
 import { supabase } from "./lib/supabase";
 import { useReviews }                         from "./hooks/useReviews";
@@ -48,6 +49,42 @@ function timeAgo(ts) {
   if (d < 3600) return `${Math.floor(d / 60)}m ago`;
   if (d < 86400) return `${Math.floor(d / 3600)}h ago`;
   return `${Math.floor(d / 86400)}d ago`;
+}
+
+function fmt12(time24) {
+  if (!time24) return "";
+  const [h, m] = time24.split(":").map(Number);
+  const suffix = h >= 12 ? "pm" : "am";
+  const h12    = h % 12 || 12;
+  return m === 0 ? `${h12}${suffix}` : `${h12}:${String(m).padStart(2,"0")}${suffix}`;
+}
+
+function getHoursInfo(restaurant) {
+  const hours = restaurant.opening_hours;
+  if (!hours) return null;
+  const DAY_NAMES = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+  const today     = DAY_NAMES[new Date().getDay()];
+  const todayH    = hours[today];
+  if (!todayH?.enabled) return "Closed today";
+  const [openHr,  openMn]  = (todayH.open  || "00:00").split(":").map(Number);
+  const [closeHr, closeMn] = (todayH.close || "23:59").split(":").map(Number);
+  const nowMin   = new Date().getHours() * 60 + new Date().getMinutes();
+  const openMin  = openHr  * 60 + openMn;
+  const closeMin = closeHr * 60 + closeMn;
+  if (nowMin < openMin)  return `Opens at ${fmt12(todayH.open)}`;
+  if (nowMin > closeMin) {
+    // Find next open day
+    for (let i = 1; i <= 7; i++) {
+      const nextDay = DAY_NAMES[(new Date().getDay() + i) % 7];
+      const nextH   = hours[nextDay];
+      if (nextH?.enabled) {
+        const label = i === 1 ? "tomorrow" : nextDay.charAt(0).toUpperCase() + nextDay.slice(1);
+        return `Opens ${label} ${fmt12(nextH.open)}`;
+      }
+    }
+    return "Closed";
+  }
+  return `Closes at ${fmt12(todayH.close)}`;
 }
 function greet() {
   const h = new Date().getHours();
@@ -147,6 +184,7 @@ function VCard({ r, onClick }) {
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: "#888" }}>{r.category}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ color: r.is_open ? "#22C55E" : "#D4CEC8", fontSize: 8 }}>●</span><span style={{ fontSize: 11, fontWeight: 700, color: r.is_open ? "#22C55E" : "#B0B0B0" }}>{r.is_open ? "Open" : "Closed"}</span></span>
+          {(() => { const info = getHoursInfo(r); return info ? <span style={{ fontSize: 10, color: "#B0B0B0", fontWeight: 500 }}>🕐 {info}</span> : null; })()}
         </div>
         <div style={{ fontSize: 12, color: "#B0B0B0", marginBottom: 8, lineHeight: 1.4 }}>{r.description}</div>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
@@ -462,10 +500,11 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
 // ════════════════════════════════════════════════════════════
 //  CHAT SCREEN — Customer ↔ Restaurant
 // ════════════════════════════════════════════════════════════
-function ChatScreen({ user, restaurant, onClose }) {
+function ChatScreen({ user, restaurant, conversationId, onClose }) {
   const { messages, loading, sending, sendMessage } = useChat({
-    userId: user?.id,
-    restaurantId: restaurant?.id,
+    userId:         user?.id,
+    restaurantId:   restaurant?.id,
+    conversationId: conversationId || null,
   });
   const [text, setText] = useState("");
   const bottomRef       = useRef();
@@ -679,6 +718,158 @@ function PaymentSettingsCard({ ownerR, togglePaymentMethod }) {
 }
 
 
+// ── Opening Hours Card ───────────────────────────────────────
+function OpeningHoursCard({ ownerR, updateOpeningHours }) {
+  const DAYS   = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+  const LABELS = { monday:"Mon",tuesday:"Tue",wednesday:"Wed",thursday:"Thu",friday:"Fri",saturday:"Sat",sunday:"Sun" };
+
+  const defaultHours = DAYS.reduce((acc, day) => ({
+    ...acc,
+    [day]: { open: "08:00", close: "22:00", enabled: true },
+  }), {});
+
+  const [hours, setHours] = useState(() => ownerR?.opening_hours || defaultHours);
+  const [saving, setSaving]   = useState(false);
+  const [saved,  setSaved]    = useState(false);
+
+  useEffect(() => {
+    if (ownerR?.opening_hours) setHours(ownerR.opening_hours);
+  }, [ownerR?.id]);
+
+  function update(day, field, value) {
+    setHours(prev => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
+  }
+
+  async function save() {
+    setSaving(true);
+    await updateOpeningHours(hours);
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: "16px 18px", marginBottom: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 14 }}>Opening Hours Schedule</div>
+      {DAYS.map(day => (
+        <div key={day} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid #F7F5F2" }}>
+          <span style={{ width: 30, fontSize: 11, fontWeight: 700, color: hours[day]?.enabled ? DARK : "#C0C0C0", flexShrink: 0 }}>{LABELS[day]}</span>
+          <Toggle checked={hours[day]?.enabled ?? true} onChange={() => update(day, "enabled", !hours[day]?.enabled)} />
+          {hours[day]?.enabled ? (
+            <>
+              <input type="time" value={hours[day]?.open || "08:00"}
+                onChange={e => update(day, "open", e.target.value)}
+                style={{ flex: 1, minWidth: 0, border: "1px solid #EBEBEB", borderRadius: 8, padding: "5px 6px", fontSize: 12, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", background: BG }} />
+              <span style={{ fontSize: 10, color: "#C0C0C0", flexShrink: 0 }}>–</span>
+              <input type="time" value={hours[day]?.close || "22:00"}
+                onChange={e => update(day, "close", e.target.value)}
+                style={{ flex: 1, minWidth: 0, border: "1px solid #EBEBEB", borderRadius: 8, padding: "5px 6px", fontSize: 12, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", background: BG }} />
+            </>
+          ) : (
+            <span style={{ fontSize: 11, color: "#C0C0C0", flex: 1 }}>Closed</span>
+          )}
+        </div>
+      ))}
+      {saved && <div style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, marginTop: 10 }}>✓ Hours saved</div>}
+      <button onClick={save} disabled={saving}
+        style={{ width: "100%", marginTop: 14, padding: "12px", background: CORAL, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", opacity: saving ? 0.6 : 1 }}>
+        {saving ? "Saving..." : "Save Hours"}
+      </button>
+    </div>
+  );
+}
+
+
+// ── Post Media Card (video/photo for TikTok feed) ─────────────
+function PostMediaCard({ ownerR, uploadPostMedia, createPost }) {
+  const [file, setFile]       = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [isVideo, setIsVideo] = useState(false);
+  const [caption, setCaption] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [done, setDone]       = useState(false);
+  const [err, setErr]         = useState("");
+  const fileRef               = useRef();
+
+  function handleFile(e) {
+    const f = e.target.files?.[0]; if (!f) return;
+    setErr(""); setDone(false);
+    const vid = f.type.startsWith("video/");
+    setIsVideo(vid);
+    setFile(f);
+    const reader = new FileReader();
+    reader.onload = ev => setPreview(ev.target.result);
+    reader.readAsDataURL(f);
+
+    // Validate video duration
+    if (vid) {
+      const url = URL.createObjectURL(f);
+      const video = document.createElement("video");
+      video.src = url;
+      video.onloadedmetadata = () => {
+        if (video.duration > 61) {
+          setErr("Video must be 60 seconds or less.");
+          setFile(null); setPreview(null);
+        }
+        URL.revokeObjectURL(url);
+      };
+    }
+  }
+
+  async function submit() {
+    if (!file) return;
+    setUploading(true); setErr("");
+    const { url, isVideo: iv, error: upErr } = await uploadPostMedia(file);
+    if (upErr) { setErr(upErr.message || "Upload failed"); setUploading(false); return; }
+    const { error: postErr } = await createPost({
+      postType:  iv ? "update" : "new",
+      text:      caption.trim(),
+      mediaUrl:  url,
+      mediaType: iv ? "video" : "photo",
+    });
+    if (postErr) { setErr(postErr.message || "Failed to post"); setUploading(false); return; }
+    setFile(null); setPreview(null); setCaption(""); setUploading(false); setDone(true);
+    setTimeout(() => setDone(false), 3000);
+  }
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", overflow: "hidden", marginBottom: 14 }}>
+      <div style={{ padding: "16px 16px 4px", fontSize: 13, fontWeight: 800, color: DARK }}>Post to Feed</div>
+      <div style={{ padding: "4px 16px 14px", fontSize: 11, color: "#888" }}>Share a video (max 60s) or photo · appears in the Chowli feed</div>
+      <div style={{ padding: "0 16px 16px" }}>
+        <input ref={fileRef} type="file" accept="image/*,video/*" capture="environment" onChange={handleFile} style={{ display: "none" }} />
+        {!preview
+          ? <div onClick={() => fileRef.current?.click()} style={{ height: 140, background: BG, borderRadius: 14, border: "1.5px dashed #EBEBEB", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}>
+              <span style={{ fontSize: 28 }}>🎬</span>
+              <span style={{ fontSize: 13, color: "#B0B0B0", fontWeight: 600 }}>Tap to add a video or photo</span>
+            </div>
+          : <div style={{ position: "relative" }}>
+              {isVideo
+                ? <video src={preview} style={{ width: "100%", height: 200, objectFit: "cover", borderRadius: 14, display: "block" }} controls playsInline muted />
+                : <img src={preview} alt="" style={{ width: "100%", height: 200, objectFit: "cover", borderRadius: 14 }} />
+              }
+              <button onClick={() => { setFile(null); setPreview(null); setErr(""); }} style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>✕</button>
+              <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(0,0,0,0.5)", borderRadius: 20, padding: "3px 10px", fontSize: 10, fontWeight: 700, color: "#fff" }}>{isVideo ? "📹 Video" : "📷 Photo"}</div>
+            </div>
+        }
+        {preview && (
+          <textarea value={caption} onChange={e => setCaption(e.target.value.slice(0, 150))} placeholder="Caption (optional)..."
+            style={{ width: "100%", marginTop: 10, border: "none", background: BG, outline: "none", borderRadius: 12, padding: "10px 12px", fontSize: 13, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", resize: "none", minHeight: 54 }} />
+        )}
+        {err  && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginTop: 8 }}>{err}</div>}
+        {done && <div style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, marginTop: 8 }}>✓ Posted to the Chowli feed!</div>}
+        {preview && (
+          <button disabled={uploading} onClick={submit}
+            style={{ width: "100%", marginTop: 12, padding: "13px", background: CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", opacity: uploading ? 0.6 : 1 }}>
+            {uploading ? "Uploading..." : "Post to Feed"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 // ── Offline / slow connection detection ──────────────────────
 function useOnlineStatus() {
   const [online, setOnline] = useState(navigator.onLine);
@@ -769,7 +960,7 @@ const OrdersSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24
 export default function App() {
   const { user, profile, loading: authLoading, isOwner, isAdmin, signUp, signIn, signInWithMagicLink, signOut } = useAuth();
   const { restaurants, loading: restLoading } = useRestaurants();
-  const { posts, likedIds, toggleLike }       = useFeed(user?.id);
+  const { posts, likedIds, toggleLike, loading: feedLoading, loadingMore, hasMore, fetchMore, fetchComments, addComment } = useFeed(user?.id);
   const { grouped: storyGroups, markViewed }  = useStories(user?.id);
   const cart                                  = useCart();
   const { makeReservation, submitting: resSub, error: resErr } = useReservations(user?.id);
@@ -841,14 +1032,33 @@ export default function App() {
   const selected  = restaurants.find(r => r.id === selectedId);
   const ownerR    = restaurants.find(r => r.id === ownerRId) || restaurants.find(r => r.owner_id === user?.id);
   const openCount = restaurants.filter(r => r.is_open).length;
-  const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, saving, togglePaymentMethod } = useOwnerRestaurant(ownerR?.id);
+  const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, saving, togglePaymentMethod, updateOpeningHours, uploadPostMedia } = useOwnerRestaurant(ownerR?.id);
   const { unreadCount: ownerUnread } = useOwnerChats(ownerR?.id || null);
   const { orders: incomingOrders, fetchOrders: fetchIncoming, updateStatus } = useIncomingOrders(ownerR?.id);
 
+  function getMatchedMenuItems(r) {
+    if (!search) return [];
+    const s = search.toLowerCase();
+    const matched = [];
+    (r.menu_categories || []).forEach(cat => {
+      (cat.menu_items || []).forEach(item => {
+        if (item.name.toLowerCase().includes(s)) matched.push(item);
+      });
+    });
+    return matched;
+  }
+
   const filtered = restaurants.filter(r => {
     const mc = activeCat === "All" || r.category === activeCat;
-    const ms = !search || r.name.toLowerCase().includes(search.toLowerCase()) || r.category.toLowerCase().includes(search.toLowerCase());
-    return mc && ms;
+    if (!mc) return false;
+    if (!search) return true;
+    const s = search.toLowerCase();
+    if (r.name.toLowerCase().includes(s)) return true;
+    if (r.category.toLowerCase().includes(s)) return true;
+    // Search through menu item names
+    return (r.menu_categories || []).some(cat =>
+      (cat.menu_items || []).some(item => item.name.toLowerCase().includes(s))
+    );
   });
   const openNow = restaurants.filter(r => r.is_open).slice(0, 4);
 
@@ -981,6 +1191,8 @@ export default function App() {
         @keyframes tabDot { 0%{transform:scale(0)} 60%{transform:scale(1.5)} 100%{transform:scale(1)} }
         @keyframes cartBounce { 0%,100%{transform:translateX(-50%) translateY(0)} 35%{transform:translateX(-50%) translateY(-7px)} 65%{transform:translateX(-50%) translateY(-2px)} }
         @keyframes pulseBadge { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+        @keyframes successPop { 0%{transform:scale(0.4) rotate(-10deg);opacity:0} 60%{transform:scale(1.18) rotate(3deg)} 80%{transform:scale(0.95) rotate(-1deg)} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+        @keyframes confetti { 0%{transform:translateY(0) rotate(0deg);opacity:1} 100%{transform:translateY(60px) rotate(360deg);opacity:0} }
         .vlist > *:nth-child(1){animation:slideInCard 0.32s 0.05s both}
         .vlist > *:nth-child(2){animation:slideInCard 0.32s 0.10s both}
         .vlist > *:nth-child(3){animation:slideInCard 0.32s 0.15s both}
@@ -1102,7 +1314,13 @@ export default function App() {
         {ownerChatTarget && ownerR && (
           <ChatScreen
             user={user}
-            restaurant={ownerR}
+            restaurant={{
+              ...ownerR,
+              name: ownerChatTarget.profiles?.full_name
+                ? `Chat with ${ownerChatTarget.profiles.full_name}`
+                : "Customer Chat",
+            }}
+            conversationId={ownerChatTarget.id}
             onClose={() => setOwnerChatTarget(null)}
           />
         )}
@@ -1268,23 +1486,60 @@ export default function App() {
             <div style={{ display: "flex", gap: 10, padding: "14px 20px 4px", overflowX: "auto", scrollbarWidth: "none" }}>
               {CATS.map(c => <button key={c} onClick={() => setActiveCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, border: "none", background: activeCat === c ? CORAL : "#fff", color: activeCat === c ? "#fff" : "#555", fontWeight: 700, fontSize: 12, cursor: "pointer" }}><span style={{ fontSize: 14 }}>{CAT_ICONS[c]}</span>{c}</button>)}
             </div>
-            <div style={{ padding: "10px 20px 4px", fontSize: 11, fontWeight: 700, color: "#B0B0B0" }}>{filtered.length} result{filtered.length !== 1 ? "s" : ""}</div>
-            <div className="vlist">{filtered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} />)}</div>
+            <div style={{ padding: "10px 20px 4px", fontSize: 11, fontWeight: 700, color: "#B0B0B0" }}>
+              {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+              {search && <span style={{ color: "#C0C0C0" }}> · searching menus too</span>}
+            </div>
+            <div className="vlist">
+              {filtered.map(r => {
+                const matchedItems = getMatchedMenuItems(r);
+                const showItems = matchedItems.length > 0 && search &&
+                  !r.name.toLowerCase().includes(search.toLowerCase()) &&
+                  !r.category.toLowerCase().includes(search.toLowerCase());
+                return (
+                  <div key={r.id}>
+                    <VCard r={r} onClick={() => goDetail(r.id)} />
+                    {showItems && (
+                      <div style={{ marginTop: -6, marginBottom: 4, paddingLeft: 108, paddingRight: 14, display: "flex", gap: 5, flexWrap: "wrap" }}>
+                        {matchedItems.slice(0, 4).map(item => (
+                          <span key={item.id} style={{ fontSize: 10, fontWeight: 700, color: CORAL, background: "#FFF0ED", padding: "3px 8px", borderRadius: 10 }}>
+                            {item.name}
+                          </span>
+                        ))}
+                        {matchedItems.length > 4 && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: "#888", background: "#F5F5F5", padding: "3px 8px", borderRadius: 10 }}>
+                            +{matchedItems.length - 4} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </>
         )}
 
-        {/* ══════════ FEED ══════════ */}
+        {/* ══════════ FEED (TikTok-style) ══════════ */}
         {tab === "feed" && (
-          <>
-            <div style={{ background: "#fff", padding: "max(env(safe-area-inset-top), 52px) 20px 18px", borderBottom: "1px solid #F0EDE8" }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 3 }}>What's Happening 🔥</div>
-              <div style={{ fontSize: 12, color: "#888" }}>Live updates from restaurants near you</div>
-            </div>
-            <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-              {posts.length === 0 ? <div style={{ textAlign: "center", padding: "48px 0" }}><div style={{ fontSize: 32, marginBottom: 10 }}>📭</div><div style={{ fontSize: 14, color: "#B0B0B0", fontWeight: 600 }}>No updates yet</div></div>
-                : posts.map(p => <PostCard key={p.id} post={p} liked={likedIds.has(p.id)} onLike={() => user ? toggleLike(p.id) : setAuthMode("login")} onViewRest={() => goDetail(p.restaurants?.id)} />)}
-            </div>
-          </>
+          <FeedScreen
+            posts={posts}
+            likedIds={likedIds}
+            loading={feedLoading}
+            loadingMore={loadingMore}
+            hasMore={hasMore}
+            toggleLike={toggleLike}
+            fetchMore={fetchMore}
+            fetchComments={fetchComments}
+            addComment={addComment}
+            user={user}
+            onLogin={() => setAuthMode("login")}
+            onNavigateToRestaurant={(id) => { if (id) { goDetail(id); } }}
+            onOrder={(restaurant) => {
+              if (!restaurant) return;
+              goDetail(restaurant.id);
+            }}
+          />
         )}
 
         {/* ══════════ DETAIL ══════════ */}
@@ -1314,7 +1569,8 @@ export default function App() {
               </div>
               <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 6, lineHeight: 1.2 }}>{selected.name}</div>
               <div style={{ fontSize: 13, color: "#888", lineHeight: 1.6, marginBottom: 10 }}>{selected.description}</div>
-              <div style={{ fontSize: 11, color: "#888", marginBottom: 16 }}>📍 {selected.address}</div>
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>📍 {selected.address}</div>
+              {(() => { const info = getHoursInfo(selected); return info ? <div style={{ fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 16 }}>🕐 {info}</div> : <div style={{ marginBottom: 16 }} />; })()}
 
               {/* Action buttons */}
               <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
@@ -1426,13 +1682,41 @@ export default function App() {
 
               {detailTab === "info" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {[{ ico: "📍", label: "Location", val: selected.address }, { ico: "🕐", label: "Status", val: selected.is_open ? "Open Now" : "Closed", color: selected.is_open ? "#16A34A" : "#DC2626" }, { ico: "🚚", label: "Delivery", val: "Contact restaurant directly" }, { ico: "🍽️", label: "Cuisine", val: selected.category }].map(chip => (
+                  {[
+                    { ico: "📍", label: "Location", val: selected.address },
+                    { ico: "🟢", label: "Status", val: selected.is_open ? "Open Now" : "Closed", color: selected.is_open ? "#16A34A" : "#DC2626" },
+                    { ico: "🚚", label: "Delivery", val: "Contact restaurant directly" },
+                    { ico: "🍽️", label: "Cuisine", val: selected.category },
+                  ].map(chip => (
                     <div key={chip.label} style={{ background: BG, borderRadius: 14, padding: 14 }}>
                       <div style={{ fontSize: 18, marginBottom: 4 }}>{chip.ico}</div>
                       <div style={{ fontSize: 10, color: "#888", fontWeight: 600, marginBottom: 2 }}>{chip.label}</div>
                       <div style={{ fontSize: 14, fontWeight: 800, color: chip.color || DARK }}>{chip.val}</div>
                     </div>
                   ))}
+                  {/* Opening hours from schedule */}
+                  {selected.opening_hours && (() => {
+                    const DAYS = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+                    const DAY_LABELS = { monday:"Mon",tuesday:"Tue",wednesday:"Wed",thursday:"Thu",friday:"Fri",saturday:"Sat",sunday:"Sun" };
+                    return (
+                      <div style={{ background: BG, borderRadius: 14, padding: 14 }}>
+                        <div style={{ fontSize: 18, marginBottom: 8 }}>🕐</div>
+                        <div style={{ fontSize: 10, color: "#888", fontWeight: 600, marginBottom: 10 }}>OPENING HOURS</div>
+                        {DAYS.map(day => {
+                          const dh = selected.opening_hours[day];
+                          return (
+                            <div key={day} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid #EBEBEB" }}>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: dh?.enabled ? DARK : "#C0C0C0" }}>{DAY_LABELS[day]}</span>
+                              <span style={{ fontSize: 12, color: dh?.enabled ? "#555" : "#C0C0C0" }}>
+                                {dh?.enabled ? `${fmt12(dh.open)} – ${fmt12(dh.close)}` : "Closed"}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {(() => { const info = getHoursInfo(selected); return info ? <div style={{ fontSize: 12, fontWeight: 700, color: CORAL, marginTop: 10 }}>🕐 {info}</div> : null; })()}
+                      </div>
+                    );
+                  })()}
                   <button onClick={() => setShowReservation(selected)} style={{ width: "100%", padding: "14px", background: CORAL, color: "#fff", border: "none", borderRadius: 16, fontSize: 14, fontWeight: 800, cursor: "pointer", marginTop: 8 }}>📅 Reserve a Table</button>
                 </div>
               )}
@@ -1561,6 +1845,14 @@ export default function App() {
 
               {/* ── Incoming reservations ── */}
               <ReservationManagement restaurantId={ownerR.id} />
+
+              {/* ── Opening hours ── */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Store Hours</div>
+              <OpeningHoursCard ownerR={ownerR} updateOpeningHours={updateOpeningHours} />
+
+              {/* Feed media post */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Feed Post</div>
+              <PostMediaCard ownerR={ownerR} uploadPostMedia={uploadPostMedia} createPost={createPost} />
 
               {/* Stories */}
               <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Live Story</div>

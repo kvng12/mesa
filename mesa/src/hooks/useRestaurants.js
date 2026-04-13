@@ -26,7 +26,6 @@ export function useRestaurants() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "menu_items" },
         (payload) => {
-          // Patch the nested menu item directly — no full refetch needed
           setRestaurants((prev) =>
             prev.map((r) => ({
               ...r,
@@ -45,7 +44,7 @@ export function useRestaurants() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "menu_items" },
-        () => fetchAll()   // new item added — refetch to get it in the right category
+        () => fetchAll()
       )
       .on(
         "postgres_changes",
@@ -145,7 +144,6 @@ export function useOwnerRestaurant(restaurantId) {
     return { url: urlData.publicUrl, error: null };
   }
 
-  // ── Restaurant logo upload ───────────────────────────────────
   async function uploadLogo(file) {
     const ext      = file.name.split(".").pop();
     const fileName = `${restaurantId}/logo-${Date.now()}.${ext}`;
@@ -161,8 +159,6 @@ export function useOwnerRestaurant(restaurantId) {
       .getPublicUrl(fileName);
 
     const url = urlData.publicUrl;
-
-    // Save URL to restaurants table
     const { error: updateErr } = await supabase
       .from("restaurants")
       .update({ logo_url: url })
@@ -172,9 +168,7 @@ export function useOwnerRestaurant(restaurantId) {
     return { url, error: null };
   }
 
-  // ── Toggle which payment methods the restaurant accepts ──────
   async function togglePaymentMethod(method, currentValue) {
-    // method: "accepts_online" | "accepts_cash"
     const { error } = await supabase
       .from("restaurants")
       .update({ [method]: !currentValue })
@@ -182,16 +176,56 @@ export function useOwnerRestaurant(restaurantId) {
     return { error };
   }
 
-  async function createPost({ postType, text }) {
+  async function updateOpeningHours(hours) {
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ opening_hours: hours })
+      .eq("id", restaurantId);
+    return { error };
+  }
+
+  async function createPost({ postType, text, mediaUrl, mediaType, thumbnailUrl }) {
     setSaving(true);
+    const insertData = {
+      restaurant_id: restaurantId,
+      post_type:     postType,
+      text:          text || "",
+    };
+    if (mediaUrl)     insertData.media_url     = mediaUrl;
+    if (mediaType)    insertData.media_type    = mediaType;
+    if (thumbnailUrl) insertData.thumbnail_url = thumbnailUrl;
+
     const { data, error } = await supabase
       .from("posts")
-      .insert({ restaurant_id: restaurantId, post_type: postType, text })
+      .insert(insertData)
       .select()
       .single();
     setSaving(false);
     return { data, error };
   }
 
-  return { saving, toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, togglePaymentMethod };
+  async function uploadPostMedia(file) {
+    const isVideo = file.type.startsWith("video/");
+    const ext     = (file.name.split(".").pop() || (isVideo ? "mp4" : "jpg")).toLowerCase();
+    const fileName = `${restaurantId}/post-${Date.now()}.${ext}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from("post-media")
+      .upload(fileName, file, { cacheControl: "3600", upsert: true, contentType: file.type });
+
+    if (uploadErr) return { url: null, isVideo, error: uploadErr };
+
+    const { data: urlData } = supabase.storage
+      .from("post-media")
+      .getPublicUrl(fileName);
+
+    return { url: urlData.publicUrl, isVideo, error: null };
+  }
+
+  return {
+    saving,
+    toggleOpen, toggleItem, updateItemImage, uploadFoodImage,
+    uploadLogo, createPost, togglePaymentMethod,
+    updateOpeningHours, uploadPostMedia,
+  };
 }

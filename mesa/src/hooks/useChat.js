@@ -5,7 +5,8 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
 // ── Single conversation (customer ↔ restaurant) ──────────────
-export function useChat({ userId, restaurantId }) {
+// Pass conversationId to load an existing conv directly (owner reply flow)
+export function useChat({ userId, restaurantId, conversationId: forcedConvId = null }) {
   const [messages, setMessages]         = useState([]);
   const [conversation, setConversation] = useState(null);
   const [loading, setLoading]           = useState(true);
@@ -14,7 +15,8 @@ export function useChat({ userId, restaurantId }) {
   const subscribedRef = useRef(false);
 
   useEffect(() => {
-    if (!userId || !restaurantId) return;
+    if (!userId) return;
+    if (!forcedConvId && !restaurantId) return;
     if (subscribedRef.current) return;
     subscribedRef.current = true;
 
@@ -27,25 +29,39 @@ export function useChat({ userId, restaurantId }) {
         channelRef.current = null;
       }
     };
-  }, [userId, restaurantId]);
+  }, [userId, restaurantId, forcedConvId]);
 
   async function initConversation() {
     setLoading(true);
 
-    let { data: conv } = await supabase
-      .from("conversations")
-      .select("*")
-      .eq("customer_id", userId)
-      .eq("restaurant_id", restaurantId)
-      .maybeSingle();
+    let conv = null;
 
-    if (!conv) {
-      const { data: newConv } = await supabase
+    if (forcedConvId) {
+      // Owner opening a specific customer conversation by ID
+      const { data } = await supabase
         .from("conversations")
-        .insert({ customer_id: userId, restaurant_id: restaurantId })
-        .select()
+        .select("*")
+        .eq("id", forcedConvId)
         .single();
-      conv = newConv;
+      conv = data;
+    } else {
+      // Customer: find or create conversation with this restaurant
+      let { data } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("customer_id", userId)
+        .eq("restaurant_id", restaurantId)
+        .maybeSingle();
+
+      if (!data) {
+        const { data: newConv } = await supabase
+          .from("conversations")
+          .insert({ customer_id: userId, restaurant_id: restaurantId })
+          .select()
+          .single();
+        data = newConv;
+      }
+      conv = data;
     }
 
     if (!conv) { setLoading(false); return; }
@@ -63,7 +79,6 @@ export function useChat({ userId, restaurantId }) {
 
     await markRead(conv.id, userId);
 
-    // Build full channel with all listeners BEFORE calling .subscribe()
     channelRef.current = supabase
       .channel(`chat-${conv.id}-${Date.now()}`)
       .on(
@@ -75,7 +90,11 @@ export function useChat({ userId, restaurantId }) {
           filter: `conversation_id=eq.${conv.id}`,
         },
         (payload) => {
-          setMessages(prev => [...prev, payload.new]);
+          setMessages(prev => {
+            // Deduplicate by id
+            if (prev.find(m => m.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
           markRead(conv.id, userId);
         }
       )
@@ -94,13 +113,15 @@ export function useChat({ userId, restaurantId }) {
         text:            text.trim(),
       });
 
-    await supabase
-      .from("conversations")
-      .update({
-        last_message_at: new Date().toISOString(),
-        last_message:    text.trim(),
-      })
-      .eq("id", conversation.id);
+    if (!error) {
+      await supabase
+        .from("conversations")
+        .update({
+          last_message_at: new Date().toISOString(),
+          last_message:    text.trim(),
+        })
+        .eq("id", conversation.id);
+    }
 
     setSending(false);
     return { error };
@@ -134,7 +155,6 @@ export function useOwnerChats(restaurantId) {
 
     fetchConversations();
 
-    // Build all listeners BEFORE .subscribe()
     channelRef.current = supabase
       .channel(`owner-chats-${restaurantId}-${Date.now()}`)
       .on(
@@ -168,24 +188,46 @@ export function useOwnerChats(restaurantId) {
   }, [restaurantId]);
 
   async function fetchConversations() {
-    const { data } = await supabase
+    // Fetch conversations with customer profile info
+    const { data: convData, error } = await supabase
       .from("conversations")
-      .select(`
-        *,
-        profiles!conversations_customer_id_fkey(full_name, phone)
-      `)
+      .select("*")
       .eq("restaurant_id", restaurantId)
       .order("last_message_at", { ascending: false, nullsFirst: false });
 
-    setConversations(data || []);
+    if (error) { setLoading(false); return; }
+    const convs = convData || [];
 
-    const { count } = await supabase
-      .from("messages")
-      .select("*", { count: "exact", head: true })
-      .eq("read", false)
-      .in("conversation_id", (data || []).map(c => c.id));
+    // Fetch customer profiles separately to avoid FK name issues
+    const customerIds = [...new Set(convs.map(c => c.customer_id).filter(Boolean))];
+    let profileMap = {};
+    if (customerIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, phone")
+        .in("id", customerIds);
+      (profiles || []).forEach(p => { profileMap[p.id] = p; });
+    }
 
-    setUnreadCount(count || 0);
+    const enriched = convs.map(c => ({
+      ...c,
+      profiles: profileMap[c.customer_id] || null,
+    }));
+
+    setConversations(enriched);
+
+    // Count unread messages not sent by any customer (i.e., messages awaiting owner's read)
+    if (convs.length > 0) {
+      const { count } = await supabase
+        .from("messages")
+        .select("*", { count: "exact", head: true })
+        .eq("read", false)
+        .in("conversation_id", convs.map(c => c.id));
+      setUnreadCount(count || 0);
+    } else {
+      setUnreadCount(0);
+    }
+
     setLoading(false);
   }
 
