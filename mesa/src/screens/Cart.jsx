@@ -147,13 +147,13 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
 
       setPlacingOrder(true);
 
-      window.PaystackPop.newTransaction({
+      const handler = window.PaystackPop.setup({
         key:      import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
         email:    user.email,
         amount:   cart.subtotal * 100,
         currency: "NGN",
         ref,
-        onSuccess: async (response) => {
+        callback: async (response) => {
           const { data, error } = await cart.placeOrder({
             fulfillment:       snapFulfillment,
             paymentMethod:     "online",
@@ -166,10 +166,11 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
           if (error) { setOrderErr(error); return; }
           setOrderSuccess({ orderId: data?.id, method: "online" });
         },
-        onCancel: () => {
+        onClose: () => {
           setPlacingOrder(false);
         },
       });
+      handler.openIframe();
     } else {
       // Cash order — use async IIFE since outer function is sync
       setPlacingOrder(true);
