@@ -6,7 +6,7 @@ function usePaystack() {
   useEffect(() => {
     if (window.PaystackPop) return; // already loaded
     const script = document.createElement("script");
-    script.src = "https://js.paystack.co/v1/inline.js";
+    script.src = "https://js.paystack.co/v2/inline.js";
     script.async = true;
     document.body.appendChild(script);
     return () => document.body.removeChild(script);
@@ -147,30 +147,34 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
 
       setPlacingOrder(true);
 
-      const handler = window.PaystackPop.setup({
+      const paystackPop = new window.PaystackPop();
+      const handler = paystackPop.newTransaction({
         key:      import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
         email:    user.email,
         amount:   cart.subtotal * 100,
         currency: "NGN",
         ref,
-        callback: async (response) => {
-          const { data, error } = await cart.placeOrder({
+        onSuccess: function(response) {
+          // Paystack v1 requires a regular function — not async
+          // Handle async work inside a plain promise
+          cart.placeOrder({
             fulfillment:       snapFulfillment,
             paymentMethod:     "online",
             deliveryAddress:   snapAddress,
             note:              snapNote,
             userId:            snapUserId,
             paystackReference: response.reference,
+          }).then(function(result) {
+            setPlacingOrder(false);
+            if (result.error) { setOrderErr(result.error); return; }
+            setOrderSuccess({ orderId: result.data?.id, method: "online" });
           });
-          setPlacingOrder(false);
-          if (error) { setOrderErr(error); return; }
-          setOrderSuccess({ orderId: data?.id, method: "online" });
         },
-        onClose: () => {
+        onCancel: function() {
           setPlacingOrder(false);
         },
       });
-      handler.openIframe();
+      // v2 opens automatically via newTransaction()
     } else {
       // Cash order — use async IIFE since outer function is sync
       setPlacingOrder(true);
