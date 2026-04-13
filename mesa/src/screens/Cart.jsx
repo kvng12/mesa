@@ -121,7 +121,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
 
   const effectivePayment = lockedPayment || paymentMethod;
 
-  async function handlePlaceOrder() {
+  function handlePlaceOrder() {
     if (!user) { onSignIn(); return; }
     if (fulfillment === "delivery" && !address.trim()) {
       setOrderErr("Please enter a delivery address"); return;
@@ -129,23 +129,25 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
     if (!acceptsOnline && !acceptsCash) {
       setOrderErr("This restaurant has no payment methods enabled"); return;
     }
-
-    setPlacingOrder(true);
     setOrderErr("");
 
     if (effectivePayment === "online") {
       if (!window.PaystackPop) {
-        setOrderErr("Paystack is still loading. Please try again in a moment.");
-        setPlacingOrder(false);
+        setOrderErr("Paystack is still loading. Please wait a moment and try again.");
         return;
       }
 
+      // Open Paystack IMMEDIATELY — must be synchronous from user click
+      // Browser blocks popups if there's any async before this point
       const ref = `chowli-${Date.now()}`;
+      const snapFulfillment = fulfillment;
+      const snapAddress     = address;
+      const snapNote        = note;
+      const snapUserId      = user.id;
 
-      // Store order details for use in callback
-      const orderDetails = { fulfillment, address, note, userId: user.id, ref };
+      setPlacingOrder(true);
 
-      const handler = window.PaystackPop.newTransaction({
+      window.PaystackPop.newTransaction({
         key:      import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
         email:    user.email,
         amount:   cart.subtotal * 100,
@@ -153,11 +155,11 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
         ref,
         onSuccess: async (response) => {
           const { data, error } = await cart.placeOrder({
-            fulfillment:       orderDetails.fulfillment,
+            fulfillment:       snapFulfillment,
             paymentMethod:     "online",
-            deliveryAddress:   orderDetails.address,
-            note:              orderDetails.note,
-            userId:            orderDetails.userId,
+            deliveryAddress:   snapAddress,
+            note:              snapNote,
+            userId:            snapUserId,
             paystackReference: response.reference,
           });
           setPlacingOrder(false);
@@ -169,17 +171,20 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
         },
       });
     } else {
-      // Cash order
-      const { data, error } = await cart.placeOrder({
-        fulfillment,
-        paymentMethod: "cash",
-        deliveryAddress: address,
-        note,
-        userId: user.id,
-      });
-      setPlacingOrder(false);
-      if (error) { setOrderErr(error); return; }
-      setOrderSuccess({ orderId: data?.id, method: "cash" });
+      // Cash order — use async IIFE since outer function is sync
+      setPlacingOrder(true);
+      (async () => {
+        const { data, error } = await cart.placeOrder({
+          fulfillment,
+          paymentMethod: "cash",
+          deliveryAddress: address,
+          note,
+          userId: user.id,
+        });
+        setPlacingOrder(false);
+        if (error) { setOrderErr(error); return; }
+        setOrderSuccess({ orderId: data?.id, method: "cash" });
+      })();
     }
   }
 
