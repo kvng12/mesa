@@ -961,7 +961,7 @@ export default function App() {
         ${FONTS}
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { background: ${BG}; overscroll-behavior: none; }
-        .mesa { font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; max-width: 430px; margin: 0 auto; min-height: 100vh; background: ${BG}; padding-bottom: calc(80px + env(safe-area-inset-bottom)); overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
+        .chowli { font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; max-width: 430px; margin: 0 auto; min-height: 100vh; background: ${BG}; padding-bottom: calc(80px + env(safe-area-inset-bottom)); overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
         .hscroll { display: flex; gap: 14px; padding: 0 20px 4px; overflow-x: auto; scrollbar-width: none; }
         .hscroll::-webkit-scrollbar { display: none; }
         .vlist { display: flex; flex-direction: column; gap: 10px; padding: 0 20px; }
@@ -1029,7 +1029,7 @@ export default function App() {
         }
       `}</style>
 
-      <div className="mesa">
+      <div className="chowli">
         {!isOnline && <OfflineBanner />}
 
         {/* ── Profile overlay ── */}

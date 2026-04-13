@@ -107,7 +107,7 @@ export default function ProfilePage({ user, onClose, onSignOut, onRegister }) {
             <div style={{ background: `linear-gradient(135deg, ${CORAL}, #FF8C6B)`, borderRadius: 20, padding: 20, marginBottom: 14, cursor: "pointer" }} onClick={onRegister}>
               <div style={{ fontSize: 22, marginBottom: 8 }}>🏪</div>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", marginBottom: 4 }}>Own a restaurant?</div>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", lineHeight: 1.6 }}>Register your restaurant on MESA and reach more customers. Tap to apply.</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", lineHeight: 1.6 }}>Register your restaurant on Chowli and reach more customers. Tap to apply.</div>
             </div>
           ) : (
             <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: 20, marginBottom: 14 }}>

@@ -65,7 +65,7 @@ export function LoginScreen({ onSignUp, onForgot, onBack, signIn }) {
       <div style={S.heroBlock}>
         <div style={S.logoCircle}>🍽️</div>
         <h1 style={S.pageTitle}>Welcome back</h1>
-        <p style={S.pageSub}>Sign in to your MESA account</p>
+        <p style={S.pageSub}>Sign in to your Chowli account</p>
       </div>
       <form onSubmit={submit} style={{ padding: "0 24px" }}>
         <Field label="Email address" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
@@ -134,7 +134,7 @@ export function SignUpScreen({ onLogin, onBack, signUp }) {
       <div style={S.heroBlock}>
         <div style={S.logoCircle}>🍽️</div>
         <h1 style={S.pageTitle}>Create account</h1>
-        <p style={S.pageSub}>Join MESA — it's free</p>
+        <p style={S.pageSub}>Join Chowli — it's free</p>
       </div>
 
       {/* Phone / Email toggle */}

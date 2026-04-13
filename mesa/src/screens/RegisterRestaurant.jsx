@@ -64,13 +64,13 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
           <div style={{ fontSize: 60, marginBottom: 20 }}>🎉</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 10 }}>Application Submitted!</div>
           <div style={{ fontSize: 14, color: "#888", lineHeight: 1.7, marginBottom: 28 }}>
-            We'll review your application and get back to you within 24 hours. You'll be notified once your restaurant is live on MESA.
+            We'll review your application and get back to you within 24 hours. You'll be notified once your restaurant is live on Chowli.
           </div>
           <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 14, padding: "14px 18px", fontSize: 13, color: "#92400E", lineHeight: 1.7, marginBottom: 28, textAlign: "left", width: "100%" }}>
             <strong>What happens next?</strong><br />
             1. Our admin reviews your details<br />
             2. You'll be approved or asked for more info<br />
-            3. Once approved, your restaurant appears on MESA
+            3. Once approved, your restaurant appears on Chowli
           </div>
           <button onClick={onClose} style={btnFull}>Done</button>
         </div>
@@ -83,7 +83,7 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
     return (
       <Overlay onClose={() => setStep(1)} title="Preview" backLabel="← Back to Edit">
         <div style={{ padding: "0 20px 40px" }}>
-          <div style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>This is how your restaurant will appear on MESA:</div>
+          <div style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>This is how your restaurant will appear on Chowli:</div>
 
           {/* Preview card */}
           <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", overflow: "hidden", marginBottom: 24 }}>

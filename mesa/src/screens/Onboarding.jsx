@@ -20,7 +20,7 @@ const SLIDES = [
     bg: "#2D6A4F",
     emoji: "🍲",
     headline: "Support local,\neat well",
-    sub: "Every restaurant on MESA is a real local business. No middleman, no hidden fees.",
+    sub: "Every restaurant on Chowli is a real local business. No middleman, no hidden fees.",
   },
 ];
 

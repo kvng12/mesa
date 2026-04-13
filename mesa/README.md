@@ -1,4 +1,4 @@
-# MESA — Local Food Marketplace
+# Chowli — Local Food Marketplace
 > A Progressive Web App connecting restaurants and customers in one place.
 
 ---
