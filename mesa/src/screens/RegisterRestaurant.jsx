@@ -24,7 +24,7 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
   const [step, setStep]       = useState(1);
   const [form, setForm]       = useState({
     name: "", category: "Nigerian", description: "",
-    address: "", phone: "",
+    address: "", phone: "", state: "",
     icon: "🍲", bgFrom: "#7C2D12", bgTo: "#C2410C",
     tags: "",
   });
@@ -48,6 +48,7 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
       description: form.description.trim(),
       address:     form.address.trim(),
       phone:       form.phone.trim(),
+      state:       form.state.trim() || null,
       icon:        form.icon,
       bg_from:     form.bgFrom,
       bg_to:       form.bgTo,
@@ -114,6 +115,7 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
 
         <Field label="Restaurant name *" value={form.name} onChange={v => set("name", v)} placeholder="e.g. Mama Ngozi's Kitchen" />
         <Field label="Address *" value={form.address} onChange={v => set("address", v)} placeholder="Block 3, Shop 7, Tambuwal" />
+        <Field label="State" value={form.state} onChange={v => set("state", v)} placeholder="e.g. Lagos State" />
         <Field label="Phone number *" value={form.phone} onChange={v => set("phone", v)} placeholder="080XXXXXXXX" type="tel" />
 
         {/* Category */}

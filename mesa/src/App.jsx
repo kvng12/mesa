@@ -86,13 +86,26 @@ function getHoursInfo(restaurant) {
   }
   return `Closes at ${fmt12(todayH.close)}`;
 }
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function fmtDist(km) {
+  if (km < 1) return `${Math.round(km * 1000)}m`;
+  if (km < 10) return `${km.toFixed(1)}km`;
+  return `${Math.round(km)}km`;
+}
+
 function greet() {
   const h = new Date().getHours();
   if (h < 12) return "Good morning"; if (h < 17) return "Good afternoon"; return "Good evening";
 }
 
 // ── Status helpers ───────────────────────────────────────────
-const ORDER_STATUS = { pending: { label: "Received", color: "#D97706", bg: "#FFFBEB" }, confirmed: { label: "Confirmed", color: "#2563EB", bg: "#EFF6FF" }, preparing: { label: "Preparing", color: CORAL, bg: "#FFF0ED" }, ready: { label: "Ready!", color: "#16A34A", bg: "#F0FDF4" }, completed: { label: "Completed", color: "#6B7280", bg: "#F3F4F6" }, cancelled: { label: "Cancelled", color: "#DC2626", bg: "#FEF2F2" } };
+const ORDER_STATUS = { pending: { label: "Received", color: "#D97706", bg: "#FFFBEB" }, confirmed: { label: "Confirmed", color: "#2563EB", bg: "#EFF6FF" }, preparing: { label: "Preparing", color: CORAL, bg: "#FFF0ED" }, ready: { label: "Ready!", color: "#16A34A", bg: "#F0FDF4" }, completed: { label: "Completed", color: "#6B7280", bg: "#F3F4F6" }, delivered: { label: "Delivered", color: "#16A34A", bg: "#F0FDF4" }, cancelled: { label: "Cancelled", color: "#DC2626", bg: "#FEF2F2" } };
 const RES_STATUS  = { pending: { label: "Pending", color: "#D97706", bg: "#FFFBEB" }, confirmed: { label: "Confirmed", color: "#16A34A", bg: "#F0FDF4" }, rejected: { label: "Declined", color: "#DC2626", bg: "#FEF2F2" }, completed: { label: "Done", color: "#6B7280", bg: "#F3F4F6" } };
 
 // ════════════════════════════════════════════════════════════
@@ -169,7 +182,7 @@ function Toggle({ checked, onChange }) {
   );
 }
 
-function VCard({ r, onClick }) {
+function VCard({ r, onClick, distance }) {
   const all = (r.menu_categories || []).flatMap(c => c.menu_items || []);
   return (
     <div onClick={onClick} style={{ background: "#fff", borderRadius: 20, padding: 14, display: "flex", gap: 14, cursor: "pointer", border: "1px solid #F0EDE8", opacity: r.is_open ? 1 : 0.55 }}>
@@ -185,6 +198,7 @@ function VCard({ r, onClick }) {
           <span style={{ fontSize: 11, fontWeight: 600, color: "#888" }}>{r.category}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ color: r.is_open ? "#22C55E" : "#D4CEC8", fontSize: 8 }}>●</span><span style={{ fontSize: 11, fontWeight: 700, color: r.is_open ? "#22C55E" : "#B0B0B0" }}>{r.is_open ? "Open" : "Closed"}</span></span>
           {(() => { const info = getHoursInfo(r); return info ? <span style={{ fontSize: 10, color: "#B0B0B0", fontWeight: 500 }}>🕐 {info}</span> : null; })()}
+          {distance != null && <span style={{ fontSize: 10, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", padding: "2px 7px", borderRadius: 10 }}>📍 {fmtDist(distance)}</span>}
         </div>
         <div style={{ fontSize: 12, color: "#B0B0B0", marginBottom: 8, lineHeight: 1.4 }}>{r.description}</div>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
@@ -875,6 +889,69 @@ function PostMediaCard({ ownerR, uploadPostMedia, createPost }) {
 }
 
 
+// ── Owner Location Card ──────────────────────────────────────
+function LocationCard({ ownerR }) {
+  const [lat,     setLat]     = useState(ownerR?.latitude  ?? "");
+  const [lng,     setLng]     = useState(ownerR?.longitude ?? "");
+  const [state,   setState]   = useState(ownerR?.state     ?? "");
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
+  const [locErr,  setLocErr]  = useState("");
+
+  function detectLocation() {
+    if (!navigator.geolocation) { setLocErr("Geolocation not supported"); return; }
+    navigator.geolocation.getCurrentPosition(({ coords }) => {
+      setLat(coords.latitude.toFixed(6));
+      setLng(coords.longitude.toFixed(6));
+      setLocErr("");
+    }, () => setLocErr("Permission denied"), { timeout: 8000 });
+  }
+
+  async function save() {
+    setSaving(true); setSaved(false);
+    await supabase.from("restaurants").update({
+      latitude:  lat  ? parseFloat(lat)  : null,
+      longitude: lng  ? parseFloat(lng)  : null,
+      state:     state.trim() || null,
+    }).eq("id", ownerR.id);
+    setSaving(false); setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: "16px 18px", marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px" }}>Location</div>
+        <button onClick={detectLocation} style={{ fontSize: 11, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", border: "none", borderRadius: 10, padding: "5px 12px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          Use my location
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#B0B0B0", marginBottom: 4 }}>LATITUDE</div>
+          <input value={lat} onChange={e => setLat(e.target.value)} placeholder="e.g. 6.5244"
+            style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 10, padding: "9px 12px", fontSize: 13, color: DARK, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box" }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#B0B0B0", marginBottom: 4 }}>LONGITUDE</div>
+          <input value={lng} onChange={e => setLng(e.target.value)} placeholder="e.g. 3.3792"
+            style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 10, padding: "9px 12px", fontSize: 13, color: DARK, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box" }} />
+        </div>
+      </div>
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: "#B0B0B0", marginBottom: 4 }}>STATE (e.g. Lagos State)</div>
+        <input value={state} onChange={e => setState(e.target.value)} placeholder="e.g. Lagos State"
+          style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 10, padding: "9px 12px", fontSize: 13, color: DARK, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box" }} />
+      </div>
+      {locErr && <div style={{ fontSize: 11, color: "#DC2626", marginBottom: 8 }}>{locErr}</div>}
+      <button onClick={save} disabled={saving}
+        style={{ width: "100%", padding: "11px", background: saved ? "#16A34A" : CORAL, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, fontFamily: "'Plus Jakarta Sans', sans-serif", transition: "background 0.2s" }}>
+        {saving ? "Saving..." : saved ? "✓ Saved" : "Save Location"}
+      </button>
+    </div>
+  );
+}
+
 // ── Offline / slow connection detection ──────────────────────
 function useOnlineStatus() {
   const [online, setOnline] = useState(navigator.onLine);
@@ -1005,12 +1082,31 @@ export default function App() {
   const [activeChat, setActiveChat]     = useState(null); // restaurant object for customer chat
   const [showOwnerChats, setShowOwnerChats] = useState(false);
   const [ownerChatTarget, setOwnerChatTarget] = useState(null); // conv for owner reply
+  const [userLocation, setUserLocation] = useState(null); // { lat, lng, state }
 
   useEffect(() => {
     if (appState !== "splash") return;
     const timer = setTimeout(() => setAppState(localStorage.getItem("chowli_onboarded") ? "app" : "onboarding"), 1800);
     return () => clearTimeout(timer);
   }, [appState]);
+
+  // ── Geolocation for distance badges + state filtering ──────
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      const { latitude: lat, longitude: lng } = coords;
+      let state = null;
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+          { headers: { "Accept-Language": "en" } }
+        );
+        const data = await res.json();
+        state = data.address?.state || null;
+      } catch { /* location still useful for distance even without state */ }
+      setUserLocation({ lat, lng, state });
+    }, () => { /* permission denied — no location features */ }, { timeout: 8000 });
+  }, []);
 
   // ── Fix 3: Hardware back button — go back instead of exiting ──
   useEffect(() => {
@@ -1037,6 +1133,13 @@ export default function App() {
   const selected  = restaurants.find(r => r.id === selectedId);
   const ownerR    = restaurants.find(r => r.id === ownerRId) || restaurants.find(r => r.owner_id === user?.id);
   const openCount = restaurants.filter(r => r.is_open).length;
+  const isOwnRestaurant = !!(user && selected?.owner_id === user.id);
+
+  // Distance helper — returns km or null
+  function getDistance(r) {
+    if (!userLocation || !r.latitude || !r.longitude) return null;
+    return haversineKm(userLocation.lat, userLocation.lng, r.latitude, r.longitude);
+  }
   const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, saving, togglePaymentMethod, updateOpeningHours, uploadPostMedia } = useOwnerRestaurant(ownerR?.id);
   const { unreadCount: ownerUnread } = useOwnerChats(ownerR?.id || null);
   const { orders: incomingOrders, fetchOrders: fetchIncoming, updateStatus } = useIncomingOrders(ownerR?.id);
@@ -1054,6 +1157,8 @@ export default function App() {
   }
 
   const filtered = restaurants.filter(r => {
+    // State filter: hide restaurants in a different state when user location is known
+    if (userLocation?.state && r.state && r.state !== userLocation.state) return false;
     const mc = activeCat === "All" || r.category === activeCat;
     if (!mc) return false;
     if (!search) return true;
@@ -1071,6 +1176,10 @@ export default function App() {
 
   function handleAddToCart(menuItem, restaurant) {
     if (!user) { setAuthMode("login"); return; }
+    if (restaurant.state && userLocation?.state && restaurant.state !== userLocation.state) {
+      alert(`This restaurant is in ${restaurant.state}. You can only order from restaurants in your area.`);
+      return;
+    }
     if (cart.isDifferentRestaurant(restaurant.id)) {
       setPendingItem({ menuItem, restaurant }); return;
     }
@@ -1414,8 +1523,10 @@ export default function App() {
               {/* Location row */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
                 <span style={{ fontSize: 14 }}>📍</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Tambuwal, Sokoto</span>
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>▾</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
+                  {userLocation?.state || "Detecting location..."}
+                </span>
+                {userLocation && <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.15)", padding: "2px 8px", borderRadius: 10 }}>Nearby</span>}
               </div>
 
               {/* Category pills on the header itself */}
@@ -1471,7 +1582,7 @@ export default function App() {
                 ? [1,2,3].map(i => <VCardSkeleton key={i} />)
                 : filtered.length === 0
                   ? <div style={{ textAlign: "center", padding: "40px 0" }}><div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div><div style={{ fontSize: 14, color: "#B0B0B0", fontWeight: 600 }}>Nothing found</div></div>
-                  : filtered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} />)
+                  : filtered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} distance={getDistance(r)} />)
               }
             </div>
             <div style={{ height: 12 }} />
@@ -1504,7 +1615,7 @@ export default function App() {
                   !r.category.toLowerCase().includes(search.toLowerCase());
                 return (
                   <div key={r.id}>
-                    <VCard r={r} onClick={() => goDetail(r.id)} />
+                    <VCard r={r} onClick={() => goDetail(r.id)} distance={getDistance(r)} />
                     {showItems && (
                       <div style={{ marginTop: -6, marginBottom: 4, paddingLeft: 108, paddingRight: 14, display: "flex", gap: 5, flexWrap: "wrap" }}>
                         {matchedItems.slice(0, 4).map(item => (
@@ -1579,16 +1690,23 @@ export default function App() {
               {(() => { const info = getHoursInfo(selected); return info ? <div style={{ fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 16 }}>🕐 {info}</div> : <div style={{ marginBottom: 16 }} />; })()}
 
               {/* Action buttons */}
+              {isOwnRestaurant && (
+                <div style={{ background: "#FFF0ED", border: "1px solid #FFD0C0", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: CORAL, fontWeight: 700, marginBottom: 20 }}>
+                  🏪 This is your restaurant — manage it from the Store tab
+                </div>
+              )}
               <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-                <button onClick={() => setShowReservation(selected)}
-                  style={{ flex: 1, padding: "12px", background: "#FFF0ED", color: CORAL, border: "1.5px solid #FFD0C0", borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
-                  📅 Reserve a table
-                </button>
+                {!isOwnRestaurant && (
+                  <button onClick={() => setShowReservation(selected)}
+                    style={{ flex: 1, padding: "12px", background: "#FFF0ED", color: CORAL, border: "1.5px solid #FFD0C0", borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+                    📅 Reserve a table
+                  </button>
+                )}
                 <button onClick={() => user ? setActiveChat(selected) : setAuthMode("login")}
-                  style={{ padding: "12px 16px", background: "#EFF6FF", color: "#2563EB", border: "1.5px solid #BFDBFE", borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                  style={{ flex: isOwnRestaurant ? 1 : undefined, padding: "12px 16px", background: "#EFF6FF", color: "#2563EB", border: "1.5px solid #BFDBFE", borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                   💬 Chat
                 </button>
-                {cart.restaurantId === selected.id && cart.totalItems > 0 && (
+                {!isOwnRestaurant && cart.restaurantId === selected.id && cart.totalItems > 0 && (
                   <button onClick={() => setTab("cart")}
                     style={{ padding: "12px 16px", background: CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                     🛒 {cart.totalItems}
@@ -1631,7 +1749,7 @@ export default function App() {
                                 <div style={{ fontSize: 14, fontWeight: 700, color: item.is_available ? DARK : "#D4CEC8", marginBottom: 3, lineHeight: 1.3 }}>{item.name}</div>
                                 {!item.is_available && <div style={{ fontSize: 10, color: "#D4CEC8", marginBottom: 4 }}>Not available today</div>}
                                 <div style={{ fontSize: 14, fontWeight: 800, color: item.is_available ? CORAL : "#EBEBEB", marginBottom: 8 }}>₦{Number(item.price).toLocaleString()}</div>
-                                {item.is_available && selected.is_open && (
+                                {!isOwnRestaurant && item.is_available && selected.is_open && (
                                   qty === 0 ? (
                                     <button onClick={() => handleAddToCart(item, selected)}
                                       style={{ display: "flex", alignItems: "center", gap: 5, background: CORAL, border: "none", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", borderRadius: 10, padding: "7px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -1653,7 +1771,7 @@ export default function App() {
                     </div>
                   ))}
                   {/* Floating cart bar */}
-                  {cart.restaurantId === selected.id && cart.totalItems > 0 && (
+                  {!isOwnRestaurant && cart.restaurantId === selected.id && cart.totalItems > 0 && (
                     <div className="cart-bar" style={{ position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 40px)", maxWidth: 390, background: CORAL, borderRadius: 16, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", zIndex: 50, boxShadow: "0 4px 20px rgba(255,98,64,0.4)" }}
                       onClick={() => setTab("cart")}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1817,6 +1935,9 @@ export default function App() {
               {/* ── Payment method settings ── */}
               <PaymentSettingsCard ownerR={ownerR} togglePaymentMethod={togglePaymentMethod} />
 
+              {/* ── Restaurant location ── */}
+              <LocationCard ownerR={ownerR} />
+
               {/* ── Incoming orders ── */}
               {incomingOrders.length > 0 && (
                 <>
@@ -1838,7 +1959,9 @@ export default function App() {
                             {order.status === "pending" && <button onClick={() => updateStatus(order.id, "confirmed")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Confirm</button>}
                             {order.status === "confirmed" && <button onClick={() => updateStatus(order.id, "preparing")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#FFF0ED", color: CORAL, cursor: "pointer" }}>Preparing</button>}
                             {order.status === "preparing" && <button onClick={() => updateStatus(order.id, "ready")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Ready</button>}
-                            {!["completed","cancelled"].includes(order.status) && <button onClick={() => updateStatus(order.id, "cancelled")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#FEF2F2", color: "#DC2626", cursor: "pointer" }}>Cancel</button>}
+                            {order.status === "ready" && order.fulfillment !== "delivery" && <button onClick={() => updateStatus(order.id, "completed")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Completed</button>}
+                            {order.status === "ready" && order.fulfillment === "delivery" && <button onClick={() => updateStatus(order.id, "delivered")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Delivered</button>}
+                            {!["completed","delivered","cancelled"].includes(order.status) && <button onClick={() => updateStatus(order.id, "cancelled")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#FEF2F2", color: "#DC2626", cursor: "pointer" }}>Cancel</button>}
                           </div>
                         </div>
                         {order.note && <div style={{ marginTop: 8, fontSize: 11, color: "#888", background: BG, borderRadius: 8, padding: "6px 10px" }}>Note: {order.note}</div>}
@@ -1898,7 +2021,13 @@ export default function App() {
               </div>
               {(ownerR.menu_categories || []).map(cat => (
                 <div key={cat.id} style={{ marginBottom: 18 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#888", padding: "8px 0", borderBottom: "1px solid #F0EDE8", marginBottom: 8 }}>{cat.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F0EDE8", marginBottom: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#888", padding: "8px 0" }}>{cat.name}</div>
+                    <button onClick={async () => {
+                      if (!window.confirm(`Delete "${cat.name}" and all its items?`)) return;
+                      await supabase.from("menu_categories").delete().eq("id", cat.id);
+                    }} style={{ fontSize: 11, fontWeight: 700, color: "#DC2626", background: "#FEF2F2", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Delete</button>
+                  </div>
                   {cat.menu_items.map(item => (
                     <DashMenuItem
                       key={item.id}

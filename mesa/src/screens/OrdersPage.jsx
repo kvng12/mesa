@@ -16,6 +16,7 @@ const STATUS = {
   preparing: { label: "Preparing",      color: "#D97706",  bg: "#FFFBEB", icon: "👨‍🍳", step: 3 },
   ready:     { label: "Ready",          color: "#16A34A",  bg: "#F0FDF4", icon: "🔔", step: 4 },
   completed: { label: "Completed",      color: "#6B7280",  bg: "#F3F4F6", icon: "✓",  step: 5 },
+  delivered: { label: "Delivered",      color: "#16A34A",  bg: "#F0FDF4", icon: "🛵", step: 5 },
   cancelled: { label: "Cancelled",      color: "#DC2626",  bg: "#FEF2F2", icon: "✕",  step: 0 },
 };
 
@@ -48,15 +49,19 @@ function shortId(id) {
 
 // ── Progress dots ─────────────────────────────────────────────
 // Future: expand into a full tracking timeline with timestamps
-function StatusProgress({ status }) {
+function StatusProgress({ status, fulfillment }) {
   if (status === "cancelled") return null;
-  const steps = ["pending", "confirmed", "preparing", "ready", "completed"];
+  // Delivery orders show "delivered" as final step; pickup shows "completed"
+  const steps = fulfillment === "delivery"
+    ? ["pending", "confirmed", "preparing", "ready", "delivered"]
+    : ["pending", "confirmed", "preparing", "ready", "completed"];
   const currentStep = STATUS[status]?.step ?? 1;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 0, margin: "12px 0 4px" }}>
       {steps.map((s, i) => {
-        const done  = STATUS[s].step <= currentStep;
-        const isNow = s === status;
+        const stepVal = STATUS[s]?.step ?? 1;
+        const done    = stepVal <= currentStep;
+        const isNow   = s === status;
         return (
           <div key={s} style={{ display: "flex", alignItems: "center", flex: 1 }}>
             <div style={{
@@ -69,7 +74,7 @@ function StatusProgress({ status }) {
               boxShadow: isNow ? `0 0 0 3px #FFF0ED` : "none",
             }} />
             {i < steps.length - 1 && (
-              <div style={{ flex: 1, height: 2, background: STATUS[steps[i + 1]].step <= currentStep ? "#16A34A" : "#E0E0E0", transition: "background 0.4s" }} />
+              <div style={{ flex: 1, height: 2, background: STATUS[steps[i + 1]]?.step <= currentStep ? "#16A34A" : "#E0E0E0", transition: "background 0.4s" }} />
             )}
           </div>
         );
@@ -129,7 +134,7 @@ function OrderCard({ order, onReview, reviewedOrderIds, onReorder }) {
         </div>
 
         {/* Progress bar (not shown for cancelled) */}
-        {order.status !== "cancelled" && <StatusProgress status={order.status} />}
+        {order.status !== "cancelled" && <StatusProgress status={order.status} fulfillment={order.fulfillment} />}
 
         {/* Divider */}
         <div style={{ height: 1, background: "#F5F5F5", margin: "12px 0" }} />
