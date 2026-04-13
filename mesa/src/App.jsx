@@ -86,19 +86,6 @@ function getHoursInfo(restaurant) {
   }
   return `Closes at ${fmt12(todayH.close)}`;
 }
-function haversineKm(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-function fmtDist(km) {
-  if (km < 1) return `${Math.round(km * 1000)}m`;
-  if (km < 10) return `${km.toFixed(1)}km`;
-  return `${Math.round(km)}km`;
-}
-
 function greet() {
   const h = new Date().getHours();
   if (h < 12) return "Good morning"; if (h < 17) return "Good afternoon"; return "Good evening";
@@ -182,7 +169,7 @@ function Toggle({ checked, onChange }) {
   );
 }
 
-function VCard({ r, onClick, distance }) {
+function VCard({ r, onClick }) {
   const all = (r.menu_categories || []).flatMap(c => c.menu_items || []);
   return (
     <div onClick={onClick} style={{ background: "#fff", borderRadius: 20, padding: 14, display: "flex", gap: 14, cursor: "pointer", border: "1px solid #F0EDE8", opacity: r.is_open ? 1 : 0.55 }}>
@@ -198,7 +185,7 @@ function VCard({ r, onClick, distance }) {
           <span style={{ fontSize: 11, fontWeight: 600, color: "#888" }}>{r.category}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ color: r.is_open ? "#22C55E" : "#D4CEC8", fontSize: 8 }}>●</span><span style={{ fontSize: 11, fontWeight: 700, color: r.is_open ? "#22C55E" : "#B0B0B0" }}>{r.is_open ? "Open" : "Closed"}</span></span>
           {(() => { const info = getHoursInfo(r); return info ? <span style={{ fontSize: 10, color: "#B0B0B0", fontWeight: 500 }}>🕐 {info}</span> : null; })()}
-          {distance != null && <span style={{ fontSize: 10, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", padding: "2px 7px", borderRadius: 10 }}>📍 {fmtDist(distance)}</span>}
+          {r.state && <span style={{ fontSize: 10, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", padding: "2px 7px", borderRadius: 10 }}>📍 {r.state}</span>}
         </div>
         <div style={{ fontSize: 12, color: "#B0B0B0", marginBottom: 8, lineHeight: 1.4 }}>{r.description}</div>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
@@ -737,7 +724,7 @@ function PaymentSettingsCard({ ownerR, togglePaymentMethod }) {
 }
 
 
-// ── Opening Hours Card ───────────────────────────────────────
+// ── Opening Hours Card (collapsible) ────────────────────────
 function OpeningHoursCard({ ownerR, updateOpeningHours }) {
   const DAYS   = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
   const LABELS = { monday:"Mon",tuesday:"Tue",wednesday:"Wed",thursday:"Thu",friday:"Fri",saturday:"Sat",sunday:"Sun" };
@@ -747,9 +734,10 @@ function OpeningHoursCard({ ownerR, updateOpeningHours }) {
     [day]: { open: "08:00", close: "22:00", enabled: true },
   }), {});
 
-  const [hours, setHours] = useState(() => ownerR?.opening_hours || defaultHours);
-  const [saving, setSaving]   = useState(false);
-  const [saved,  setSaved]    = useState(false);
+  const [hours,    setHours]    = useState(() => ownerR?.opening_hours || defaultHours);
+  const [saving,   setSaving]   = useState(false);
+  const [saved,    setSaved]    = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (ownerR?.opening_hours) setHours(ownerR.opening_hours);
@@ -762,38 +750,70 @@ function OpeningHoursCard({ ownerR, updateOpeningHours }) {
   async function save() {
     setSaving(true);
     await updateOpeningHours(hours);
-    setSaving(false);
-    setSaved(true);
+    setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
 
+  // Build a one-line summary like "Mon–Sat • 8am–10pm" or "5 days open"
+  function summary() {
+    const enabled = DAYS.filter(d => hours[d]?.enabled);
+    if (enabled.length === 0) return "Closed all week";
+    if (enabled.length === 7) {
+      const h = hours[enabled[0]];
+      return `Every day • ${fmt12(h.open)}–${fmt12(h.close)}`;
+    }
+    const firstH = hours[enabled[0]];
+    const allSame = enabled.every(d => hours[d].open === firstH.open && hours[d].close === firstH.close);
+    if (allSame) {
+      const first = LABELS[enabled[0]];
+      const last  = LABELS[enabled[enabled.length - 1]];
+      const range = first === last ? first : `${first}–${last}`;
+      return `${range} • ${fmt12(firstH.open)}–${fmt12(firstH.close)}`;
+    }
+    return `${enabled.length} days open`;
+  }
+
   return (
-    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: "16px 18px", marginBottom: 14 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 14 }}>Opening Hours Schedule</div>
-      {DAYS.map(day => (
-        <div key={day} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid #F7F5F2" }}>
-          <span style={{ width: 30, fontSize: 11, fontWeight: 700, color: hours[day]?.enabled ? DARK : "#C0C0C0", flexShrink: 0 }}>{LABELS[day]}</span>
-          <Toggle checked={hours[day]?.enabled ?? true} onChange={() => update(day, "enabled", !hours[day]?.enabled)} />
-          {hours[day]?.enabled ? (
-            <>
-              <input type="time" value={hours[day]?.open || "08:00"}
-                onChange={e => update(day, "open", e.target.value)}
-                style={{ flex: 1, minWidth: 0, border: "1px solid #EBEBEB", borderRadius: 8, padding: "5px 6px", fontSize: 12, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", background: BG }} />
-              <span style={{ fontSize: 10, color: "#C0C0C0", flexShrink: 0 }}>–</span>
-              <input type="time" value={hours[day]?.close || "22:00"}
-                onChange={e => update(day, "close", e.target.value)}
-                style={{ flex: 1, minWidth: 0, border: "1px solid #EBEBEB", borderRadius: 8, padding: "5px 6px", fontSize: 12, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", background: BG }} />
-            </>
-          ) : (
-            <span style={{ fontSize: 11, color: "#C0C0C0", flex: 1 }}>Closed</span>
-          )}
+    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", marginBottom: 14, overflow: "hidden" }}>
+      {/* Header row — always visible, tap to expand */}
+      <div onClick={() => setExpanded(e => !e)}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", cursor: "pointer" }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 3 }}>Opening Hours</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: DARK }}>{summary()}</div>
         </div>
-      ))}
-      {saved && <div style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, marginTop: 10 }}>✓ Hours saved</div>}
-      <button onClick={save} disabled={saving}
-        style={{ width: "100%", marginTop: 14, padding: "12px", background: CORAL, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", opacity: saving ? 0.6 : 1 }}>
-        {saving ? "Saving..." : "Save Hours"}
-      </button>
+        <span style={{ fontSize: 18, color: "#C0C0C0", transition: "transform 0.2s", display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}>⌄</span>
+      </div>
+
+      {/* Expanded schedule */}
+      {expanded && (
+        <div style={{ padding: "0 18px 16px", borderTop: "1px solid #F7F5F2" }}>
+          {DAYS.map(day => (
+            <div key={day} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid #F7F5F2" }}>
+              <span style={{ width: 30, fontSize: 11, fontWeight: 700, color: hours[day]?.enabled ? DARK : "#C0C0C0", flexShrink: 0 }}>{LABELS[day]}</span>
+              <Toggle checked={hours[day]?.enabled ?? true} onChange={() => update(day, "enabled", !hours[day]?.enabled)} />
+              {hours[day]?.enabled ? (
+                <>
+                  <input type="time" value={hours[day]?.open || "08:00"}
+                    onChange={e => update(day, "open", e.target.value)}
+                    style={{ flex: 1, minWidth: 0, border: "1px solid #EBEBEB", borderRadius: 8, padding: "5px 6px", fontSize: 12, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", background: BG }} />
+                  <span style={{ fontSize: 10, color: "#C0C0C0", flexShrink: 0 }}>–</span>
+                  <input type="time" value={hours[day]?.close || "22:00"}
+                    onChange={e => update(day, "close", e.target.value)}
+                    style={{ flex: 1, minWidth: 0, border: "1px solid #EBEBEB", borderRadius: 8, padding: "5px 6px", fontSize: 12, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", background: BG }} />
+                </>
+              ) : (
+                <span style={{ fontSize: 11, color: "#C0C0C0", flex: 1 }}>Closed</span>
+              )}
+            </div>
+          ))}
+          {saved && <div style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, marginTop: 10 }}>✓ Hours saved</div>}
+          <button onClick={save} disabled={saving}
+            style={{ width: "100%", marginTop: 14, padding: "12px", background: CORAL, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", opacity: saving ? 0.6 : 1 }}>
+            {saving ? "Saving..." : "Save Hours"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -891,62 +911,32 @@ function PostMediaCard({ ownerR, uploadPostMedia, createPost }) {
 
 // ── Owner Location Card ──────────────────────────────────────
 function LocationCard({ ownerR }) {
-  const [lat,     setLat]     = useState(ownerR?.latitude  ?? "");
-  const [lng,     setLng]     = useState(ownerR?.longitude ?? "");
-  const [state,   setState]   = useState(ownerR?.state     ?? "");
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
-  const [locErr,  setLocErr]  = useState("");
+  const [state,  setState]  = useState(ownerR?.state ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
 
-  function detectLocation() {
-    if (!navigator.geolocation) { setLocErr("Geolocation not supported"); return; }
-    navigator.geolocation.getCurrentPosition(({ coords }) => {
-      setLat(coords.latitude.toFixed(6));
-      setLng(coords.longitude.toFixed(6));
-      setLocErr("");
-    }, () => setLocErr("Permission denied"), { timeout: 8000 });
-  }
+  useEffect(() => { setState(ownerR?.state ?? ""); }, [ownerR?.id]);
 
   async function save() {
     setSaving(true); setSaved(false);
-    await supabase.from("restaurants").update({
-      latitude:  lat  ? parseFloat(lat)  : null,
-      longitude: lng  ? parseFloat(lng)  : null,
-      state:     state.trim() || null,
-    }).eq("id", ownerR.id);
+    await supabase.from("restaurants").update({ state: state.trim() || null }).eq("id", ownerR.id);
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
 
   return (
     <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: "16px 18px", marginBottom: 14 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px" }}>Location</div>
-        <button onClick={detectLocation} style={{ fontSize: 11, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", border: "none", borderRadius: 10, padding: "5px 12px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-          Use my location
-        </button>
-      </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#B0B0B0", marginBottom: 4 }}>LATITUDE</div>
-          <input value={lat} onChange={e => setLat(e.target.value)} placeholder="e.g. 6.5244"
-            style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 10, padding: "9px 12px", fontSize: 13, color: DARK, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box" }} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#B0B0B0", marginBottom: 4 }}>LONGITUDE</div>
-          <input value={lng} onChange={e => setLng(e.target.value)} placeholder="e.g. 3.3792"
-            style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 10, padding: "9px 12px", fontSize: 13, color: DARK, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box" }} />
-        </div>
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: "#B0B0B0", marginBottom: 4 }}>STATE (e.g. Lagos State)</div>
-        <input value={state} onChange={e => setState(e.target.value)} placeholder="e.g. Lagos State"
-          style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 10, padding: "9px 12px", fontSize: 13, color: DARK, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box" }} />
-      </div>
-      {locErr && <div style={{ fontSize: 11, color: "#DC2626", marginBottom: 8 }}>{locErr}</div>}
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>Region / State</div>
+      <div style={{ fontSize: 12, color: "#B0B0B0", marginBottom: 10 }}>Customers nearby will find your restaurant first.</div>
+      <input
+        value={state}
+        onChange={e => setState(e.target.value)}
+        placeholder="e.g. Sokoto, Lagos State, Abuja"
+        style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 12, padding: "11px 14px", fontSize: 13, color: DARK, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box", marginBottom: 12 }}
+      />
       <button onClick={save} disabled={saving}
         style={{ width: "100%", padding: "11px", background: saved ? "#16A34A" : CORAL, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, fontFamily: "'Plus Jakarta Sans', sans-serif", transition: "background 0.2s" }}>
-        {saving ? "Saving..." : saved ? "✓ Saved" : "Save Location"}
+        {saving ? "Saving..." : saved ? "✓ Saved" : "Save Region"}
       </button>
     </div>
   );
@@ -1090,22 +1080,20 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [appState]);
 
-  // ── Geolocation for distance badges + state filtering ──────
+  // ── Geolocation — detect user's state for nearby filtering ──
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(async ({ coords }) => {
-      const { latitude: lat, longitude: lng } = coords;
-      let state = null;
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+          `https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json`,
           { headers: { "Accept-Language": "en" } }
         );
         const data = await res.json();
-        state = data.address?.state || null;
-      } catch { /* location still useful for distance even without state */ }
-      setUserLocation({ lat, lng, state });
-    }, () => { /* permission denied — no location features */ }, { timeout: 8000 });
+        const state = data.address?.state || null;
+        if (state) setUserLocation({ state });
+      } catch { /* no filtering if reverse geocode fails */ }
+    }, () => { /* permission denied */ }, { timeout: 8000 });
   }, []);
 
   // ── Fix 3: Hardware back button — go back instead of exiting ──
@@ -1134,12 +1122,6 @@ export default function App() {
   const ownerR    = restaurants.find(r => r.id === ownerRId) || restaurants.find(r => r.owner_id === user?.id);
   const openCount = restaurants.filter(r => r.is_open).length;
   const isOwnRestaurant = !!(user && selected?.owner_id === user.id);
-
-  // Distance helper — returns km or null
-  function getDistance(r) {
-    if (!userLocation || !r.latitude || !r.longitude) return null;
-    return haversineKm(userLocation.lat, userLocation.lng, r.latitude, r.longitude);
-  }
   const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, saving, togglePaymentMethod, updateOpeningHours, uploadPostMedia } = useOwnerRestaurant(ownerR?.id);
   const { unreadCount: ownerUnread } = useOwnerChats(ownerR?.id || null);
   const { orders: incomingOrders, fetchOrders: fetchIncoming, updateStatus } = useIncomingOrders(ownerR?.id);
@@ -1236,9 +1218,8 @@ export default function App() {
         @keyframes splashSlide { 0%{opacity:0;transform:translateY(16px)} 100%{opacity:1;transform:translateY(0)} }
         @keyframes splashSub { 0%{opacity:0} 100%{opacity:0.75} }
       `}</style>
-      <div style={{ width: 96, height: 96, background: "rgba(255,255,255,0.18)", borderRadius: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 50, marginBottom: 22, animation: "splashPop 0.7s cubic-bezier(.36,.07,.19,.97) both" }}>🍗</div>
-      <div style={{ fontSize: 42, fontWeight: 800, color: "#fff", letterSpacing: -1.5, fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashSlide 0.5s 0.45s both" }}>Chowli</div>
-      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 8, fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashSub 0.6s 0.7s both" }}>Your local food market</div>
+      <img src="/logo.svg" alt="Chowli" style={{ height: 90, marginBottom: 8, animation: "splashPop 0.7s cubic-bezier(.36,.07,.19,.97) both" }} />
+      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashSub 0.6s 0.7s both" }}>Your local food market</div>
     </div>
   );
 
@@ -1427,6 +1408,7 @@ export default function App() {
         {/* ── Owner reply to specific customer ── */}
         {ownerChatTarget && ownerR && (
           <ChatScreen
+            key={ownerChatTarget.id}
             user={user}
             restaurant={{
               ...ownerR,
@@ -1492,7 +1474,11 @@ export default function App() {
               <div style={{ position: "absolute", top: -30, right: -30, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
               <div style={{ position: "absolute", bottom: -20, left: 40, width: 90, height: 90, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, position: "relative" }}>
+                {/* Centered logo mark */}
+                <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", pointerEvents: "none" }}>
+                  <img src="/logo.svg" alt="Chowli" style={{ height: 28, opacity: 0.92 }} />
+                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div onClick={() => user ? setShowProfile(true) : setAuthMode("login")}
                     style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(255,255,255,0.22)", border: "2.5px solid rgba(255,255,255,0.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: "#fff", cursor: "pointer", backdropFilter: "blur(4px)" }}>
@@ -1524,9 +1510,8 @@ export default function App() {
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
                 <span style={{ fontSize: 14 }}>📍</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
-                  {userLocation?.state || "Detecting location..."}
+                  {userLocation?.state || "Nigeria"}
                 </span>
-                {userLocation && <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.15)", padding: "2px 8px", borderRadius: 10 }}>Nearby</span>}
               </div>
 
               {/* Category pills on the header itself */}
@@ -1582,7 +1567,7 @@ export default function App() {
                 ? [1,2,3].map(i => <VCardSkeleton key={i} />)
                 : filtered.length === 0
                   ? <div style={{ textAlign: "center", padding: "40px 0" }}><div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div><div style={{ fontSize: 14, color: "#B0B0B0", fontWeight: 600 }}>Nothing found</div></div>
-                  : filtered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} distance={getDistance(r)} />)
+                  : filtered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} />)
               }
             </div>
             <div style={{ height: 12 }} />
@@ -1615,7 +1600,7 @@ export default function App() {
                   !r.category.toLowerCase().includes(search.toLowerCase());
                 return (
                   <div key={r.id}>
-                    <VCard r={r} onClick={() => goDetail(r.id)} distance={getDistance(r)} />
+                    <VCard r={r} onClick={() => goDetail(r.id)} />
                     {showItems && (
                       <div style={{ marginTop: -6, marginBottom: 4, paddingLeft: 108, paddingRight: 14, display: "flex", gap: 5, flexWrap: "wrap" }}>
                         {matchedItems.slice(0, 4).map(item => (

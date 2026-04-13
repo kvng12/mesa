@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 58" fill="none">
+  <!-- Bowl body -->
+  <path d="M10 34 Q14 56 34 56 Q54 56 58 34 Z" fill="white"/>
+  <!-- Rim -->
+  <rect x="8" y="26" width="52" height="12" rx="6" fill="white"/>
+  <!-- Steam curls -->
+  <path d="M20 22 Q17 13 20 4" stroke="white" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <path d="M34 20 Q31 11 34 2" stroke="white" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <path d="M48 22 Q45 13 48 4" stroke="white" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <!-- Wordmark -->
+  <text x="72" y="44" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="32" fill="white" letter-spacing="-1">Chowli</text>
+</svg>

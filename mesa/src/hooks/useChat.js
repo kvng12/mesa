@@ -56,7 +56,7 @@ export function useChat({
     let conv = null;
 
     if (forcedConvId) {
-      // Direct lookup by conversation ID (owner opening a specific chat)
+      // Owner opening a specific conversation by ID — direct lookup, no create
       const { data } = await supabase
         .from("conversations")
         .select("*")
@@ -64,7 +64,7 @@ export function useChat({
         .single();
       conv = data;
     } else {
-      // Find conversation by customer_id + restaurant_id, create if missing
+      // Customer opening their own chat — find or create by customer_id + restaurant_id
       let { data } = await supabase
         .from("conversations")
         .select("*")
