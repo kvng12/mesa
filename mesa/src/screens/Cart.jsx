@@ -1,17 +1,6 @@
 // src/screens/Cart.jsx
-import { useState, useEffect } from "react";
-
-// Load Paystack JS SDK dynamically
-function usePaystack() {
-  useEffect(() => {
-    if (window.PaystackPop) return; // already loaded
-    const script = document.createElement("script");
-    script.src = "https://js.paystack.co/v2/inline.js";
-    script.async = true;
-    document.body.appendChild(script);
-    return () => document.body.removeChild(script);
-  }, []);
-}
+import { useState } from "react";
+import PaystackPop from "@paystack/inline-js";
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -103,7 +92,6 @@ export function ReservationScreen({ restaurant, user, onClose, onSignIn, makeRes
 
 // ── Cart Screen ───────────────────────────────────────────────
 export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlaced, acceptsOnline = true, acceptsCash = true }) {
-  usePaystack(); // load Paystack SDK
   const [fulfillment, setFulfillment]   = useState("pickup");
   const [orderSuccess, setOrderSuccess] = useState(null); // { orderId, method }
   const [paymentMethod, setPaymentMethod] = useState(
@@ -132,11 +120,6 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
     setOrderErr("");
 
     if (effectivePayment === "online") {
-      if (!window.PaystackPop) {
-        setOrderErr("Paystack is still loading. Please wait a moment and try again.");
-        return;
-      }
-
       // Open Paystack IMMEDIATELY — must be synchronous from user click
       // Browser blocks popups if there's any async before this point
       const ref = `chowli-${Date.now()}`;
@@ -147,8 +130,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
 
       setPlacingOrder(true);
 
-      const paystackPop = new window.PaystackPop();
-      const handler = paystackPop.newTransaction({
+      new PaystackPop().newTransaction({
         key:      import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
         email:    user.email,
         amount:   cart.subtotal * 100,
@@ -174,7 +156,6 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
           setPlacingOrder(false);
         },
       });
-      // v2 opens automatically via newTransaction()
     } else {
       // Cash order — use async IIFE since outer function is sync
       setPlacingOrder(true);
