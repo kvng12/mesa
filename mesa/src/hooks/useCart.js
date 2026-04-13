@@ -2,6 +2,12 @@
 // Cart is kept in local state (no DB until checkout).
 // One restaurant at a time — adding from a different restaurant
 // prompts the user to clear and start fresh.
+//
+// ── SQL to broaden the payment_status check constraint ───────
+//   ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_payment_status_check;
+//   ALTER TABLE orders ADD CONSTRAINT orders_payment_status_check
+//     CHECK (payment_status IN ('pending', 'paid', 'cash', 'failed', 'refunded'));
+// ────────────────────────────────────────────────────────────
 
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
@@ -81,7 +87,7 @@ export function useCart() {
           restaurant_id:     restaurantId,
           fulfillment,
           payment_method:    paymentMethod,
-          payment_status:    paymentMethod === "online" ? "pending" : "cash",
+          payment_status:    "pending",   // cash orders stay "pending" until fulfilled; online transitions to "paid" after Paystack callback
           delivery_address:  fulfillment === "delivery" ? deliveryAddress : null,
           note:              note || null,
           paystack_reference: paystackReference || null,
