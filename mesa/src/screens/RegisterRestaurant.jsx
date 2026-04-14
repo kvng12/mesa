@@ -1,11 +1,29 @@
 // src/screens/RegisterRestaurant.jsx
+//
+// ── SQL required before this form works correctly ────────────────────────────
+//
+// 1. Add state column to restaurant_applications (fixes submission error):
+//    ALTER TABLE restaurant_applications ADD COLUMN IF NOT EXISTS state TEXT;
+//
+// 2. Change category from TEXT to TEXT[] to support multiple selections:
+//    ALTER TABLE restaurant_applications ALTER COLUMN category TYPE TEXT[] USING ARRAY[category];
+//    ALTER TABLE restaurants ALTER COLUMN category TYPE TEXT[] USING ARRAY[category];
+//
+// ────────────────────────────────────────────────────────────────────────────
+
 import { useState } from "react";
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
 const BG    = "#F5F5F5";
 
-const CATEGORIES = ["Nigerian", "Grills", "Chinese", "Snacks", "Fast Food", "Bakery", "Drinks", "Other"];
+const STATES = ["Sokoto", "Kebbi State"];
+
+const CATEGORIES = [
+  "Nigerian", "Grills", "Suya", "Shawarma", "Snacks",
+  "Drinks", "Bakery", "Fast Food", "Breakfast",
+  "Rice & Swallow", "Chicken", "Seafood", "Other",
+];
 
 const ICONS = ["🍲","🔥","🍜","🥐","🍔","🍕","🥘","🍖","🌮","🥗","🍱","🧆","🥩","🦐","🍣","🫕","☕","🧁","🍰","🥧","🫔","🌯"];
 
@@ -21,9 +39,9 @@ const PRESETS = [
 ];
 
 export default function RegisterRestaurant({ onClose, onSubmit, submitting, error }) {
-  const [step, setStep]       = useState(1);
-  const [form, setForm]       = useState({
-    name: "", category: "Nigerian", description: "",
+  const [step, setStep]   = useState(1);
+  const [form, setForm]   = useState({
+    name: "", category: [], description: "",
     address: "", phone: "", state: "",
     icon: "🍲", bgFrom: "#7C2D12", bgTo: "#C2410C",
     tags: "",
@@ -32,11 +50,26 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })); }
 
+  // Toggle a category in/out of the selected array
+  function toggleCategory(cat) {
+    setForm(f => {
+      const already = f.category.includes(cat);
+      return {
+        ...f,
+        category: already
+          ? f.category.filter(c => c !== cat)
+          : [...f.category, cat],
+      };
+    });
+  }
+
   function validateStep1() {
-    if (!form.name.trim())        { setFieldErr("Restaurant name is required"); return false; }
-    if (!form.address.trim())     { setFieldErr("Address is required"); return false; }
-    if (!form.phone.trim())       { setFieldErr("Phone number is required"); return false; }
-    if (!form.description.trim()) { setFieldErr("Please add a short description"); return false; }
+    if (!form.name.trim())          { setFieldErr("Restaurant name is required"); return false; }
+    if (!form.address.trim())       { setFieldErr("Address is required"); return false; }
+    if (!form.state)                { setFieldErr("Please select your state"); return false; }
+    if (!form.phone.trim())         { setFieldErr("Phone number is required"); return false; }
+    if (!form.description.trim())   { setFieldErr("Please add a short description"); return false; }
+    if (form.category.length === 0) { setFieldErr("Please select at least one category"); return false; }
     setFieldErr(""); return true;
   }
 
@@ -44,11 +77,11 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
     const tags = form.tags.split(",").map(t => t.trim()).filter(Boolean);
     const { error: err } = await onSubmit({
       name:        form.name.trim(),
-      category:    form.category,
+      category:    form.category,          // TEXT[] array
       description: form.description.trim(),
       address:     form.address.trim(),
       phone:       form.phone.trim(),
-      state:       form.state.trim() || null,
+      state:       form.state || null,
       icon:        form.icon,
       bg_from:     form.bgFrom,
       bg_to:       form.bgTo,
@@ -93,7 +126,12 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
             </div>
             <div style={{ padding: "16px" }}>
               <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 4 }}>{form.name || "Restaurant name"}</div>
-              <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{form.category} · {form.address}</div>
+              <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>
+                {form.category.join(", ") || "Category"} · {form.address}
+              </div>
+              {form.state && (
+                <div style={{ fontSize: 10, color: "#2563EB", fontWeight: 700, marginBottom: 6 }}>📍 {form.state}</div>
+              )}
               <div style={{ fontSize: 12, color: "#B0B0B0", lineHeight: 1.5 }}>{form.description}</div>
             </div>
           </div>
@@ -115,27 +153,85 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
 
         <Field label="Restaurant name *" value={form.name} onChange={v => set("name", v)} placeholder="e.g. Mama Ngozi's Kitchen" />
         <Field label="Address *" value={form.address} onChange={v => set("address", v)} placeholder="Block 3, Shop 7, Tambuwal" />
-        <Field label="State" value={form.state} onChange={v => set("state", v)} placeholder="e.g. Lagos State" />
+
+        {/* State — dropdown restricted to Sokoto and Kebbi */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={labelStyle}>State *</div>
+          <select
+            value={form.state}
+            onChange={e => set("state", e.target.value)}
+            style={{
+              width: "100%",
+              border: "1.5px solid #EBEBEB",
+              borderRadius: 12,
+              background: BG,
+              outline: "none",
+              fontSize: 14,
+              color: form.state ? DARK : "#B0B0B0",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              padding: "12px 14px",
+              appearance: "none",
+              WebkitAppearance: "none",
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 14px center",
+              paddingRight: 36,
+              cursor: "pointer",
+            }}
+          >
+            <option value="" disabled>Select your state</option>
+            {STATES.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
         <Field label="Phone number *" value={form.phone} onChange={v => set("phone", v)} placeholder="080XXXXXXXX" type="tel" />
 
-        {/* Category */}
+        {/* Category — multi-select chips */}
         <div style={{ marginBottom: 18 }}>
-          <div style={labelStyle}>Category *</div>
+          <div style={labelStyle}>
+            Category * <span style={{ color: "#C0C0C0", fontWeight: 400 }}>
+              {form.category.length > 0 ? `(${form.category.length} selected)` : "(select all that apply)"}
+            </span>
+          </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {CATEGORIES.map(c => (
-              <button key={c} onClick={() => set("category", c)}
-                style={{ padding: "7px 14px", borderRadius: 20, border: "1.5px solid", borderColor: form.category === c ? CORAL : "#EBEBEB", background: form.category === c ? "#FFF0ED" : "#fff", color: form.category === c ? CORAL : "#888", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                {c}
-              </button>
-            ))}
+            {CATEGORIES.map(c => {
+              const selected = form.category.includes(c);
+              return (
+                <button
+                  key={c}
+                  onClick={() => toggleCategory(c)}
+                  style={{
+                    padding: "7px 14px",
+                    borderRadius: 20,
+                    border: "1.5px solid",
+                    borderColor: selected ? CORAL : "#EBEBEB",
+                    background:  selected ? "#FFF0ED" : "#fff",
+                    color:       selected ? CORAL : "#888",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {c}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Description */}
         <div style={{ marginBottom: 18 }}>
           <div style={labelStyle}>Description * <span style={{ color: "#C0C0C0", fontWeight: 400 }}>({form.description.length}/120)</span></div>
-          <textarea value={form.description} onChange={e => set("description", e.target.value.slice(0, 120))} placeholder="Tell customers what makes your restaurant special..."
-            style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 14, background: BG, outline: "none", fontSize: 14, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", padding: "12px 14px", lineHeight: 1.6, minHeight: 80, resize: "none" }} />
+          <textarea
+            value={form.description}
+            onChange={e => set("description", e.target.value.slice(0, 120))}
+            placeholder="Tell customers what makes your restaurant special..."
+            style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 14, background: BG, outline: "none", fontSize: 14, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", padding: "12px 14px", lineHeight: 1.6, minHeight: 80, resize: "none" }}
+          />
         </div>
 
         {/* Tags */}
@@ -198,5 +294,5 @@ function Field({ label, value, onChange, placeholder, type = "text" }) {
   );
 }
 
-const labelStyle  = { fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 8 };
-const btnFull     = { width: "100%", padding: 14, background: CORAL, color: "#fff", border: "none", borderRadius: 16, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" };
+const labelStyle = { fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 8 };
+const btnFull    = { width: "100%", padding: 14, background: CORAL, color: "#fff", border: "none", borderRadius: 16, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" };

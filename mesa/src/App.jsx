@@ -182,7 +182,7 @@ function VCard({ r, onClick }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: DARK, marginBottom: 4 }}>{r.name}</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "#888" }}>{r.category}</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#888" }}>{Array.isArray(r.category) ? r.category.join(", ") : r.category}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ color: r.is_open ? "#22C55E" : "#D4CEC8", fontSize: 8 }}>●</span><span style={{ fontSize: 11, fontWeight: 700, color: r.is_open ? "#22C55E" : "#B0B0B0" }}>{r.is_open ? "Open" : "Closed"}</span></span>
           {(() => { const info = getHoursInfo(r); return info ? <span style={{ fontSize: 10, color: "#B0B0B0", fontWeight: 500 }}>🕐 {info}</span> : null; })()}
           {r.state && <span style={{ fontSize: 10, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", padding: "2px 7px", borderRadius: 10 }}>📍 {r.state}</span>}
@@ -210,7 +210,7 @@ function HCard({ r, onClick }) {
       </div>
       <div style={{ padding: "12px 14px 14px" }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: DARK, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
-        <div style={{ fontSize: 10, color: "#888", fontWeight: 600, marginBottom: 4 }}>{r.category}</div>
+        <div style={{ fontSize: 10, color: "#888", fontWeight: 600, marginBottom: 4 }}>{Array.isArray(r.category) ? r.category[0] : r.category}</div>
         <div style={{ fontSize: 10, color: "#B0B0B0" }}>📍 {r.address}</div>
       </div>
     </div>
@@ -1187,12 +1187,13 @@ export default function App() {
   const filtered = restaurants.filter(r => {
     // State filter: hide restaurants in a different state when user location is known
     if (userLocation?.state && r.state && r.state !== userLocation.state) return false;
-    const mc = activeCat === "All" || r.category === activeCat;
+    const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
+    const mc = activeCat === "All" || cats.includes(activeCat);
     if (!mc) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     if (r.name.toLowerCase().includes(s)) return true;
-    if (r.category.toLowerCase().includes(s)) return true;
+    if (cats.some(c => c.toLowerCase().includes(s))) return true;
     // Search through menu item names
     return (r.menu_categories || []).some(cat =>
       (cat.menu_items || []).some(item => item.name.toLowerCase().includes(s))
@@ -1639,7 +1640,7 @@ export default function App() {
                 const matchedItems = getMatchedMenuItems(r);
                 const showItems = matchedItems.length > 0 && search &&
                   !r.name.toLowerCase().includes(search.toLowerCase()) &&
-                  !r.category.toLowerCase().includes(search.toLowerCase());
+                  !(Array.isArray(r.category) ? r.category : [r.category]).some(c => c?.toLowerCase().includes(search.toLowerCase()));
                 return (
                   <div key={r.id}>
                     <VCard r={r} onClick={() => goDetail(r.id)} />
@@ -1706,7 +1707,7 @@ export default function App() {
 
             <div style={{ background: "#fff", borderRadius: "28px 28px 0 0", marginTop: -28, padding: "24px 20px 0", position: "relative", zIndex: 2, minHeight: "calc(100vh - 212px)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ background: selected.badge ? "#FFF0ED" : BG, color: selected.badge ? CORAL : "#888", fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 20 }}>{selected.badge || selected.category}</span>
+                <span style={{ background: selected.badge ? "#FFF0ED" : BG, color: selected.badge ? CORAL : "#888", fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 20 }}>{selected.badge || (Array.isArray(selected.category) ? selected.category[0] : selected.category)}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 20, background: selected.is_open ? "#F0FDF4" : "#FEF2F2", color: selected.is_open ? "#16A34A" : "#DC2626" }}>
                   <span style={{ fontSize: 7 }}>●</span>{selected.is_open ? "Open Now" : "Closed"}
                 </div>
@@ -1837,7 +1838,7 @@ export default function App() {
                     { ico: "📍", label: "Location", val: selected.address },
                     { ico: "🟢", label: "Status", val: selected.is_open ? "Open Now" : "Closed", color: selected.is_open ? "#16A34A" : "#DC2626" },
                     { ico: "🚚", label: "Delivery", val: "Contact restaurant directly" },
-                    { ico: "🍽️", label: "Cuisine", val: selected.category },
+                    { ico: "🍽️", label: "Cuisine", val: Array.isArray(selected.category) ? selected.category.join(", ") : selected.category },
                   ].map(chip => (
                     <div key={chip.label} style={{ background: BG, borderRadius: 14, padding: 14 }}>
                       <div style={{ fontSize: 18, marginBottom: 4 }}>{chip.ico}</div>

@@ -108,7 +108,7 @@ export default function AdminPanel() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: DARK, marginBottom: 2 }}>{app.name}</div>
-                    <div style={{ fontSize: 11, color: "#888" }}>{app.category} · {app.address}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>{Array.isArray(app.category) ? app.category.join(", ") : app.category} · {app.address}</div>
                   </div>
                   <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: sc.bg, color: sc.color, flexShrink: 0 }}>{sc.label}</span>
                 </div>

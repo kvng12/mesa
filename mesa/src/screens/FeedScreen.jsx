@@ -323,7 +323,7 @@ function FeedItem({ post, isActive, liked, onLike, onComment, onRestaurant, onOr
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", textShadow: "0 1px 4px rgba(0,0,0,0.5)", lineHeight: 1.2 }}>{r.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.75)", fontWeight: 600 }}>{r.category}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.75)", fontWeight: 600 }}>{Array.isArray(r.category) ? r.category[0] : r.category}</div>
             </div>
             <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.8)", background: "rgba(255,255,255,0.15)", borderRadius: 20, padding: "3px 8px", backdropFilter: "blur(4px)" }}>
               Follow
