@@ -31,7 +31,7 @@ export function useRestaurants() {
     setLoading(true);
     const { data, error } = await supabase
       .from("restaurants")
-      .select("id, name, category, state, is_open, logo_url, opening_hours, owner_id, icon, bg_from, bg_to, description, address, phone, badge, tags, payment_cash, payment_online, created_at")
+      .select("*, menu_categories(*)")
       .order("created_at", { ascending: true });
 
     // Debug: log raw response to diagnose RLS or missing rows

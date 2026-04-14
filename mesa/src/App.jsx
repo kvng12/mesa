@@ -1268,7 +1268,7 @@ export default function App() {
     setDetailMenuLoading(true);
     supabase
       .from("menu_categories")
-      .select("id, name, sort_order, menu_items!menu_category_id(id, name, price, is_available, sort_order, image_url)")
+      .select("id, name, sort_order, menu_items(id, name, price, is_available, sort_order, image_url)")
       .eq("restaurant_id", selectedId)
       .order("sort_order", { ascending: true })
       .then(({ data }) => {
