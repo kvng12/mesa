@@ -432,6 +432,7 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
       if (catMode === "new") {
         const catName = customCat.trim() || newCatName.trim();
         if (!catName) { setErr("Category name is required"); setSaving(false); return; }
+        console.log("[AddMenuItemModal] creating category:", { restaurant_id: ownerR.id, name: catName });
         const { data: newCat, error: catErr } = await supabase
           .from("menu_categories")
           .insert({ restaurant_id: ownerR.id, name: catName, sort_order: cats.length })
@@ -462,16 +463,19 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
       }
 
       // Insert the menu item — uses menu_category_id (not category_id)
+      const insertPayload = {
+        menu_category_id: categoryId,
+        name:             name.trim(),
+        price:            Number(price),
+        is_available:     true,
+        sort_order:       0,
+        ...(imageUrl ? { image_url: imageUrl } : {}),
+      };
+      console.log("[AddMenuItemModal] ownerR:", { id: ownerR?.id, name: ownerR?.name, owner_id: ownerR?.owner_id });
+      console.log("[AddMenuItemModal] inserting menu_item:", insertPayload);
       const { error: itemErr } = await supabase
         .from("menu_items")
-        .insert({
-          menu_category_id: categoryId,
-          name:             name.trim(),
-          price:            Number(price),
-          is_available:     true,
-          sort_order:       0,
-          ...(imageUrl ? { image_url: imageUrl } : {}),
-        });
+        .insert(insertPayload);
       if (itemErr) throw itemErr;
 
       onAdded();
