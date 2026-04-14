@@ -2250,10 +2250,23 @@ export default function App() {
                       key={item.id}
                       item={item}
                       restaurantId={ownerR.id}
-                      onToggle={() => toggleItem(item.id, item.is_available)}
+                      onToggle={async () => {
+                        // 1. Optimistic update — flip immediately in local state
+                        setOwnerMenu(prev => prev.map(c => ({
+                          ...c,
+                          menu_items: (c.menu_items || []).map(i =>
+                            i.id === item.id ? { ...i, is_available: !i.is_available } : i
+                          ),
+                        })));
+                        // 2. Persist to DB
+                        await toggleItem(item.id, item.is_available);
+                        // 3. Sync to confirm actual DB state
+                        refetchOwnerMenu();
+                      }}
                       onDelete={async () => {
                         if (!window.confirm("Delete " + item.name + "?")) return;
                         await supabase.from("menu_items").delete().eq("id", item.id);
+                        refetchOwnerMenu();
                       }}
                       onImageUploaded={async (file) => {
                         const { url, error } = await uploadFoodImage(file, ownerR.id, item.id);
