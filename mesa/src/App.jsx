@@ -442,7 +442,7 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
       }
 
       // Upload photo first (if selected), get public URL
-      // ISSUE 1 FIX: column is menu_category_id — confirmed correct below
+      // Upload photo first (if selected), get public URL
       let imageUrl = null;
       if (imageFile) {
         setUploading(true);
@@ -462,9 +462,9 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
         setUploading(false);
       }
 
-      // Insert the menu item — uses menu_category_id (not category_id)
+      // Insert the menu item
       const insertPayload = {
-        menu_category_id: categoryId,
+        category_id: categoryId,
         name:             name.trim(),
         price:            Number(price),
         is_available:     true,
@@ -1281,13 +1281,13 @@ export default function App() {
 
     const { data: items } = await supabase
       .from("menu_items")
-      .select("id, name, price, is_available, sort_order, image_url, menu_category_id")
-      .in("menu_category_id", cats.map(c => c.id))
+      .select("id, name, price, is_available, sort_order, image_url, category_id")
+      .in("category_id", cats.map(c => c.id))
       .order("sort_order", { ascending: true });
 
     return cats.map(cat => ({
       ...cat,
-      menu_items: (items || []).filter(i => i.menu_category_id === cat.id),
+      menu_items: (items || []).filter(i => i.category_id === cat.id),
     }));
   }
 
