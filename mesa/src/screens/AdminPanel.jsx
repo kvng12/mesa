@@ -22,10 +22,12 @@ function StatCard({ n, label, color }) {
 }
 
 export default function AdminPanel() {
-  const { applications, stats, loading, actionLoading, fetchApplications, fetchStats, approveApplication, rejectApplication } = useAdmin();
+  const { applications, stats, loading, actionLoading, fetchApplications, fetchStats, approveApplication, rejectApplication, backfillApprovedApplications } = useAdmin();
   const [filter, setFilter]   = useState("pending");
   const [rejectNote, setNote] = useState({});     // { [id]: noteText }
   const [showReject, setShowReject] = useState(null); // id of app showing reject input
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillResult, setBackfillResult] = useState(null);
 
   useEffect(() => {
     fetchApplications();
@@ -167,6 +169,31 @@ export default function AdminPanel() {
           style={{ width: "100%", padding: 12, background: "#fff", color: "#888", border: "1.5px solid #EBEBEB", borderRadius: 14, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", marginTop: 8 }}>
           Refresh Data
         </button>
+
+        {/* One-time backfill — creates restaurant rows for approved applications that are missing them */}
+        <button
+          onClick={async () => {
+            setBackfilling(true);
+            setBackfillResult(null);
+            const result = await backfillApprovedApplications();
+            setBackfilling(false);
+            setBackfillResult(result);
+          }}
+          disabled={backfilling}
+          style={{ width: "100%", padding: 12, background: backfilling ? "#F9F9F9" : "#FFF0ED", color: CORAL, border: `1.5px solid ${CORAL}`, borderRadius: 14, fontSize: 12, fontWeight: 700, cursor: backfilling ? "not-allowed" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", marginTop: 8, opacity: backfilling ? 0.6 : 1 }}>
+          {backfilling ? "Running backfill..." : "🔧 Backfill: Create missing restaurant rows"}
+        </button>
+        {backfillResult && (
+          <div style={{ marginTop: 8, fontSize: 12, fontWeight: 600, padding: "8px 14px", borderRadius: 10,
+            background: backfillResult.error ? "#FEF2F2" : "#F0FDF4",
+            color: backfillResult.error ? "#DC2626" : "#16A34A" }}>
+            {backfillResult.error
+              ? `Error: ${backfillResult.error.message || backfillResult.error}`
+              : backfillResult.created === 0
+                ? "All approved applications already have restaurant rows."
+                : `Created ${backfillResult.created} restaurant row${backfillResult.created !== 1 ? "s" : ""}. Refresh to see them.`}
+          </div>
+        )}
       </div>
     </div>
   );
