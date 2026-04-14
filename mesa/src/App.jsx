@@ -1398,8 +1398,10 @@ export default function App() {
     }
 
     order.order_items.forEach(item => {
-      // Reconstruct a minimal menuItem shape from the order snapshot
-      const menuItem = { id: item.menu_item_id || item.id, name: item.name, price: item.price };
+      // menu_item_id is the FK to menu_items — must be present and valid.
+      // item.id is the order_items row UUID, which is NOT a valid menu_items FK.
+      if (!item.menu_item_id) return; // skip items from old orders that lack menu_item_id
+      const menuItem = { id: item.menu_item_id, name: item.name, price: item.price };
       for (let i = 0; i < item.quantity; i++) {
         cart.addItem(menuItem, restaurant);
       }

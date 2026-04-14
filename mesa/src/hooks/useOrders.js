@@ -54,7 +54,7 @@ export function useOrders(userId) {
         delivery_address,
         created_at,
         restaurants ( id, name, icon, bg_from, bg_to ),
-        order_items ( id, name, price, quantity, line_total )
+        order_items ( id, menu_item_id, name, price, quantity, line_total )
       `)
       .eq("customer_id", userId)
       .order("created_at", { ascending: false })
