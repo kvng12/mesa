@@ -10,6 +10,7 @@ export function useOrders(userId) {
   const [error, setError]     = useState(null);
   const channelRef            = useRef(null);
   const subscribedRef         = useRef(false);
+  const retryingRef           = useRef(false); // guard against re-entrant teardown
   const retryTimerRef         = useRef(null);
   const pollIntervalRef       = useRef(null);
 
@@ -27,12 +28,12 @@ export function useOrders(userId) {
 
     return () => {
       subscribedRef.current = false;
+      retryingRef.current   = true; // prevent any in-flight callback from scheduling a retry
       clearTimeout(retryTimerRef.current);
       clearInterval(pollIntervalRef.current);
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
+      const ch = channelRef.current;
+      channelRef.current = null;    // null before removeChannel to stop re-entrant callbacks
+      if (ch) supabase.removeChannel(ch);
     };
   }, [userId]);
 
@@ -107,13 +108,22 @@ export function useOrders(userId) {
       .subscribe((status) => {
         console.log("[useOrders] realtime status:", status);
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          // Guard: if we're already tearing down, don't recurse.
+          // removeChannel() can synchronously fire this callback with CLOSED,
+          // causing infinite recursion if we don't bail out here.
+          if (retryingRef.current) return;
+          retryingRef.current = true;
+
           console.warn("[useOrders] channel", status, "— retrying in 5s");
-          // Tear down the broken channel and reconnect after a short delay
-          if (channelRef.current) {
-            supabase.removeChannel(channelRef.current);
-            channelRef.current = null;
-          }
+
+          // Null the ref BEFORE calling removeChannel so any re-entrant
+          // CLOSED callbacks see null and skip the removeChannel call.
+          const ch = channelRef.current;
+          channelRef.current = null;
+          if (ch) supabase.removeChannel(ch);
+
           retryTimerRef.current = setTimeout(() => {
+            retryingRef.current = false;
             if (subscribedRef.current) subscribeRealtime();
           }, 5_000);
         }

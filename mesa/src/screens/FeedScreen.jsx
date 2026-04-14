@@ -146,11 +146,10 @@ const GRADIENTS = [
 ];
 
 // ── Single feed item ──────────────────────────────────────────
-function FeedItem({ post, isActive, liked, onLike, onComment, onRestaurant, onOrder, itemRef }) {
+function FeedItem({ post, isActive, liked, onLike, onComment, onRestaurant, onOrder, itemRef, muted, onToggleMute }) {
   const videoRef  = useRef();
   const [hearts, setHearts] = useState([]);
   const lastTap   = useRef(0);
-  const [muted, setMuted] = useState(true);
 
   const r = post.restaurants;
   const gradIdx = post.id ? post.id.charCodeAt(0) % GRADIENTS.length : 0;
@@ -284,7 +283,7 @@ function FeedItem({ post, isActive, liked, onLike, onComment, onRestaurant, onOr
         {/* Mute/Unmute for videos */}
         {post.media_type === "video" && post.media_url && (
           <button
-            onClick={() => setMuted(m => !m)}
+            onClick={onToggleMute}
             style={{ background: "transparent", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}
           >
             <div style={{
@@ -374,6 +373,7 @@ export default function FeedScreen({
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [commentPost, setCommentPost]   = useState(null);
+  const [muted, setMuted]               = useState(true);
   const itemRefs  = useRef([]);
   const observerRef = useRef(null);
 
@@ -496,6 +496,8 @@ export default function FeedScreen({
             onRestaurant={() => onNavigateToRestaurant(post.restaurants?.id)}
             onOrder={() => onOrder(post.restaurants)}
             itemRef={el => { itemRefs.current[i] = el; }}
+            muted={muted}
+            onToggleMute={() => setMuted(m => !m)}
           />
         ))}
 
