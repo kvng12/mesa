@@ -9,6 +9,7 @@ const STORY_DURATION = 5000; // ms per story
 export default function StoryViewer({ group, onClose, onViewed }) {
   const [idx, setIdx]         = useState(0);
   const [progress, setProgress] = useState(0);
+  const [imgError, setImgError] = useState(false);
   const timerRef              = useRef(null);
   const progressRef           = useRef(null);
   const startRef              = useRef(null);
@@ -17,10 +18,15 @@ export default function StoryViewer({ group, onClose, onViewed }) {
   const r     = group.restaurant;
   const total = group.stories.length;
 
-  // Mark current story as viewed
+  // Mark current story as viewed + log URL for debugging
   useEffect(() => {
-    if (story && onViewed) onViewed(story.id);
+    if (!story) return;
+    console.log("[StoryViewer] story image_url:", story.image_url, "| id:", story.id);
+    if (onViewed) onViewed(story.id);
   }, [story?.id]);
+
+  // Reset error state when navigating to a new story
+  useEffect(() => { setImgError(false); }, [idx]);
 
   // Auto-advance timer
   useEffect(() => {
@@ -97,12 +103,24 @@ export default function StoryViewer({ group, onClose, onViewed }) {
       </div>
 
       {/* Image */}
-      <img
-        src={story.image_url}
-        alt=""
-        style={S.image}
-        onError={e => { e.target.style.display = "none"; }}
-      />
+      {imgError ? (
+        <div style={{ ...S.image, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <div style={{ fontSize: 36 }}>🖼️</div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", textAlign: "center", padding: "0 24px" }}>
+            Image unavailable{"\n"}(storage bucket may not be public)
+          </div>
+        </div>
+      ) : (
+        <img
+          src={story.image_url}
+          alt=""
+          style={S.image}
+          onError={() => {
+            console.error("[StoryViewer] image failed to load:", story.image_url);
+            setImgError(true);
+          }}
+        />
+      )}
 
       {/* Caption */}
       {story.caption && (

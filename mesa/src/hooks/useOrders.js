@@ -9,20 +9,26 @@ export function useOrders(userId) {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const channelRef            = useRef(null);
-  const subscribedRef         = useRef(false); // guard against double-subscribe
+  const subscribedRef         = useRef(false);
+  const retryTimerRef         = useRef(null);
+  const pollIntervalRef       = useRef(null);
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
 
-    // Guard: if already subscribed (React StrictMode double-fire), skip
     if (subscribedRef.current) return;
     subscribedRef.current = true;
 
     fetchOrders();
     subscribeRealtime();
 
+    // Polling fallback: re-fetch every 30s in case realtime is unavailable
+    pollIntervalRef.current = setInterval(() => fetchOrders(), 30_000);
+
     return () => {
       subscribedRef.current = false;
+      clearTimeout(retryTimerRef.current);
+      clearInterval(pollIntervalRef.current);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -99,9 +105,17 @@ export function useOrders(userId) {
         }
       )
       .subscribe((status) => {
-        // Optional: log subscription status for debugging
-        if (status === "CHANNEL_ERROR") {
-          console.warn("Orders realtime channel error — falling back to manual refresh");
+        console.log("[useOrders] realtime status:", status);
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          console.warn("[useOrders] channel", status, "— retrying in 5s");
+          // Tear down the broken channel and reconnect after a short delay
+          if (channelRef.current) {
+            supabase.removeChannel(channelRef.current);
+            channelRef.current = null;
+          }
+          retryTimerRef.current = setTimeout(() => {
+            if (subscribedRef.current) subscribeRealtime();
+          }, 5_000);
         }
       });
   }
