@@ -138,7 +138,7 @@ function StoryUploadCard({ restaurantId, restaurant }) {
       <div style={{ padding: "16px 16px 4px", fontSize: 13, fontWeight: 800, color: DARK }}>Post a Story</div>
       <div style={{ padding: "4px 16px 14px", fontSize: 11, color: "#888" }}>Visible to customers for 24 hours</div>
       <div style={{ padding: "0 16px 16px" }}>
-        <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: "none" }} />
+        <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
         {!preview
           ? <div onClick={() => fileRef.current?.click()} style={{ height: 140, background: BG, borderRadius: 14, border: "1.5px dashed #EBEBEB", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}>
               <span style={{ fontSize: 28 }}>📷</span>
