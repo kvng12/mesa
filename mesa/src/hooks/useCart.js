@@ -115,12 +115,20 @@ export function useCart() {
       if (itemsErr) throw itemsErr;
 
       // Notify restaurant owner for cash orders (online orders are notified via Paystack webhook)
-      if (paymentMethod === "cash" && BACKEND_URL) {
-        fetch(`${BACKEND_URL}/notify/new-order`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: order.id, restaurantId }),
-        }).catch(() => {}); // fire-and-forget
+      if (paymentMethod === "cash") {
+        if (!BACKEND_URL) {
+          console.warn("[notify/new-order] VITE_BACKEND_URL is not set — skipping push notification");
+        } else {
+          const notifyPayload = { orderId: order.id, restaurantId };
+          console.log("[notify/new-order] calling", `${BACKEND_URL}/notify/new-order`, notifyPayload);
+          fetch(`${BACKEND_URL}/notify/new-order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(notifyPayload),
+          })
+            .then(r => r.json().then(body => console.log("[notify/new-order] response:", r.status, body)))
+            .catch(err => console.error("[notify/new-order] fetch failed:", err.message));
+        }
       }
 
       clearCart();
