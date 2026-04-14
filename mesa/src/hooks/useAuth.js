@@ -7,8 +7,16 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get current session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Get current session on mount — clear stale tokens gracefully
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        // Invalid or expired refresh token — wipe the local session so the user
+        // sees the login screen instead of getting stuck in a broken state
+        console.warn("[useAuth] getSession error — clearing session:", error.message);
+        supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
       setUser(session?.user ?? null);
       if (session?.user) fetchProfile(session.user.id);
       else setLoading(false);
@@ -16,7 +24,16 @@ export function useAuth() {
 
     // Listen for auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        if (event === "TOKEN_REFRESHED" && !session) {
+          // Refresh failed — clear state so user lands on login
+          console.warn("[useAuth] TOKEN_REFRESHED with no session — signing out");
+          await supabase.auth.signOut();
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
         setUser(session?.user ?? null);
         if (session?.user) fetchProfile(session.user.id);
         else { setProfile(null); setLoading(false); }
@@ -32,6 +49,7 @@ export function useAuth() {
       .select("*")
       .eq("id", userId)
       .single();
+    console.log("[useAuth] fetchProfile →", { id: userId, role: data?.role, full_name: data?.full_name });
     setProfile(data);
     setLoading(false);
   }

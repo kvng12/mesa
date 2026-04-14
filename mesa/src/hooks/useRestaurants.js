@@ -79,6 +79,13 @@ export function useRestaurants() {
       `)
       .order("created_at", { ascending: true });
 
+    // Debug: log raw response to diagnose RLS or missing rows
+    console.log("[useRestaurants] fetchAll →", {
+      rowCount: data?.length ?? 0,
+      error: error?.message ?? null,
+      rows: data?.map(r => ({ id: r.id, name: r.name, owner_id: r.owner_id, state: r.state })) ?? [],
+    });
+
     if (error) { setError(error.message); }
     else {
       const normalized = (data || []).map((r) => ({

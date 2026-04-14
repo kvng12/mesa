@@ -1236,9 +1236,7 @@ export default function App() {
   const [activeChat, setActiveChat]     = useState(null); // restaurant object for customer chat
   const [showOwnerChats, setShowOwnerChats] = useState(false);
   const [ownerChatTarget, setOwnerChatTarget] = useState(null); // conv for owner reply
-  const [userLocation, setUserLocation]     = useState(null);  // { state } from reverse-geocode
-  const [manualState, setManualState]       = useState(undefined); // undefined=auto, null=all, string=manual
-  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [userLocation, setUserLocation]     = useState(null);  // { state } from reverse-geocode — display only
 
   useEffect(() => {
     if (appState !== "splash") return;
@@ -1304,16 +1302,7 @@ export default function App() {
     return matched;
   }
 
-  // effectiveState: manualState overrides auto-detect; undefined means use GPS result; null means show all
-  const effectiveState = manualState !== undefined ? manualState : userLocation?.state;
-  const byState = effectiveState
-    ? restaurants.filter(r => !r.state || r.state === effectiveState)
-    : restaurants;
-  // Auto-fallback: if state filter yields 0 results, silently show all with a banner
-  const locationFallback = !!(effectiveState && byState.length === 0 && restaurants.length > 0);
-  const baseList = locationFallback ? restaurants : byState;
-
-  const filtered = baseList.filter(r => {
+  const filtered = restaurants.filter(r => {
     const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
     const mc = activeCat === "All" || cats.includes(activeCat);
     if (!mc) return false;
@@ -1332,10 +1321,6 @@ export default function App() {
 
   function handleAddToCart(menuItem, restaurant) {
     if (!user) { setAuthMode("login"); return; }
-    if (restaurant.state && effectiveState && restaurant.state !== effectiveState) {
-      alert(`This restaurant is in ${restaurant.state}. You can only order from restaurants in your area.`);
-      return;
-    }
     if (cart.isDifferentRestaurant(restaurant.id)) {
       setPendingItem({ menuItem, restaurant }); return;
     }
@@ -1523,38 +1508,6 @@ export default function App() {
           />
         )}
 
-        {/* ── Location picker overlay ── */}
-        {showLocationPicker && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 400, display: "flex", alignItems: "flex-end" }}
-            onClick={() => setShowLocationPicker(false)}>
-            <div onClick={e => e.stopPropagation()}
-              style={{ width: "100%", maxWidth: 430, margin: "0 auto", background: "#fff", borderRadius: "24px 24px 0 0", padding: "24px 24px calc(32px + env(safe-area-inset-bottom))", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              <div style={{ width: 40, height: 4, background: "#E5E5E5", borderRadius: 4, margin: "0 auto 20px" }} />
-              <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 16 }}>Choose area</div>
-              {[
-                { label: "All areas",   value: null,         icon: "🌍" },
-                { label: "Sokoto",      value: "Sokoto",     icon: "📍" },
-                { label: "Kebbi State", value: "Kebbi State",icon: "📍" },
-              ].map(opt => {
-                const active = manualState === opt.value || (manualState === undefined && userLocation?.state === opt.value);
-                return (
-                  <button key={String(opt.value)} onClick={() => { setManualState(opt.value); setShowLocationPicker(false); }}
-                    style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "14px 16px", marginBottom: 8, borderRadius: 14, border: `1.5px solid ${active ? CORAL : "#EBEBEB"}`, background: active ? "#FFF0ED" : "#F9F9F9", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                    <span style={{ fontSize: 18 }}>{opt.icon}</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: active ? CORAL : DARK }}>{opt.label}</span>
-                    {active && <span style={{ marginLeft: "auto", fontSize: 16, color: CORAL }}>✓</span>}
-                  </button>
-                );
-              })}
-              {userLocation?.state && !["Sokoto","Kebbi State"].includes(userLocation.state) && (
-                <div style={{ fontSize: 11, color: "#B0B0B0", marginTop: 8, textAlign: "center" }}>
-                  Your detected location ({userLocation.state}) is outside our delivery areas.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* ── Register restaurant overlay ── */}
         {showRegister && (
           <RegisterRestaurant
@@ -1708,22 +1661,12 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Location row — tappable pill */}
-              <div style={{ marginBottom: 18 }}>
-                <button onClick={() => setShowLocationPicker(true)}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 20, padding: "6px 14px", cursor: "pointer" }}>
-                  <span style={{ fontSize: 13 }}>📍</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>
-                    {manualState === null ? "All areas" : (manualState || userLocation?.state || "Nigeria")}
-                  </span>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.75)" }}>▾</span>
-                </button>
-                {locationFallback && (
-                  <div style={{ marginTop: 8, fontSize: 11, color: "rgba(255,255,255,0.9)", background: "rgba(0,0,0,0.25)", borderRadius: 10, padding: "5px 12px", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                    No restaurants in {effectiveState} — showing all
-                    <span onClick={() => setManualState(null)} style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }}>Clear filter</span>
-                  </div>
-                )}
+              {/* Location row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
+                <span style={{ fontSize: 14 }}>📍</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
+                  {userLocation?.state || "Nigeria"}
+                </span>
               </div>
 
               {/* Category pills on the header itself */}
