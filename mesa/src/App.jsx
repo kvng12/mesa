@@ -1218,7 +1218,7 @@ export default function App() {
         @keyframes splashSlide { 0%{opacity:0;transform:translateY(16px)} 100%{opacity:1;transform:translateY(0)} }
         @keyframes splashSub { 0%{opacity:0} 100%{opacity:0.75} }
       `}</style>
-      <img src="/logo.jpg" alt="Chowli" style={{ width: 120, height: 120, borderRadius: 24, marginBottom: 8, animation: "splashPop 0.7s cubic-bezier(.36,.07,.19,.97) both" }} />
+      <img src="/logo.png" alt="Chowli" style={{ width: 120, height: 120, borderRadius: 24, objectFit: "cover", marginBottom: 8, animation: "splashPop 0.7s cubic-bezier(.36,.07,.19,.97) both" }} />
       <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashSub 0.6s 0.7s both" }}>Your local food market</div>
     </div>
   );
@@ -1256,7 +1256,7 @@ export default function App() {
 
   if (authLoading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: BG, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <div style={{ textAlign: "center" }}><div style={{ fontSize: 36, marginBottom: 12, animation: "floatUp 1.4s ease-in-out infinite" }}>🍗</div><div style={{ fontSize: 14, color: "#888", fontWeight: 600 }}>Loading Chowli...</div></div>
+      <div style={{ textAlign: "center" }}><img src="/logo.png" alt="Chowli" style={{ width: 72, height: 72, borderRadius: 16, objectFit: "cover", marginBottom: 12, animation: "floatUp 1.4s ease-in-out infinite" }} /><div style={{ fontSize: 14, color: "#888", fontWeight: 600 }}>Loading Chowli...</div></div>
     </div>
   );
 
