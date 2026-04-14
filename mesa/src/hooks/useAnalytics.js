@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabase";
 export function useAnalytics(restaurantId) {
   const [data, setData]       = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
   const [period, setPeriod]   = useState("7d"); // "7d" | "30d" | "all"
 
   useEffect(() => {
@@ -25,13 +26,19 @@ export function useAnalytics(restaurantId) {
       : new Date("2020-01-01").toISOString();
 
     // Fetch completed + paid orders in period
-    const { data: orders } = await supabase
+    const { data: orders, error: fetchError } = await supabase
       .from("orders")
       .select(`id, subtotal, status, created_at, order_items(name, quantity, price, line_total)`)
       .eq("restaurant_id", restaurantId)
       .gte("created_at", since)
       .order("created_at", { ascending: true });
 
+    if (fetchError) {
+      setError(fetchError.message);
+      setLoading(false);
+      return;
+    }
+    setError(null);
     const all = orders || [];
 
     // Total revenue (completed + delivered orders)
@@ -91,5 +98,5 @@ export function useAnalytics(restaurantId) {
     setLoading(false);
   }
 
-  return { data, loading, period, setPeriod, refetch: fetchAnalytics };
+  return { data, loading, error, period, setPeriod, refetch: fetchAnalytics };
 }

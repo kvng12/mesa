@@ -368,7 +368,7 @@ function FeedItem({ post, isActive, liked, onLike, onComment, onRestaurant, onOr
 
 // ── Main TikTok Feed ──────────────────────────────────────────
 export default function FeedScreen({
-  posts, likedIds, loading, loadingMore, hasMore,
+  posts, likedIds, loading, error, loadingMore, hasMore,
   toggleLike, fetchMore, fetchComments, addComment,
   user, onLogin, onNavigateToRestaurant, onOrder,
 }) {
@@ -417,6 +417,21 @@ export default function FeedScreen({
       <div style={{ textAlign: "center" }}>
         <div style={{ fontSize: 36, marginBottom: 12 }}>🎬</div>
         <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>Loading feed...</div>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div style={{
+      position: "fixed", inset: 0, background: "#0A0A0A",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      maxWidth: 430, margin: "0 auto", zIndex: 10,
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+    }}>
+      <div style={{ textAlign: "center", padding: "0 32px" }}>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+        <div style={{ fontSize: 15, color: "#fff", fontWeight: 700, marginBottom: 8 }}>Couldn't load feed</div>
+        <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{error}</div>
       </div>
     </div>
   );

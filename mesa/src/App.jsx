@@ -1196,7 +1196,7 @@ const OrdersSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24
 export default function App() {
   const { user, profile, loading: authLoading, isOwner, isAdmin, signUp, signIn, signInWithMagicLink, signOut } = useAuth();
   const { restaurants, loading: restLoading } = useRestaurants();
-  const { posts, likedIds, toggleLike, loading: feedLoading, loadingMore, hasMore, fetchMore, fetchComments, addComment } = useFeed(user?.id);
+  const { posts, likedIds, toggleLike, loading: feedLoading, error: feedError, loadingMore, hasMore, fetchMore, fetchComments, addComment } = useFeed(user?.id);
   const { grouped: storyGroups, markViewed }  = useStories(user?.id);
   const cart                                  = useCart();
   const { makeReservation, submitting: resSub, error: resErr } = useReservations(user?.id);
@@ -1236,7 +1236,9 @@ export default function App() {
   const [activeChat, setActiveChat]     = useState(null); // restaurant object for customer chat
   const [showOwnerChats, setShowOwnerChats] = useState(false);
   const [ownerChatTarget, setOwnerChatTarget] = useState(null); // conv for owner reply
-  const [userLocation, setUserLocation] = useState(null); // { lat, lng, state }
+  const [userLocation, setUserLocation]     = useState(null);  // { state } from reverse-geocode
+  const [manualState, setManualState]       = useState(undefined); // undefined=auto, null=all, string=manual
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   useEffect(() => {
     if (appState !== "splash") return;
@@ -1302,9 +1304,16 @@ export default function App() {
     return matched;
   }
 
-  const filtered = restaurants.filter(r => {
-    // State filter: hide restaurants in a different state when user location is known
-    if (userLocation?.state && r.state && r.state !== userLocation.state) return false;
+  // effectiveState: manualState overrides auto-detect; undefined means use GPS result; null means show all
+  const effectiveState = manualState !== undefined ? manualState : userLocation?.state;
+  const byState = effectiveState
+    ? restaurants.filter(r => !r.state || r.state === effectiveState)
+    : restaurants;
+  // Auto-fallback: if state filter yields 0 results, silently show all with a banner
+  const locationFallback = !!(effectiveState && byState.length === 0 && restaurants.length > 0);
+  const baseList = locationFallback ? restaurants : byState;
+
+  const filtered = baseList.filter(r => {
     const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
     const mc = activeCat === "All" || cats.includes(activeCat);
     if (!mc) return false;
@@ -1323,7 +1332,7 @@ export default function App() {
 
   function handleAddToCart(menuItem, restaurant) {
     if (!user) { setAuthMode("login"); return; }
-    if (restaurant.state && userLocation?.state && restaurant.state !== userLocation.state) {
+    if (restaurant.state && effectiveState && restaurant.state !== effectiveState) {
       alert(`This restaurant is in ${restaurant.state}. You can only order from restaurants in your area.`);
       return;
     }
@@ -1514,6 +1523,38 @@ export default function App() {
           />
         )}
 
+        {/* ── Location picker overlay ── */}
+        {showLocationPicker && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 400, display: "flex", alignItems: "flex-end" }}
+            onClick={() => setShowLocationPicker(false)}>
+            <div onClick={e => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: 430, margin: "0 auto", background: "#fff", borderRadius: "24px 24px 0 0", padding: "24px 24px calc(32px + env(safe-area-inset-bottom))", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              <div style={{ width: 40, height: 4, background: "#E5E5E5", borderRadius: 4, margin: "0 auto 20px" }} />
+              <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 16 }}>Choose area</div>
+              {[
+                { label: "All areas",   value: null,         icon: "🌍" },
+                { label: "Sokoto",      value: "Sokoto",     icon: "📍" },
+                { label: "Kebbi State", value: "Kebbi State",icon: "📍" },
+              ].map(opt => {
+                const active = manualState === opt.value || (manualState === undefined && userLocation?.state === opt.value);
+                return (
+                  <button key={String(opt.value)} onClick={() => { setManualState(opt.value); setShowLocationPicker(false); }}
+                    style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "14px 16px", marginBottom: 8, borderRadius: 14, border: `1.5px solid ${active ? CORAL : "#EBEBEB"}`, background: active ? "#FFF0ED" : "#F9F9F9", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    <span style={{ fontSize: 18 }}>{opt.icon}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: active ? CORAL : DARK }}>{opt.label}</span>
+                    {active && <span style={{ marginLeft: "auto", fontSize: 16, color: CORAL }}>✓</span>}
+                  </button>
+                );
+              })}
+              {userLocation?.state && !["Sokoto","Kebbi State"].includes(userLocation.state) && (
+                <div style={{ fontSize: 11, color: "#B0B0B0", marginTop: 8, textAlign: "center" }}>
+                  Your detected location ({userLocation.state}) is outside our delivery areas.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── Register restaurant overlay ── */}
         {showRegister && (
           <RegisterRestaurant
@@ -1667,12 +1708,22 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Location row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
-                <span style={{ fontSize: 14 }}>📍</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
-                  {userLocation?.state || "Nigeria"}
-                </span>
+              {/* Location row — tappable pill */}
+              <div style={{ marginBottom: 18 }}>
+                <button onClick={() => setShowLocationPicker(true)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.2)", border: "1.5px solid rgba(255,255,255,0.4)", borderRadius: 20, padding: "6px 14px", cursor: "pointer" }}>
+                  <span style={{ fontSize: 13 }}>📍</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>
+                    {manualState === null ? "All areas" : (manualState || userLocation?.state || "Nigeria")}
+                  </span>
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.75)" }}>▾</span>
+                </button>
+                {locationFallback && (
+                  <div style={{ marginTop: 8, fontSize: 11, color: "rgba(255,255,255,0.9)", background: "rgba(0,0,0,0.25)", borderRadius: 10, padding: "5px 12px", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    No restaurants in {effectiveState} — showing all
+                    <span onClick={() => setManualState(null)} style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }}>Clear filter</span>
+                  </div>
+                )}
               </div>
 
               {/* Category pills on the header itself */}
@@ -1789,6 +1840,7 @@ export default function App() {
             posts={posts}
             likedIds={likedIds}
             loading={feedLoading}
+            error={feedError}
             loadingMore={loadingMore}
             hasMore={hasMore}
             toggleLike={toggleLike}
@@ -2013,6 +2065,34 @@ export default function App() {
             <div style={{ fontSize: 56, marginBottom: 16 }}>🙋</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: DARK, marginBottom: 8 }}>Not an owner account</div>
             <div style={{ fontSize: 14, color: "#888" }}>Contact the Chowli team to register your restaurant.</div>
+          </div>
+        )}
+
+        {tab === "store" && user && isOwner && !ownerR && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", padding: "0 32px", textAlign: "center" }}>
+            {restLoading
+              ? <div style={{ fontSize: 14, color: "#B0B0B0", fontWeight: 600 }}>Loading your store...</div>
+              : <>
+                  <div style={{ fontSize: 56, marginBottom: 16 }}>🏪</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: DARK, marginBottom: 8 }}>No restaurant linked</div>
+                  <div style={{ fontSize: 14, color: "#888", lineHeight: 1.7, marginBottom: 16 }}>
+                    Your account is set as an owner but no restaurant is linked to it yet.
+                  </div>
+                  {application && (
+                    <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 14, padding: "14px 18px", fontSize: 13, color: "#92400E", lineHeight: 1.6, marginBottom: 20, width: "100%", textAlign: "left" }}>
+                      <strong>Application status:</strong>{" "}
+                      <span style={{ textTransform: "capitalize" }}>{application.status}</span><br />
+                      {application.status === "pending" && "Under review — we'll notify you once approved."}
+                      {application.status === "rejected" && (application.admin_note ? `Declined: ${application.admin_note}` : "Application was declined.")}
+                      {application.status === "approved" && "Approved! Your store should appear shortly. Try refreshing."}
+                    </div>
+                  )}
+                  <button onClick={() => setShowRegister(true)}
+                    style={{ background: CORAL, color: "#fff", border: "none", borderRadius: 16, padding: "14px 32px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+                    Register a Restaurant
+                  </button>
+                </>
+            }
           </div>
         )}
 

@@ -7,6 +7,7 @@ export function useFeed(userId) {
   const [posts, setPosts]             = useState([]);
   const [likedIds, setLikedIds]       = useState(new Set());
   const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore]         = useState(true);
   const [page, setPage]               = useState(0);
@@ -50,12 +51,20 @@ export function useFeed(userId) {
     const from = pageNum * PAGE_SIZE;
     const to   = from + PAGE_SIZE - 1;
 
-    const { data } = await supabase
+    const { data, error: fetchError } = await supabase
       .from("posts")
       .select(`*, restaurants (id, name, icon, bg_from, bg_to, category, logo_url)`)
       .order("created_at", { ascending: false })
       .range(from, to);
 
+    if (fetchError) {
+      setError(fetchError.message);
+      if (pageNum === 0) setLoading(false);
+      else setLoadingMore(false);
+      return;
+    }
+
+    setError(null);
     const newPosts = data || [];
     setHasMore(newPosts.length === PAGE_SIZE);
 
@@ -144,7 +153,7 @@ export function useFeed(userId) {
   }
 
   return {
-    posts, likedIds, loading, loadingMore, hasMore,
+    posts, likedIds, loading, error, loadingMore, hasMore,
     toggleLike, fetchMore, fetchComments, addComment,
   };
 }
