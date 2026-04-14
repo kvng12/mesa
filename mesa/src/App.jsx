@@ -1218,7 +1218,7 @@ export default function App() {
         @keyframes splashSlide { 0%{opacity:0;transform:translateY(16px)} 100%{opacity:1;transform:translateY(0)} }
         @keyframes splashSub { 0%{opacity:0} 100%{opacity:0.75} }
       `}</style>
-      <img src="/logo.svg" alt="Chowli" style={{ height: 90, marginBottom: 8, animation: "splashPop 0.7s cubic-bezier(.36,.07,.19,.97) both" }} />
+      <img src="/logo.jpg" alt="Chowli" style={{ width: 120, height: 120, borderRadius: 24, marginBottom: 8, animation: "splashPop 0.7s cubic-bezier(.36,.07,.19,.97) both" }} />
       <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashSub 0.6s 0.7s both" }}>Your local food market</div>
     </div>
   );
@@ -1474,11 +1474,7 @@ export default function App() {
               <div style={{ position: "absolute", top: -30, right: -30, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
               <div style={{ position: "absolute", bottom: -20, left: 40, width: 90, height: 90, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, position: "relative" }}>
-                {/* Centered logo mark */}
-                <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", pointerEvents: "none" }}>
-                  <img src="/logo.svg" alt="Chowli" style={{ height: 28, opacity: 0.92 }} />
-                </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div onClick={() => user ? setShowProfile(true) : setAuthMode("login")}
                     style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(255,255,255,0.22)", border: "2.5px solid rgba(255,255,255,0.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: "#fff", cursor: "pointer", backdropFilter: "blur(4px)" }}>
