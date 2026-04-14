@@ -464,7 +464,8 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
 
       // Insert the menu item
       const insertPayload = {
-        category_id: categoryId,
+        restaurant_id:    ownerR.id,
+        category_id:      categoryId,
         name:             name.trim(),
         price:            Number(price),
         is_available:     true,
