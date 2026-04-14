@@ -374,16 +374,52 @@ const DEFAULT_MENU_CATS = [
 
 // ── Add Menu Item Modal ──
 function AddMenuItemModal({ ownerR, onClose, onAdded }) {
-  const [name, setName]         = useState("");
-  const [price, setPrice]       = useState("");
-  const [catMode, setCatMode]   = useState("existing"); // "existing" | "new"
-  const [selCatId, setSelCatId] = useState(ownerR?.menu_categories?.[0]?.id || "");
+  const [name, setName]             = useState("");
+  const [price, setPrice]           = useState("");
+  const [catMode, setCatMode]       = useState("existing");
+  const [selCatId, setSelCatId]     = useState("");
   const [newCatName, setNewCatName] = useState("");
   const [customCat, setCustomCat]   = useState("");
-  const [saving, setSaving]     = useState(false);
-  const [err, setErr]           = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [err, setErr]               = useState("");
 
-  const cats = ownerR?.menu_categories || [];
+  // ISSUE 3 FIX: fetch categories fresh from DB rather than relying on
+  // ownerR.menu_categories which may be stale or empty on first render.
+  const [cats, setCats]             = useState([]);
+  const [catsLoading, setCatsLoading] = useState(true);
+
+  // ISSUE 2: photo upload state
+  const [imageFile, setImageFile]       = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploading, setUploading]       = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileRef = useRef();
+
+  useEffect(() => {
+    if (!ownerR?.id) return;
+    supabase
+      .from("menu_categories")
+      .select("id, name, sort_order")
+      .eq("restaurant_id", ownerR.id)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        const fetched = data || [];
+        setCats(fetched);
+        if (fetched.length > 0) setSelCatId(fetched[0].id);
+        setCatsLoading(false);
+      });
+  }, [ownerR?.id]);
+
+  function handleImageFile(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (f.size > 10 * 1024 * 1024) { setErr("Image must be 10 MB or less"); return; }
+    setErr("");
+    setImageFile(f);
+    const reader = new FileReader();
+    reader.onload = ev => setImagePreview(ev.target.result);
+    reader.readAsDataURL(f);
+  }
 
   async function submit() {
     if (!name.trim()) { setErr("Item name is required"); return; }
@@ -391,28 +427,50 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
     setSaving(true); setErr("");
 
     try {
+      // Resolve category — create new one if needed
       let categoryId = selCatId;
-
-      // Create new category if needed
       if (catMode === "new") {
-        const catName = customCat || newCatName;
-        if (!catName.trim()) { setErr("Category name is required"); setSaving(false); return; }
+        const catName = customCat.trim() || newCatName.trim();
+        if (!catName) { setErr("Category name is required"); setSaving(false); return; }
         const { data: newCat, error: catErr } = await supabase
           .from("menu_categories")
-          .insert({ restaurant_id: ownerR.id, name: catName.trim(), sort_order: cats.length })
+          .insert({ restaurant_id: ownerR.id, name: catName, sort_order: cats.length })
           .select().single();
         if (catErr) throw catErr;
         categoryId = newCat.id;
       }
 
+      // Upload photo first (if selected), get public URL
+      // ISSUE 1 FIX: column is menu_category_id — confirmed correct below
+      let imageUrl = null;
+      if (imageFile) {
+        setUploading(true);
+        const ext      = (imageFile.name.split(".").pop() || "jpg").toLowerCase();
+        const fileName = `${ownerR.id}/item-${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("food-images")
+          .upload(fileName, imageFile, {
+            cacheControl: "3600",
+            upsert: true,
+            contentType: imageFile.type,
+            onUploadProgress: (e) => setUploadProgress(Math.round((e.loaded / e.total) * 100)),
+          });
+        if (uploadErr) throw uploadErr;
+        const { data: urlData } = supabase.storage.from("food-images").getPublicUrl(fileName);
+        imageUrl = urlData.publicUrl;
+        setUploading(false);
+      }
+
+      // Insert the menu item — uses menu_category_id (not category_id)
       const { error: itemErr } = await supabase
         .from("menu_items")
         .insert({
           menu_category_id: categoryId,
-          name: name.trim(),
-          price: Number(price),
-          is_available: true,
-          sort_order: 0,
+          name:             name.trim(),
+          price:            Number(price),
+          is_available:     true,
+          sort_order:       0,
+          ...(imageUrl ? { image_url: imageUrl } : {}),
         });
       if (itemErr) throw itemErr;
 
@@ -420,9 +478,12 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
       onClose();
     } catch (e) {
       setErr(e.message || "Something went wrong");
+      setUploading(false);
     }
     setSaving(false);
   }
+
+  const busy = saving || uploading;
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 500, display: "flex", alignItems: "flex-end", maxWidth: 430, margin: "0 auto" }}>
@@ -432,39 +493,96 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
           <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", background: BG, border: "none", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
 
-        {/* Item name */}
+        {/* ── Food photo upload ── */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.6px" }}>Food Photo (optional)</div>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleImageFile} style={{ display: "none" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {/* Square image placeholder */}
+            <div
+              onClick={() => fileRef.current?.click()}
+              style={{
+                width: 100, height: 100, borderRadius: 16, flexShrink: 0, overflow: "hidden",
+                border: imagePreview ? "2px solid #F0EDE8" : "2px dashed #DDDDD8",
+                background: BG, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              {imagePreview
+                ? <img src={imagePreview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 28, marginBottom: 2 }}>📷</div>
+                    <div style={{ fontSize: 9, color: "#B0B0B0", fontWeight: 600 }}>Tap to add</div>
+                  </div>
+              }
+            </div>
+            <div style={{ flex: 1 }}>
+              {imagePreview ? (
+                <>
+                  <div style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, marginBottom: 8 }}>✓ Photo selected</div>
+                  <button
+                    onClick={() => { setImageFile(null); setImagePreview(null); setUploadProgress(0); }}
+                    style={{ fontSize: 11, fontWeight: 700, color: "#DC2626", background: "#FEF2F2", border: "none", borderRadius: 8, padding: "5px 12px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  >
+                    Remove
+                  </button>
+                </>
+              ) : (
+                <div style={{ fontSize: 12, color: "#B0B0B0", lineHeight: 1.65 }}>
+                  Add a photo to make your item stand out.<br />
+                  <span style={{ fontWeight: 600, color: "#888" }}>JPG, PNG · max 10 MB</span>
+                </div>
+              )}
+              {uploading && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                    <span style={{ fontSize: 10, color: "#888", fontWeight: 600 }}>Uploading…</span>
+                    <span style={{ fontSize: 10, color: CORAL, fontWeight: 700 }}>{uploadProgress}%</span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 4, background: "#F0EDE8", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${uploadProgress}%`, background: CORAL, borderRadius: 4, transition: "width 0.3s" }} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Item name ── */}
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.6px" }}>Item Name</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.6px" }}>Item Name *</div>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Jollof Rice + Chicken"
             style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 12, background: BG, outline: "none", fontSize: 14, color: DARK, padding: "12px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }} />
         </div>
 
-        {/* Price */}
+        {/* ── Price ── */}
         <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.6px" }}>Price (₦)</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.6px" }}>Price (₦) *</div>
           <input value={price} onChange={e => setPrice(e.target.value)} placeholder="e.g. 1500" type="number" inputMode="numeric"
             style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 12, background: BG, outline: "none", fontSize: 14, color: DARK, padding: "12px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }} />
         </div>
 
-        {/* Category */}
+        {/* ── Category ── */}
         <div style={{ marginBottom: 18 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.6px" }}>Category</div>
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             {["existing", "new"].map(m => (
               <button key={m} onClick={() => setCatMode(m)}
-                style={{ flex: 1, padding: "9px", borderRadius: 12, border: `1.5px solid ${catMode === m ? CORAL : "#EBEBEB"}`, background: catMode === m ? "#FFF0ED" : "#fff", color: catMode === m ? CORAL : "#888", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                style={{ flex: 1, padding: "9px", borderRadius: 12, border: `1.5px solid ${catMode === m ? CORAL : "#EBEBEB"}`, background: catMode === m ? "#FFF0ED" : "#fff", color: catMode === m ? CORAL : "#888", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                 {m === "existing" ? "Existing category" : "+ New category"}
               </button>
             ))}
           </div>
 
           {catMode === "existing" ? (
-            cats.length === 0
-              ? <div style={{ fontSize: 13, color: "#B0B0B0", padding: "10px 0" }}>No categories yet — create one below</div>
+            catsLoading
+              ? <div style={{ fontSize: 13, color: "#B0B0B0", padding: "10px 0" }}>Loading categories…</div>
+              : cats.length === 0
+              ? <div style={{ fontSize: 13, color: "#B0B0B0", padding: "10px 0" }}>No categories yet — switch to "+ New category" to create one</div>
               : <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {cats.map(c => (
                     <button key={c.id} onClick={() => setSelCatId(c.id)}
-                      style={{ textAlign: "left", padding: "11px 14px", borderRadius: 12, border: `1.5px solid ${selCatId === c.id ? CORAL : "#EBEBEB"}`, background: selCatId === c.id ? "#FFF0ED" : BG, color: selCatId === c.id ? CORAL : DARK, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                      style={{ textAlign: "left", padding: "11px 14px", borderRadius: 12, border: `1.5px solid ${selCatId === c.id ? CORAL : "#EBEBEB"}`, background: selCatId === c.id ? "#FFF0ED" : BG, color: selCatId === c.id ? CORAL : DARK, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                       {c.name}
                     </button>
                   ))}
@@ -475,7 +593,7 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
                 {DEFAULT_MENU_CATS.map(dc => (
                   <button key={dc.label} onClick={() => { setCustomCat(""); setNewCatName(dc.label); }}
-                    style={{ padding: "7px 12px", borderRadius: 20, border: `1.5px solid ${newCatName === dc.label && !customCat ? CORAL : "#EBEBEB"}`, background: newCatName === dc.label && !customCat ? "#FFF0ED" : "#fff", color: newCatName === dc.label && !customCat ? CORAL : "#555", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                    style={{ padding: "7px 12px", borderRadius: 20, border: `1.5px solid ${newCatName === dc.label && !customCat ? CORAL : "#EBEBEB"}`, background: newCatName === dc.label && !customCat ? "#FFF0ED" : "#fff", color: newCatName === dc.label && !customCat ? CORAL : "#555", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                     {dc.icon} {dc.label}
                   </button>
                 ))}
@@ -488,9 +606,9 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
 
         {err && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 12, padding: "8px 12px", background: "#FEF2F2", borderRadius: 10 }}>{err}</div>}
 
-        <button onClick={submit} disabled={saving}
-          style={{ width: "100%", padding: 14, background: saving ? "#ccc" : CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: saving ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-          {saving ? "Adding..." : "Add to Menu"}
+        <button onClick={submit} disabled={busy}
+          style={{ width: "100%", padding: 14, background: busy ? "#B0B0B0" : CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: busy ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          {uploading ? `Uploading photo… ${uploadProgress}%` : saving ? "Adding…" : "Add to Menu"}
         </button>
       </div>
     </div>
