@@ -1212,8 +1212,10 @@ export default function App() {
   const [tab, setTab]                 = useState("home");
   const [selectedId, setSelectedId]   = useState(null);
   const [detailTab, setDetailTab]     = useState("menu");
-  const [detailMenu, setDetailMenu]   = useState([]);   // menu_categories + items for detail view
+  const [detailMenu, setDetailMenu]   = useState([]);   // menu_categories + items for customer detail view
   const [detailMenuLoading, setDetailMenuLoading] = useState(false);
+  const [ownerMenu, setOwnerMenu]     = useState([]);   // menu_categories + items for owner dashboard
+  const [ownerMenuLoading, setOwnerMenuLoading] = useState(false);
   const [ownerRId, setOwnerRId]       = useState(null);
   const [activeCat, setActiveCat]     = useState("All");
   const [search, setSearch]           = useState("");
@@ -1262,24 +1264,53 @@ export default function App() {
     }, () => { /* permission denied */ }, { timeout: 8000 });
   }, []);
 
+  // ── Shared helper: fetch categories + items without FK embed ambiguity ──
+  // Queries categories and items as two separate requests, then zips them.
+  async function fetchMenuForRestaurant(restaurantId) {
+    const { data: cats } = await supabase
+      .from("menu_categories")
+      .select("id, name, sort_order")
+      .eq("restaurant_id", restaurantId)
+      .order("sort_order", { ascending: true });
+
+    if (!cats?.length) return [];
+
+    const { data: items } = await supabase
+      .from("menu_items")
+      .select("id, name, price, is_available, sort_order, image_url, menu_category_id")
+      .in("menu_category_id", cats.map(c => c.id))
+      .order("sort_order", { ascending: true });
+
+    return cats.map(cat => ({
+      ...cat,
+      menu_items: (items || []).filter(i => i.menu_category_id === cat.id),
+    }));
+  }
+
   // ── Fetch menu when a restaurant detail is opened ────────────
   useEffect(() => {
     if (!selectedId) { setDetailMenu([]); return; }
     setDetailMenuLoading(true);
-    supabase
-      .from("menu_categories")
-      .select("id, name, sort_order, menu_items(id, name, price, is_available, sort_order, image_url)")
-      .eq("restaurant_id", selectedId)
-      .order("sort_order", { ascending: true })
-      .then(({ data }) => {
-        const cats = (data || []).map(cat => ({
-          ...cat,
-          menu_items: (cat.menu_items || []).sort((a, b) => a.sort_order - b.sort_order),
-        }));
-        setDetailMenu(cats);
-        setDetailMenuLoading(false);
-      });
+    fetchMenuForRestaurant(selectedId).then(menu => {
+      console.log("[detailMenu] fetched for", selectedId, "→", menu.length, "cats,",
+        menu.reduce((n, c) => n + c.menu_items.length, 0), "items");
+      setDetailMenu(menu);
+      setDetailMenuLoading(false);
+    });
   }, [selectedId]);
+
+  // ── Fetch menu for owner dashboard ───────────────────────────
+  async function refetchOwnerMenu() {
+    if (!ownerR?.id) return;
+    setOwnerMenuLoading(true);
+    const menu = await fetchMenuForRestaurant(ownerR.id);
+    setOwnerMenu(menu);
+    setOwnerMenuLoading(false);
+  }
+  useEffect(() => {
+    if (!ownerR?.id) { setOwnerMenu([]); return; }
+    refetchOwnerMenu();
+  }, [ownerR?.id]);
 
   // ── Fix 3: Hardware back button — go back instead of exiting ──
   useEffect(() => {
@@ -1548,7 +1579,7 @@ export default function App() {
           <AddMenuItemModal
             ownerR={ownerR}
             onClose={() => setShowAddItem(false)}
-            onAdded={() => { setShowAddItem(false); }}
+            onAdded={() => { setShowAddItem(false); refetchOwnerMenu(); }}
           />
         )}
 
@@ -1880,7 +1911,7 @@ export default function App() {
                   {detailMenu.map(cat => (
                     <div key={cat.id} style={{ marginBottom: 24 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px", color: "#C0C0C0", marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid #F5F5F5" }}>{cat.name}</div>
-                      {cat.menu_items.map(item => {
+                      {(cat.menu_items || []).map(item => {
                         const qty = cart.getQuantity(item.id);
                         return (
                           <div key={item.id} style={{ borderBottom: "1px solid #F5F5F5", paddingBottom: 14, marginBottom: 2 }}>
@@ -2099,7 +2130,7 @@ export default function App() {
             <div style={{ padding: "16px 20px" }}>
 
               {/* Stats */}
-              {(() => { const all = (ownerR.menu_categories || []).flatMap(c => c.menu_items || []); return (
+              {(() => { const all = ownerMenu.flatMap(c => c.menu_items || []); return (
                 <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                   {[{ n: all.length, l: "Items" }, { n: all.filter(i => i.is_available).length, l: "Avail" }, { n: posts.filter(p => p.restaurant_id === ownerR.id).length, l: "Posts" }, { n: incomingOrders.length, l: "Orders" }].map(s => (
                     <div key={s.l} style={{ flex: 1, background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "12px 8px", textAlign: "center" }}>
@@ -2197,16 +2228,18 @@ export default function App() {
                   + Add Item
                 </button>
               </div>
-              {(ownerR.menu_categories || []).map(cat => (
+              {ownerMenuLoading && <div style={{ textAlign: "center", padding: "16px 0", color: "#B0B0B0", fontSize: 13 }}>Loading menu...</div>}
+              {ownerMenu.map(cat => (
                 <div key={cat.id} style={{ marginBottom: 18 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F0EDE8", marginBottom: 8 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#888", padding: "8px 0" }}>{cat.name}</div>
                     <button onClick={async () => {
                       if (!window.confirm(`Delete "${cat.name}" and all its items?`)) return;
                       await supabase.from("menu_categories").delete().eq("id", cat.id);
+                      refetchOwnerMenu();
                     }} style={{ fontSize: 11, fontWeight: 700, color: "#DC2626", background: "#FEF2F2", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Delete</button>
                   </div>
-                  {cat.menu_items.map(item => (
+                  {(cat.menu_items || []).map(item => (
                     <DashMenuItem
                       key={item.id}
                       item={item}
