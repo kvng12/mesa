@@ -1299,19 +1299,6 @@ export default function App() {
     });
   }, [selectedId]);
 
-  // ── Fetch menu for owner dashboard ───────────────────────────
-  async function refetchOwnerMenu() {
-    if (!ownerR?.id) return;
-    setOwnerMenuLoading(true);
-    const menu = await fetchMenuForRestaurant(ownerR.id);
-    setOwnerMenu(menu);
-    setOwnerMenuLoading(false);
-  }
-  useEffect(() => {
-    if (!ownerR?.id) { setOwnerMenu([]); return; }
-    refetchOwnerMenu();
-  }, [ownerR?.id]);
-
   // ── Fix 3: Hardware back button — go back instead of exiting ──
   useEffect(() => {
     function handlePopState() {
@@ -1336,6 +1323,20 @@ export default function App() {
 
   const selected  = restaurants.find(r => r.id === selectedId);
   const ownerR    = restaurants.find(r => r.id === ownerRId) || restaurants.find(r => r.owner_id === user?.id);
+
+  // ── Fetch menu for owner dashboard (must be after ownerR is declared) ──
+  async function refetchOwnerMenu() {
+    if (!ownerR?.id) return;
+    setOwnerMenuLoading(true);
+    const menu = await fetchMenuForRestaurant(ownerR.id);
+    setOwnerMenu(menu);
+    setOwnerMenuLoading(false);
+  }
+  useEffect(() => {
+    if (!ownerR?.id) { setOwnerMenu([]); return; }
+    refetchOwnerMenu();
+  }, [ownerR?.id]);
+
   const openCount = restaurants.filter(r => r.is_open).length;
   const isOwnRestaurant = !!(user && selected?.owner_id === user.id);
   const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, saving, togglePaymentMethod, updateOpeningHours, uploadPostMedia } = useOwnerRestaurant(ownerR?.id);
