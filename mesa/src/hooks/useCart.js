@@ -12,6 +12,8 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 export function useCart() {
   const [items, setItems]               = useState([]);   // { menuItem, quantity }
   const [restaurantId, setRestaurantId] = useState(null);
@@ -112,6 +114,15 @@ export function useCart() {
 
       if (itemsErr) throw itemsErr;
 
+      // Notify restaurant owner for cash orders (online orders are notified via Paystack webhook)
+      if (paymentMethod === "cash" && BACKEND_URL) {
+        fetch(`${BACKEND_URL}/notify/new-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: order.id, restaurantId }),
+        }).catch(() => {}); // fire-and-forget
+      }
+
       clearCart();
       setSubmitting(false);
       return { data: order, error: null };
@@ -167,7 +178,7 @@ export function useIncomingOrders(restaurantId) {
       .from("orders")
       .select(`*, profiles(full_name, phone), order_items(*)`)
       .eq("restaurant_id", restaurantId)
-      .not("status", "in", '("completed","cancelled")')
+      .not("status", "in", '("completed","cancelled","delivered")')
       .order("created_at", { ascending: false });
     setOrders(data || []);
     setLoading(false);

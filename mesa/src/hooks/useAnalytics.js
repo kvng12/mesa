@@ -34,8 +34,8 @@ export function useAnalytics(restaurantId) {
 
     const all = orders || [];
 
-    // Total revenue (completed orders only)
-    const completedOrders = all.filter(o => o.status === "completed");
+    // Total revenue (completed + delivered orders)
+    const completedOrders = all.filter(o => o.status === "completed" || o.status === "delivered");
     const totalRevenue    = completedOrders.reduce((s, o) => s + Number(o.subtotal), 0);
     const totalOrders     = all.length;
     const completedCount  = completedOrders.length;
@@ -73,7 +73,7 @@ export function useAnalytics(restaurantId) {
     // Today's numbers
     const todayStr    = now.toISOString().slice(0, 10);
     const todayOrders = all.filter(o => o.created_at.startsWith(todayStr));
-    const todayRev    = todayOrders.filter(o => o.status === "completed")
+    const todayRev    = todayOrders.filter(o => o.status === "completed" || o.status === "delivered")
       .reduce((s, o) => s + Number(o.subtotal), 0);
 
     setData({

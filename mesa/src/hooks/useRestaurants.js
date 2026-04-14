@@ -204,14 +204,21 @@ export function useOwnerRestaurant(restaurantId) {
     return { data, error };
   }
 
-  async function uploadPostMedia(file) {
-    const isVideo = file.type.startsWith("video/");
-    const ext     = (file.name.split(".").pop() || (isVideo ? "mp4" : "jpg")).toLowerCase();
+  async function uploadPostMedia(file, onProgress) {
+    const isVideo  = file.type.startsWith("video/");
+    const ext      = (file.name.split(".").pop() || (isVideo ? "mp4" : "jpg")).toLowerCase();
     const fileName = `${restaurantId}/post-${Date.now()}.${ext}`;
 
     const { error: uploadErr } = await supabase.storage
       .from("post-media")
-      .upload(fileName, file, { cacheControl: "3600", upsert: true, contentType: file.type });
+      .upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: true,
+        contentType: file.type,
+        ...(onProgress ? {
+          onUploadProgress: (e) => onProgress(Math.round((e.loaded / e.total) * 100)),
+        } : {}),
+      });
 
     if (uploadErr) return { url: null, isVideo, error: uploadErr };
 

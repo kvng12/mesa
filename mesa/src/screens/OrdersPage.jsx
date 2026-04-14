@@ -189,7 +189,7 @@ function OrderCard({ order, onReview, reviewedOrderIds, onReorder }) {
         )}
 
         {/* Review button — only for completed, unreviewed orders */}
-        {order.status === "completed" && onReview && !reviewedOrderIds.has(order.id) && (
+        {(order.status === "completed" || order.status === "delivered") && onReview && !reviewedOrderIds.has(order.id) && (
           <button
             onClick={() => onReview(order)}
             style={{
@@ -203,13 +203,13 @@ function OrderCard({ order, onReview, reviewedOrderIds, onReorder }) {
             ⭐ Rate this order
           </button>
         )}
-        {order.status === "completed" && reviewedOrderIds.has(order.id) && (
+        {(order.status === "completed" || order.status === "delivered") && reviewedOrderIds.has(order.id) && (
           <div style={{ marginTop: 10, fontSize: 11, color: "#16A34A", fontWeight: 700, textAlign: "center" }}>
             ✓ Reviewed — thank you!
           </div>
         )}
         {/* Reorder button — completed orders only */}
-        {order.status === "completed" && onReorder && (
+        {(order.status === "completed" || order.status === "delivered") && onReorder && (
           <button
             onClick={() => onReorder(order)}
             style={{
@@ -282,8 +282,8 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
   const { orders, loading, error, refetch } = useOrders(user?.id);
 
   // Group orders into active (non-final) and past (completed/cancelled)
-  const activeOrders = orders.filter(o => !["completed", "cancelled"].includes(o.status));
-  const pastOrders   = orders.filter(o =>  ["completed", "cancelled"].includes(o.status));
+  const activeOrders = orders.filter(o => !["completed", "cancelled", "delivered"].includes(o.status));
+  const pastOrders   = orders.filter(o =>  ["completed", "cancelled", "delivered"].includes(o.status));
 
   return (
     <div style={{ background: BG, minHeight: "100vh", paddingBottom: "calc(90px + env(safe-area-inset-bottom))" }}>

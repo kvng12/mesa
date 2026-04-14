@@ -820,27 +820,61 @@ function OpeningHoursCard({ ownerR, updateOpeningHours }) {
 
 
 // ── Post Media Card (video/photo for TikTok feed) ─────────────
+// ── Post Media Card (video/photo for TikTok feed) ─────────────
+// SETUP REQUIRED in Supabase before uploads work:
+//
+// 1. Storage bucket:
+//    Supabase Dashboard → Storage → Create bucket → name: "post-media" → Public: ON
+//
+// 2. Storage policy (allow authenticated uploads):
+//    In the post-media bucket → Policies → New policy → For full customization:
+//      Policy name: "Authenticated users can upload"
+//      Allowed operation: INSERT
+//      Target roles: authenticated
+//      Policy definition: bucket_id = 'post-media'
+//
+// 3. RLS policy on posts table (allow owners to insert):
+//    Run in Supabase SQL Editor:
+//      CREATE POLICY "owners can create posts" ON posts
+//      FOR INSERT WITH CHECK (
+//        auth.uid() = (SELECT owner_id FROM restaurants WHERE id = restaurant_id)
+//      );
 function PostMediaCard({ ownerR, uploadPostMedia, createPost }) {
   const [file, setFile]       = useState(null);
   const [preview, setPreview] = useState(null);
   const [isVideo, setIsVideo] = useState(false);
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress]   = useState(0);
   const [done, setDone]       = useState(false);
   const [err, setErr]         = useState("");
   const fileRef               = useRef();
+
+  const VIDEO_MAX = 50 * 1024 * 1024; // 50 MB
+  const IMAGE_MAX = 10 * 1024 * 1024; // 10 MB
 
   function handleFile(e) {
     const f = e.target.files?.[0]; if (!f) return;
     setErr(""); setDone(false);
     const vid = f.type.startsWith("video/");
     setIsVideo(vid);
+
+    // File size check
+    if (vid && f.size > VIDEO_MAX) {
+      setErr("Video must be 50 MB or less.");
+      return;
+    }
+    if (!vid && f.size > IMAGE_MAX) {
+      setErr("Image must be 10 MB or less.");
+      return;
+    }
+
     setFile(f);
     const reader = new FileReader();
     reader.onload = ev => setPreview(ev.target.result);
     reader.readAsDataURL(f);
 
-    // Validate video duration
+    // Validate video duration (max 60s)
     if (vid) {
       const url = URL.createObjectURL(f);
       const video = document.createElement("video");
@@ -857,8 +891,8 @@ function PostMediaCard({ ownerR, uploadPostMedia, createPost }) {
 
   async function submit() {
     if (!file) return;
-    setUploading(true); setErr("");
-    const { url, isVideo: iv, error: upErr } = await uploadPostMedia(file);
+    setUploading(true); setProgress(0); setErr("");
+    const { url, isVideo: iv, error: upErr } = await uploadPostMedia(file, setProgress);
     if (upErr) { setErr(upErr.message || "Upload failed"); setUploading(false); return; }
     const { error: postErr } = await createPost({
       postType:  iv ? "update" : "new",
@@ -867,16 +901,17 @@ function PostMediaCard({ ownerR, uploadPostMedia, createPost }) {
       mediaType: iv ? "video" : "photo",
     });
     if (postErr) { setErr(postErr.message || "Failed to post"); setUploading(false); return; }
-    setFile(null); setPreview(null); setCaption(""); setUploading(false); setDone(true);
+    setFile(null); setPreview(null); setCaption(""); setUploading(false); setProgress(0); setDone(true);
     setTimeout(() => setDone(false), 3000);
   }
 
   return (
     <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", overflow: "hidden", marginBottom: 14 }}>
       <div style={{ padding: "16px 16px 4px", fontSize: 13, fontWeight: 800, color: DARK }}>Post to Feed</div>
-      <div style={{ padding: "4px 16px 14px", fontSize: 11, color: "#888" }}>Share a video (max 60s) or photo · appears in the Chowli feed</div>
+      <div style={{ padding: "4px 16px 14px", fontSize: 11, color: "#888" }}>Share a video (max 60s / 50 MB) or photo (max 10 MB)</div>
       <div style={{ padding: "0 16px 16px" }}>
-        <input ref={fileRef} type="file" accept="image/*,video/*" capture="environment" onChange={handleFile} style={{ display: "none" }} />
+        {/* No capture attribute — allows gallery access, not camera-only */}
+        <input ref={fileRef} type="file" accept="image/*,video/*" onChange={handleFile} style={{ display: "none" }} />
         {!preview
           ? <div onClick={() => fileRef.current?.click()} style={{ height: 140, background: BG, borderRadius: 14, border: "1.5px dashed #EBEBEB", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer" }}>
               <span style={{ fontSize: 28 }}>🎬</span>
@@ -897,10 +932,21 @@ function PostMediaCard({ ownerR, uploadPostMedia, createPost }) {
         )}
         {err  && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginTop: 8 }}>{err}</div>}
         {done && <div style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, marginTop: 8 }}>✓ Posted to the Chowli feed!</div>}
+        {uploading && progress > 0 && (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+              <span style={{ fontSize: 11, color: "#888", fontWeight: 600 }}>Uploading…</span>
+              <span style={{ fontSize: 11, color: CORAL, fontWeight: 700 }}>{progress}%</span>
+            </div>
+            <div style={{ height: 4, borderRadius: 4, background: "#F0EDE8", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${progress}%`, background: CORAL, borderRadius: 4, transition: "width 0.3s" }} />
+            </div>
+          </div>
+        )}
         {preview && (
           <button disabled={uploading} onClick={submit}
             style={{ width: "100%", marginTop: 12, padding: "13px", background: CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", opacity: uploading ? 0.6 : 1 }}>
-            {uploading ? "Uploading..." : "Post to Feed"}
+            {uploading ? "Uploading…" : "Post to Feed"}
           </button>
         )}
       </div>
