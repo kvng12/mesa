@@ -1212,6 +1212,8 @@ export default function App() {
   const [tab, setTab]                 = useState("home");
   const [selectedId, setSelectedId]   = useState(null);
   const [detailTab, setDetailTab]     = useState("menu");
+  const [detailMenu, setDetailMenu]   = useState([]);   // menu_categories + items for detail view
+  const [detailMenuLoading, setDetailMenuLoading] = useState(false);
   const [ownerRId, setOwnerRId]       = useState(null);
   const [activeCat, setActiveCat]     = useState("All");
   const [search, setSearch]           = useState("");
@@ -1260,6 +1262,25 @@ export default function App() {
     }, () => { /* permission denied */ }, { timeout: 8000 });
   }, []);
 
+  // ── Fetch menu when a restaurant detail is opened ────────────
+  useEffect(() => {
+    if (!selectedId) { setDetailMenu([]); return; }
+    setDetailMenuLoading(true);
+    supabase
+      .from("menu_categories")
+      .select("id, name, sort_order, menu_items!menu_category_id(id, name, price, is_available, sort_order, image_url)")
+      .eq("restaurant_id", selectedId)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        const cats = (data || []).map(cat => ({
+          ...cat,
+          menu_items: (cat.menu_items || []).sort((a, b) => a.sort_order - b.sort_order),
+        }));
+        setDetailMenu(cats);
+        setDetailMenuLoading(false);
+      });
+  }, [selectedId]);
+
   // ── Fix 3: Hardware back button — go back instead of exiting ──
   useEffect(() => {
     function handlePopState() {
@@ -1290,17 +1311,7 @@ export default function App() {
   const { unreadCount: ownerUnread } = useOwnerChats(ownerR?.id || null);
   const { orders: incomingOrders, fetchOrders: fetchIncoming, updateStatus } = useIncomingOrders(ownerR?.id);
 
-  function getMatchedMenuItems(r) {
-    if (!search) return [];
-    const s = search.toLowerCase();
-    const matched = [];
-    (r.menu_categories || []).forEach(cat => {
-      (cat.menu_items || []).forEach(item => {
-        if (item.name.toLowerCase().includes(s)) matched.push(item);
-      });
-    });
-    return matched;
-  }
+  function getMatchedMenuItems() { return []; } // menu items not loaded on home screen
 
   const filtered = restaurants.filter(r => {
     const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
@@ -1309,11 +1320,7 @@ export default function App() {
     if (!search) return true;
     const s = search.toLowerCase();
     if (r.name.toLowerCase().includes(s)) return true;
-    if (cats.some(c => c.toLowerCase().includes(s))) return true;
-    // Search through menu item names
-    return (r.menu_categories || []).some(cat =>
-      (cat.menu_items || []).some(item => item.name.toLowerCase().includes(s))
-    );
+    return cats.some(c => c.toLowerCase().includes(s));
   });
   const openNow = restaurants.filter(r => r.is_open).slice(0, 4);
 
@@ -1868,7 +1875,9 @@ export default function App() {
               {detailTab === "menu" && (
                 <>
                   {!selected.is_open && <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 12, padding: "10px 14px", fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 16 }}>Currently closed — menu shown for reference</div>}
-                  {(selected.menu_categories || []).map(cat => (
+                  {detailMenuLoading && <div style={{ textAlign: "center", padding: "28px 0", color: "#B0B0B0", fontSize: 13 }}>Loading menu...</div>}
+                  {!detailMenuLoading && detailMenu.length === 0 && <div style={{ textAlign: "center", padding: "28px 0", color: "#B0B0B0", fontSize: 13 }}>No menu items yet</div>}
+                  {detailMenu.map(cat => (
                     <div key={cat.id} style={{ marginBottom: 24 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px", color: "#C0C0C0", marginBottom: 12, paddingBottom: 8, borderBottom: "1px solid #F5F5F5" }}>{cat.name}</div>
                       {cat.menu_items.map(item => {

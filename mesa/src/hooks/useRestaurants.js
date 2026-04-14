@@ -22,45 +22,6 @@ export function useRestaurants() {
           );
         }
       )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "menu_items" },
-        (payload) => {
-          setRestaurants((prev) =>
-            prev.map((r) => ({
-              ...r,
-              menu_categories: (r.menu_categories || []).map((cat) => ({
-                ...cat,
-                menu_items: (cat.menu_items || []).map((item) =>
-                  item.id === payload.new.id
-                    ? { ...item, is_available: payload.new.is_available, image_url: payload.new.image_url }
-                    : item
-                ),
-              })),
-            }))
-          );
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "menu_items" },
-        () => fetchAll()
-      )
-      .on(
-        "postgres_changes",
-        { event: "DELETE", schema: "public", table: "menu_items" },
-        (payload) => {
-          setRestaurants((prev) =>
-            prev.map((r) => ({
-              ...r,
-              menu_categories: (r.menu_categories || []).map((cat) => ({
-                ...cat,
-                menu_items: (cat.menu_items || []).filter((item) => item.id !== payload.old.id),
-              })),
-            }))
-          );
-        }
-      )
       .subscribe();
 
     return () => supabase.removeChannel(channel);
@@ -70,13 +31,7 @@ export function useRestaurants() {
     setLoading(true);
     const { data, error } = await supabase
       .from("restaurants")
-      .select(`
-        *,
-        menu_categories (
-          id, name, sort_order,
-          menu_items (id, name, price, is_available, sort_order, image_url)
-        )
-      `)
+      .select("id, name, category, state, is_open, logo_url, opening_hours, owner_id, icon, bg_from, bg_to, description, address, phone, badge, tags, payment_cash, payment_online, created_at")
       .order("created_at", { ascending: true });
 
     // Debug: log raw response to diagnose RLS or missing rows
@@ -87,18 +42,7 @@ export function useRestaurants() {
     });
 
     if (error) { setError(error.message); }
-    else {
-      const normalized = (data || []).map((r) => ({
-        ...r,
-        menu_categories: (r.menu_categories || [])
-          .sort((a, b) => a.sort_order - b.sort_order)
-          .map((cat) => ({
-            ...cat,
-            menu_items: (cat.menu_items || []).sort((a, b) => a.sort_order - b.sort_order),
-          })),
-      }));
-      setRestaurants(normalized);
-    }
+    else { setRestaurants(data || []); }
     setLoading(false);
   }
 
