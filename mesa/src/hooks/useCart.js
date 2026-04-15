@@ -120,21 +120,25 @@ export function useCart() {
 
       // 3. Post-order side-effects (fire-and-forget)
       if (promoCode) {
-        supabase.rpc("increment_promo_uses", { p_code: promoCode, p_restaurant_id: restaurantId }).catch(() => {
-          // Fallback if RPC not available: manual increment
-          supabase
-            .from("promo_codes")
-            .select("uses_count")
-            .eq("code", promoCode)
-            .eq("restaurant_id", restaurantId)
-            .single()
-            .then(({ data }) => {
-              if (data) supabase.from("promo_codes").update({ uses_count: (data.uses_count || 0) + 1 }).eq("code", promoCode).eq("restaurant_id", restaurantId);
-            });
-        });
+        (async () => {
+          try {
+            await supabase.rpc("increment_promo_uses", { p_code: promoCode, p_restaurant_id: restaurantId });
+          } catch {
+            // Fallback if RPC not available: manual increment
+            const { data } = await supabase
+              .from("promo_codes")
+              .select("uses_count")
+              .eq("code", promoCode)
+              .eq("restaurant_id", restaurantId)
+              .single();
+            if (data) {
+              await supabase.from("promo_codes").update({ uses_count: (data.uses_count || 0) + 1 }).eq("code", promoCode).eq("restaurant_id", restaurantId);
+            }
+          }
+        })();
       }
       if (redeemLoyalty && userId) {
-        redeemLoyaltyPoints(userId, restaurantId).catch(() => {});
+        redeemLoyaltyPoints(userId, restaurantId).then(null, () => {});
       }
 
       // Notify restaurant owner for cash orders (online orders are notified via Paystack webhook)
