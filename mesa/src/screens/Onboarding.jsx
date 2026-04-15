@@ -6,21 +6,21 @@ import { useState } from "react";
 const SLIDES = [
   {
     bg: "#FF6240",
-    emoji: "🍕",
-    headline: "Find the best food\nnear you",
-    sub: "Discover restaurants around you and browse their live menus in one place.",
+    emoji: "🍽️",
+    headline: "Discover\nLocal Food",
+    sub: "Find the best restaurants in Sokoto and Kebbi State — all in one place.",
   },
   {
-    bg: "#1C1C1E",
-    emoji: "🔥",
-    headline: "Live updates\nfrom restaurants",
-    sub: "See what's freshly cooked, what's sold out, and what deals are running — right now.",
+    bg: "#D97706",
+    emoji: "🛵",
+    headline: "Order\nwith Ease",
+    sub: "Cash or card, pickup or delivery — whatever works for you.",
   },
   {
     bg: "#2D6A4F",
-    emoji: "🍲",
-    headline: "Support local,\neat well",
-    sub: "Every restaurant on Chowli is a real local business. No middleman, no hidden fees.",
+    emoji: "📍",
+    headline: "Track in\nReal Time",
+    sub: "Watch your order go from kitchen to your door, every step of the way.",
   },
 ];
 

@@ -233,10 +233,10 @@ function OrderCard({ order, onReview, reviewedOrderIds, onReorder }) {
 function EmptyState({ onBrowse }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", padding: "0 32px", textAlign: "center" }}>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>🧾</div>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>🍽️</div>
       <div style={{ fontSize: 20, fontWeight: 800, color: DARK, marginBottom: 8 }}>No orders yet</div>
       <div style={{ fontSize: 14, color: "#888", lineHeight: 1.7, marginBottom: 28 }}>
-        Your orders will appear here once you place one. Browse restaurants to get started.
+        Start exploring restaurants and place your first order!
       </div>
       <button
         onClick={onBrowse}
@@ -247,7 +247,7 @@ function EmptyState({ onBrowse }) {
           fontFamily: "'Plus Jakarta Sans', sans-serif",
         }}
       >
-        Browse Restaurants
+        Explore Restaurants
       </button>
     </div>
   );

@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { awardLoyaltyPoints, redeemLoyaltyPoints } from "./useLoyaltyPoints";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -74,7 +75,7 @@ export function useCart() {
   const subtotal    = items.reduce((s, i) => s + i.menuItem.price * i.quantity, 0);
 
   // Place the order — inserts into orders + order_items
-  async function placeOrder({ fulfillment, paymentMethod, deliveryAddress, note, userId, paystackReference, scheduledTime }) {
+  async function placeOrder({ fulfillment, paymentMethod, deliveryAddress, note, userId, paystackReference, scheduledTime, promoCode, discountAmount, redeemLoyalty }) {
     if (!items.length || !restaurantId || !userId) return { error: "Missing data" };
 
     setSubmitting(true);
@@ -93,7 +94,9 @@ export function useCart() {
           delivery_address:  fulfillment === "delivery" ? deliveryAddress : null,
           note:              note || null,
           paystack_reference: paystackReference || null,
-          scheduled_time:    scheduledTime || null,
+          scheduled_time:    scheduledTime    || null,
+          promo_code:        promoCode        || null,
+          discount_amount:   discountAmount   || 0,
         })
         .select()
         .single();
@@ -114,6 +117,25 @@ export function useCart() {
         .insert(lineItems);
 
       if (itemsErr) throw itemsErr;
+
+      // 3. Post-order side-effects (fire-and-forget)
+      if (promoCode) {
+        supabase.rpc("increment_promo_uses", { p_code: promoCode, p_restaurant_id: restaurantId }).catch(() => {
+          // Fallback if RPC not available: manual increment
+          supabase
+            .from("promo_codes")
+            .select("uses_count")
+            .eq("code", promoCode)
+            .eq("restaurant_id", restaurantId)
+            .single()
+            .then(({ data }) => {
+              if (data) supabase.from("promo_codes").update({ uses_count: (data.uses_count || 0) + 1 }).eq("code", promoCode).eq("restaurant_id", restaurantId);
+            });
+        });
+      }
+      if (redeemLoyalty && userId) {
+        redeemLoyaltyPoints(userId, restaurantId).catch(() => {});
+      }
 
       // Notify restaurant owner for cash orders (online orders are notified via Paystack webhook)
       if (paymentMethod === "cash") {
@@ -207,6 +229,13 @@ export function useIncomingOrders(restaurantId) {
 
   async function updateStatus(orderId, status) {
     await supabase.from("orders").update({ status }).eq("id", orderId);
+    // Award loyalty points when order is marked complete or delivered
+    if (status === "completed" || status === "delivered") {
+      const order = orders.find(o => o.id === orderId);
+      if (order?.customer_id && order?.subtotal) {
+        awardLoyaltyPoints(order.customer_id, restaurantId, order.subtotal).catch(() => {});
+      }
+    }
     fetchOrders();
   }
 

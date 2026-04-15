@@ -20,6 +20,7 @@ import RegisterRestaurant                     from "./screens/RegisterRestaurant
 import AdminPanel                             from "./screens/AdminPanel";
 import FeedScreen                             from "./screens/FeedScreen";
 import { useProfile }                         from "./hooks/useProfile";
+import { usePromoCodes }                      from "./hooks/usePromoCodes";
 import { supabase } from "./lib/supabase";
 import { useReviews }                         from "./hooks/useReviews";
 import { useRegistration }                    from "./hooks/useRegistration";
@@ -1392,6 +1393,16 @@ export default function App() {
   const { unreadCount: ownerUnread } = useOwnerChats(ownerR?.id || null);
   const { orders: incomingOrders, fetchOrders: fetchIncoming, updateStatus } = useIncomingOrders(ownerR?.id);
 
+  const [loyaltyMembersCount, setLoyaltyMembersCount] = useState(0);
+  useEffect(() => {
+    if (!ownerR?.id) return;
+    supabase
+      .from("loyalty_points")
+      .select("id", { count: "exact", head: true })
+      .eq("restaurant_id", ownerR.id)
+      .then(({ count }) => setLoyaltyMembersCount(count || 0));
+  }, [ownerR?.id]);
+
   // Dynamic categories from actual restaurant data (Feature 5)
   const dynamicCats = ["All", ...new Set(
     restaurants.flatMap(r => Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []))
@@ -1849,7 +1860,12 @@ export default function App() {
               {restLoading
                 ? [1,2,3].map(i => <VCardSkeleton key={i} />)
                 : filtered.length === 0
-                  ? <div style={{ textAlign: "center", padding: "40px 0" }}><div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div><div style={{ fontSize: 14, color: "#B0B0B0", fontWeight: 600 }}>Nothing found</div></div>
+                  ? <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                      <div style={{ fontSize: 36, marginBottom: 10 }}>🔍</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: DARK, marginBottom: 6 }}>Nothing found</div>
+                      <div style={{ fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 14 }}>Check back later or browse all restaurants</div>
+                      <button onClick={() => setActiveCat("All")} style={{ fontSize: 12, fontWeight: 700, color: CORAL, background: "#FFF0ED", border: "none", borderRadius: 20, padding: "8px 18px", cursor: "pointer" }}>Browse All</button>
+                    </div>
                   : filtered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} />)
               }
             </div>
@@ -1941,10 +1957,11 @@ export default function App() {
 
               {/* Restaurant results */}
               {searchFiltered.length === 0 && !restLoading
-                ? <div style={{ textAlign: "center", padding: "48px 0" }}>
-                    <div style={{ fontSize: 36, marginBottom: 10 }}>🔍</div>
-                    <div style={{ fontSize: 14, color: "#B0B0B0", fontWeight: 600 }}>No restaurants match your filters</div>
-                    <button onClick={clearSearchFilters} style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: CORAL, background: "#FFF0ED", border: "none", borderRadius: 20, padding: "8px 18px", cursor: "pointer" }}>Clear filters</button>
+                ? <div style={{ textAlign: "center", padding: "48px 20px" }}>
+                    <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 8 }}>No results found</div>
+                    <div style={{ fontSize: 13, color: "#888", lineHeight: 1.6, marginBottom: 16 }}>No restaurants or dishes found. Try a different search.</div>
+                    <button onClick={clearSearchFilters} style={{ fontSize: 12, fontWeight: 700, color: CORAL, background: "#FFF0ED", border: "none", borderRadius: 20, padding: "8px 18px", cursor: "pointer" }}>Clear filters</button>
                   </div>
                 : searchFiltered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} />)
               }
@@ -2007,7 +2024,10 @@ export default function App() {
               <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 6, lineHeight: 1.2 }}>{selected.name}</div>
               <div style={{ fontSize: 13, color: "#888", lineHeight: 1.6, marginBottom: 10 }}>{selected.description}</div>
               <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>📍 {selected.address}</div>
-              {(() => { const info = getHoursInfo(selected); return info ? <div style={{ fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 16 }}>🕐 {info}</div> : <div style={{ marginBottom: 16 }} />; })()}
+              {(() => { const info = getHoursInfo(selected); return info ? <div style={{ fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 10 }}>🕐 {info}</div> : <div style={{ marginBottom: 0 }} />; })()}
+
+              {/* Loyalty points balance for this restaurant */}
+              {user && !isOwnRestaurant && <LoyaltyBadge userId={user.id} restaurantId={selected.id} />}
 
               {/* Action buttons */}
               {isOwnRestaurant && (
@@ -2280,9 +2300,9 @@ export default function App() {
               {/* Stats */}
               {(() => { const all = ownerMenu.flatMap(c => c.menu_items || []); return (
                 <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                  {[{ n: all.length, l: "Items" }, { n: all.filter(i => i.is_available).length, l: "Avail" }, { n: posts.filter(p => p.restaurant_id === ownerR.id).length, l: "Posts" }, { n: incomingOrders.length, l: "Orders" }].map(s => (
-                    <div key={s.l} style={{ flex: 1, background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "12px 8px", textAlign: "center" }}>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: CORAL }}>{s.n}</div>
+                  {[{ n: all.length, l: "Items" }, { n: all.filter(i => i.is_available).length, l: "Avail" }, { n: incomingOrders.length, l: "Orders" }, { n: loyaltyMembersCount, l: "Loyal" }, { n: posts.filter(p => p.restaurant_id === ownerR.id).length, l: "Posts" }].map(s => (
+                    <div key={s.l} style={{ flex: 1, background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "12px 4px", textAlign: "center" }}>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: CORAL }}>{s.n}</div>
                       <div style={{ fontSize: 8, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: 2 }}>{s.l}</div>
                     </div>
                   ))}
@@ -2296,9 +2316,18 @@ export default function App() {
               <LocationCard ownerR={ownerR} />
 
               {/* ── Incoming orders ── */}
+              <>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Incoming Orders</div>
+                {incomingOrders.length === 0 && (
+                  <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "20px 16px", textAlign: "center", marginBottom: 14 }}>
+                    <div style={{ fontSize: 28, marginBottom: 6 }}>🎉</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 2 }}>No new orders</div>
+                    <div style={{ fontSize: 12, color: "#888" }}>You're all caught up!</div>
+                  </div>
+                )}
+              </>
               {incomingOrders.length > 0 && (
                 <>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Incoming Orders</div>
                   {incomingOrders.map(order => {
                     const sc = ORDER_STATUS[order.status] || ORDER_STATUS.pending;
                     return (
@@ -2381,6 +2410,9 @@ export default function App() {
                 </div>
               )}
 
+              {/* ── Promo Codes ── */}
+              <PromoCodesCard restaurantId={ownerR.id} />
+
               <div style={{ height: 1, background: "#F0EDE8", margin: "4px 0 16px" }} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1 }}>Menu</div>
@@ -2390,6 +2422,13 @@ export default function App() {
                 </button>
               </div>
               {ownerMenuLoading && <div style={{ textAlign: "center", padding: "16px 0", color: "#B0B0B0", fontSize: 13 }}>Loading menu...</div>}
+              {!ownerMenuLoading && ownerMenu.flatMap(c => c.menu_items || []).length === 0 && (
+                <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "24px 16px", textAlign: "center", marginBottom: 14 }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>🍽️</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 4 }}>No menu items yet</div>
+                  <div style={{ fontSize: 12, color: "#888" }}>Tap + Add Item to get started</div>
+                </div>
+              )}
               {ownerMenu.map(cat => (
                 <div key={cat.id} style={{ marginBottom: 18 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F0EDE8", marginBottom: 8 }}>
@@ -2452,6 +2491,121 @@ export default function App() {
         {tab !== "cart" && <BottomNav tab={tab} setTab={handleTabChange} cartCount={cart.totalItems} />}
       </div>
     </>
+  );
+}
+
+// ── Loyalty badge on restaurant detail page ──────────────────
+function LoyaltyBadge({ userId, restaurantId }) {
+  const [pts, setPts] = useState(null);
+  useEffect(() => {
+    supabase
+      .from("loyalty_points")
+      .select("points")
+      .eq("customer_id", userId)
+      .eq("restaurant_id", restaurantId)
+      .maybeSingle()
+      .then(({ data }) => setPts(data?.points ?? 0));
+  }, [userId, restaurantId]);
+
+  if (pts === null || pts === 0) return <div style={{ marginBottom: 16 }} />;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#EDE9FE", borderRadius: 12, padding: "8px 12px", marginBottom: 16 }}>
+      <span style={{ fontSize: 16 }}>⭐</span>
+      <div>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#7C3AED" }}>You have {pts} points here</span>
+        {pts >= 100
+          ? <span style={{ fontSize: 11, color: "#7C3AED", marginLeft: 6 }}>· Redeem 100 pts for ₦500 off at checkout</span>
+          : <span style={{ fontSize: 11, color: "#9C72CC", marginLeft: 6 }}>· {100 - pts} more to unlock ₦500 discount</span>}
+      </div>
+    </div>
+  );
+}
+
+// ── Promo Codes section in owner dashboard ───────────────────
+function PromoCodesCard({ restaurantId }) {
+  const { codes, loading, fetchCodes, createCode, toggleCode } = usePromoCodes(restaurantId);
+  const [showForm, setShowForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm]         = useState({ code: "", discountType: "percent", discountValue: "", minOrder: "", maxUses: "", expiresAt: "" });
+  const [formErr, setFormErr]   = useState("");
+
+  useEffect(() => { fetchCodes(); }, [restaurantId]);
+
+  async function handleCreate() {
+    if (!form.code.trim() || !form.discountValue) { setFormErr("Code and discount value are required"); return; }
+    setCreating(true);
+    const { error } = await createCode({
+      code:          form.code,
+      discountType:  form.discountType,
+      discountValue: Number(form.discountValue),
+      minOrder:      form.minOrder ? Number(form.minOrder) : 0,
+      maxUses:       form.maxUses  ? Number(form.maxUses)  : null,
+      expiresAt:     form.expiresAt || null,
+    });
+    setCreating(false);
+    if (error) { setFormErr(error.message || "Failed to create code"); return; }
+    setForm({ code: "", discountType: "percent", discountValue: "", minOrder: "", maxUses: "", expiresAt: "" });
+    setFormErr("");
+    setShowForm(false);
+  }
+
+  const inputStyle = { width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 10, padding: "10px 12px", fontSize: 13, color: DARK, background: BG, outline: "none", marginBottom: 10, fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box" };
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1 }}>Promo Codes</div>
+        <button onClick={() => { setShowForm(v => !v); setFormErr(""); }} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: CORAL, border: "none", borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          {showForm ? "Cancel" : "+ Create"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #F0EDE8", padding: "16px", marginBottom: 12 }}>
+          <input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+            placeholder="Code name (e.g. SAVE20)" style={inputStyle} />
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            {[{ id: "percent", label: "% Off" }, { id: "fixed", label: "₦ Off" }].map(t => (
+              <button key={t.id} onClick={() => setForm(f => ({ ...f, discountType: t.id }))}
+                style={{ flex: 1, padding: "8px", borderRadius: 10, border: `1.5px solid ${form.discountType === t.id ? CORAL : "#EBEBEB"}`, background: form.discountType === t.id ? "#FFF0ED" : "#fff", color: form.discountType === t.id ? CORAL : "#888", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <input type="number" value={form.discountValue} onChange={e => setForm(f => ({ ...f, discountValue: e.target.value }))}
+            placeholder={form.discountType === "percent" ? "Discount % (e.g. 20)" : "Discount amount in ₦"} style={inputStyle} />
+          <input type="number" value={form.minOrder} onChange={e => setForm(f => ({ ...f, minOrder: e.target.value }))}
+            placeholder="Min order ₦ (optional)" style={inputStyle} />
+          <input type="number" value={form.maxUses} onChange={e => setForm(f => ({ ...f, maxUses: e.target.value }))}
+            placeholder="Max uses (leave blank = unlimited)" style={inputStyle} />
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#888", marginBottom: 4, marginTop: -4 }}>Expiry date (optional)</div>
+          <input type="date" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} style={{ ...inputStyle, marginBottom: 12, color: form.expiresAt ? DARK : "#B0B0B0" }} />
+          {formErr && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 10 }}>{formErr}</div>}
+          <button onClick={handleCreate} disabled={creating} style={{ width: "100%", padding: "12px", background: CORAL, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer", opacity: creating ? 0.6 : 1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            {creating ? "Creating..." : "Create Code"}
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ fontSize: 12, color: "#C0C0C0", textAlign: "center", padding: "12px 0" }}>Loading codes...</div>
+      ) : codes.length === 0 ? (
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #F0EDE8", padding: "14px", textAlign: "center", fontSize: 12, color: "#C0C0C0", marginBottom: 4 }}>No promo codes yet</div>
+      ) : codes.map(c => (
+        <div key={c.id} style={{ background: "#fff", borderRadius: 12, border: "1px solid #F0EDE8", padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: DARK, marginBottom: 2 }}>{c.code}</div>
+            <div style={{ fontSize: 11, color: "#888" }}>
+              {c.discount_type === "percent" ? `${c.discount_value}% off` : `₦${Number(c.discount_value).toLocaleString()} off`}
+              {c.min_order > 0 && ` · Min ₦${Number(c.min_order).toLocaleString()}`}
+              {c.max_uses ? ` · ${c.uses_count}/${c.max_uses} uses` : c.uses_count > 0 ? ` · ${c.uses_count} uses` : ""}
+            </div>
+          </div>
+          <Toggle checked={c.is_active} onChange={() => toggleCode(c.id, c.is_active)} />
+        </div>
+      ))}
+      <div style={{ height: 1, background: "#F0EDE8", margin: "4px 0 16px" }} />
+    </div>
   );
 }
 

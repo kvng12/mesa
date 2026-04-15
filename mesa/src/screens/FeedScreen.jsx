@@ -444,10 +444,10 @@ export default function FeedScreen({
       fontFamily: "'Plus Jakarta Sans', sans-serif",
     }}>
       <div style={{ textAlign: "center", padding: "0 32px" }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Nothing here yet</div>
+        <div style={{ fontSize: 56, marginBottom: 16 }}>📷</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", marginBottom: 8 }}>No posts yet</div>
         <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7 }}>
-          Restaurants haven't posted anything yet. Check back soon!
+          Restaurants will share food videos and photos here. Check back soon!
         </div>
       </div>
     </div>

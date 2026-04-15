@@ -1,6 +1,8 @@
 // src/screens/Cart.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PaystackPop from "@paystack/inline-js";
+import { supabase } from "../lib/supabase";
+import { validatePromoCode } from "../hooks/usePromoCodes";
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -105,12 +107,51 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
   const [schedDate, setSchedDate]       = useState("today"); // "today" | "tomorrow"
   const [schedTime, setSchedTime]       = useState("");      // "HH:MM"
 
+  // ── Promo code ──────────────────────────────────────────────
+  const [promoInput, setPromoInput]     = useState("");
+  const [promoResult, setPromoResult]   = useState(null); // { valid, promo, discount } | null
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoErr, setPromoErr]         = useState("");
+
+  // ── Loyalty points ──────────────────────────────────────────
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [redeemLoyalty, setRedeemLoyalty] = useState(false);
+
+  useEffect(() => {
+    if (!user || !cart.restaurantId) return;
+    supabase
+      .from("loyalty_points")
+      .select("points")
+      .eq("customer_id", user.id)
+      .eq("restaurant_id", cart.restaurantId)
+      .maybeSingle()
+      .then(({ data }) => setLoyaltyPoints(data?.points || 0));
+  }, [user?.id, cart.restaurantId]);
+
   // If only one payment method is available, lock to it
   const lockedPayment = acceptsOnline && !acceptsCash ? "online"
                       : !acceptsOnline && acceptsCash  ? "cash"
                       : null; // both available — let customer choose
 
   const effectivePayment = lockedPayment || paymentMethod;
+
+  // ── Promo code helpers ───────────────────────────────────
+  async function handleApplyPromo() {
+    if (!promoInput.trim()) return;
+    setPromoLoading(true);
+    setPromoErr("");
+    setPromoResult(null);
+    const result = await validatePromoCode(promoInput, cart.restaurantId, subtotal);
+    setPromoLoading(false);
+    if (!result.valid) { setPromoErr(result.reason); return; }
+    setPromoResult(result);
+    setPromoInput("");
+  }
+
+  const promoDiscount   = promoResult?.discount  || 0;
+  const loyaltyDiscount = redeemLoyalty ? 500 : 0;
+  const totalDiscount   = promoDiscount + loyaltyDiscount;
+  const finalTotal      = Math.max(0, subtotal - totalDiscount);
 
   // ── Scheduling helpers ────────────────────────────────────
   function getTimeSlots(dateKey) {
@@ -153,6 +194,9 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
     if (schedMode === "schedule" && !schedTime) {
       setOrderErr("Please select a scheduled time"); return;
     }
+    if (redeemLoyalty && loyaltyPoints < 100) {
+      setRedeemLoyalty(false);
+    }
     if (!acceptsOnline && !acceptsCash) {
       setOrderErr("This restaurant has no payment methods enabled"); return;
     }
@@ -170,11 +214,14 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
       setPlacingOrder(true);
 
       const snapScheduledTime = getScheduledTime();
+      const snapPromoCode     = promoResult?.promo?.code || null;
+      const snapDiscountAmt   = totalDiscount;
+      const snapRedeemLoyalty = redeemLoyalty;
 
       new PaystackPop().newTransaction({
         key:      import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
         email:    user.email,
-        amount:   cart.subtotal * 100,
+        amount:   Math.max(0, finalTotal) * 100,
         currency: "NGN",
         ref,
         onSuccess: function(response) {
@@ -188,6 +235,9 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
             userId:            snapUserId,
             paystackReference: response.reference,
             scheduledTime:     snapScheduledTime,
+            promoCode:         snapPromoCode,
+            discountAmount:    snapDiscountAmt,
+            redeemLoyalty:     snapRedeemLoyalty,
           }).then(function(result) {
             setPlacingOrder(false);
             if (result.error) { setOrderErr(result.error); return; }
@@ -204,11 +254,14 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
       (async () => {
         const { data, error } = await cart.placeOrder({
           fulfillment,
-          paymentMethod: "cash",
+          paymentMethod:  "cash",
           deliveryAddress: address,
           note,
-          userId: user.id,
-          scheduledTime: getScheduledTime(),
+          userId:         user.id,
+          scheduledTime:  getScheduledTime(),
+          promoCode:      promoResult?.promo?.code || null,
+          discountAmount: totalDiscount,
+          redeemLoyalty,
         });
         setPlacingOrder(false);
         if (error) { setOrderErr(error); return; }
@@ -217,7 +270,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
     }
   }
 
-  const subtotal = cart.subtotal;
+  const subtotal = cart.subtotal; // original price before discounts
 
   // ── Order success screen ──────────────────────────────────
   if (orderSuccess) return (
@@ -394,15 +447,83 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
                 style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 12, background: BG, outline: "none", fontSize: 13, color: DARK, padding: "12px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif", resize: "none", minHeight: 64 }} />
             </div>
 
+            {/* Promo Code */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8 }}>Promo Code</div>
+              {promoResult?.valid ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "#F0FDF4", border: "1.5px solid #BBF7D0", borderRadius: 12 }}>
+                  <span style={{ fontSize: 14 }}>🎉</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#16A34A" }}>{promoResult.promo.code} applied!</div>
+                    <div style={{ fontSize: 11, color: "#16A34A" }}>
+                      {promoResult.promo.discount_type === "percent"
+                        ? `${promoResult.promo.discount_value}% off`
+                        : `₦${Number(promoResult.promo.discount_value).toLocaleString()} off`}
+                      {" — saving ₦"}{Number(promoDiscount).toLocaleString()}
+                    </div>
+                  </div>
+                  <button onClick={() => { setPromoResult(null); setPromoInput(""); }} style={{ fontSize: 13, color: "#DC2626", background: "transparent", border: "none", cursor: "pointer", fontWeight: 700 }}>✕</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    value={promoInput}
+                    onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoErr(""); }}
+                    onKeyDown={e => { if (e.key === "Enter") handleApplyPromo(); }}
+                    placeholder="Enter code..."
+                    style={{ flex: 1, border: "1.5px solid #EBEBEB", borderRadius: 12, background: BG, outline: "none", fontSize: 14, color: DARK, padding: "10px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  />
+                  <button
+                    onClick={handleApplyPromo}
+                    disabled={promoLoading || !promoInput.trim()}
+                    style={{ padding: "10px 18px", background: promoInput.trim() ? CORAL : "#E0E0E0", color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: promoInput.trim() ? "pointer" : "default" }}>
+                    {promoLoading ? "..." : "Apply"}
+                  </button>
+                </div>
+              )}
+              {promoErr && <div style={{ fontSize: 11, color: "#DC2626", fontWeight: 600, marginTop: 6 }}>{promoErr}</div>}
+            </div>
+
+            {/* Loyalty Points */}
+            {loyaltyPoints > 0 && (
+              <div style={{ marginBottom: 16, padding: "12px 14px", background: redeemLoyalty ? "#EDE9FE" : BG, border: `1.5px solid ${redeemLoyalty ? "#A78BFA" : "#EBEBEB"}`, borderRadius: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: redeemLoyalty ? "#7C3AED" : DARK }}>
+                      ⭐ {loyaltyPoints} points at this restaurant
+                    </div>
+                    <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+                      {loyaltyPoints >= 100
+                        ? "Redeem 100 points for ₦500 off this order"
+                        : `${100 - loyaltyPoints} more points to unlock ₦500 discount`}
+                    </div>
+                  </div>
+                  {loyaltyPoints >= 100 && (
+                    <button
+                      onClick={() => setRedeemLoyalty(v => !v)}
+                      style={{ padding: "6px 14px", background: redeemLoyalty ? "#7C3AED" : "#fff", color: redeemLoyalty ? "#fff" : "#7C3AED", border: "1.5px solid #7C3AED", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      {redeemLoyalty ? "✓ Applied" : "Redeem"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Summary */}
             <div style={{ background: BG, borderRadius: 16, padding: "14px 16px", marginBottom: 4 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                 <span style={{ fontSize: 13, color: "#888" }}>Subtotal ({cart.totalItems} items)</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: DARK }}>₦{Number(subtotal).toLocaleString()}</span>
               </div>
+              {totalDiscount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, color: "#16A34A" }}>Discount</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#16A34A" }}>−₦{Number(totalDiscount).toLocaleString()}</span>
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ fontSize: 14, fontWeight: 800, color: DARK }}>Total</span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: CORAL }}>₦{Number(subtotal).toLocaleString()}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: CORAL }}>₦{Number(finalTotal).toLocaleString()}</span>
               </div>
             </div>
           </>
@@ -415,7 +536,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
           {orderErr && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 10, padding: "8px 12px", background: "#FEF2F2", borderRadius: 10 }}>{orderErr}</div>}
           <button onClick={handlePlaceOrder} disabled={placingOrder || (!acceptsOnline && !acceptsCash)}
             style={{ width: "100%", padding: 16, background: placingOrder || (!acceptsOnline && !acceptsCash) ? "#C0C0C0" : CORAL, color: "#fff", border: "none", borderRadius: 16, fontSize: 15, fontWeight: 800, cursor: placingOrder ? "wait" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            {placingOrder ? "Processing..." : effectivePayment === "online" ? `Pay ₦${Number(subtotal).toLocaleString()} with Card` : `Place Order — Pay ₦${Number(subtotal).toLocaleString()} in Cash`}
+            {placingOrder ? "Processing..." : effectivePayment === "online" ? `Pay ₦${Number(finalTotal).toLocaleString()} with Card` : `Place Order — Pay ₦${Number(finalTotal).toLocaleString()} in Cash`}
           </button>
         </div>
       )}
