@@ -2531,7 +2531,7 @@ function PromoCodesCard({ restaurantId }) {
 
   useEffect(() => { fetchCodes(); }, [restaurantId]);
 
-  async function handleCreate() {
+  const handleCreate = async () => {
     if (!form.code.trim() || !form.discountValue) { setFormErr("Code and discount value are required"); return; }
     setCreating(true);
     const { error } = await createCode({
@@ -2547,7 +2547,7 @@ function PromoCodesCard({ restaurantId }) {
     setForm({ code: "", discountType: "percent", discountValue: "", minOrder: "", maxUses: "", expiresAt: "" });
     setFormErr("");
     setShowForm(false);
-  }
+  };
 
   const inputStyle = { width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 10, padding: "10px 12px", fontSize: 13, color: DARK, background: BG, outline: "none", marginBottom: 10, fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box" };
 
