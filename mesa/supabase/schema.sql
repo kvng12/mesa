@@ -81,6 +81,37 @@ create table public.menu_items (
 );
 
 
+-- ── ORDERS ──────────────────────────────────────────────────
+create table public.orders (
+  id               uuid primary key default uuid_generate_v4(),
+  customer_id      uuid not null references public.profiles(id) on delete cascade,
+  restaurant_id    uuid not null references public.restaurants(id) on delete cascade,
+  status           text not null default 'pending'
+                   check (status in ('pending','confirmed','preparing','ready','delivered','cancelled')),
+  fulfillment      text not null default 'pickup'
+                   check (fulfillment in ('pickup','delivery')),
+  payment_method   text not null default 'cash'
+                   check (payment_method in ('cash','card','transfer')),
+  payment_status   text not null default 'unpaid'
+                   check (payment_status in ('unpaid','paid','refunded')),
+  subtotal         numeric(10, 2) not null default 0,
+  note             text,
+  delivery_address text,
+  created_at       timestamptz not null default now()
+);
+
+create table public.order_items (
+  id           uuid primary key default uuid_generate_v4(),
+  order_id     uuid not null references public.orders(id) on delete cascade,
+  menu_item_id uuid references public.menu_items(id) on delete set null,
+  name         text not null,
+  price        numeric(10, 2) not null,
+  quantity     int not null default 1,
+  line_total   numeric(10, 2) not null,
+  created_at   timestamptz not null default now()
+);
+
+
 -- ── POSTS (feed updates) ─────────────────────────────────────
 create table public.posts (
   id            uuid primary key default uuid_generate_v4(),
@@ -126,6 +157,11 @@ create index idx_restaurants_owner on public.restaurants(owner_id);
 create index idx_restaurants_open  on public.restaurants(is_open);
 create index idx_menu_items_rest   on public.menu_items(restaurant_id);
 create index idx_menu_items_cat    on public.menu_items(category_id);
+create index idx_orders_customer   on public.orders(customer_id);
+create index idx_orders_restaurant on public.orders(restaurant_id);
+create index idx_orders_status     on public.orders(status);
+create index idx_orders_created    on public.orders(created_at desc);
+create index idx_order_items_order on public.order_items(order_id);
 create index idx_posts_restaurant  on public.posts(restaurant_id);
 create index idx_posts_created     on public.posts(created_at desc);
 create index idx_likes_post        on public.likes(post_id);
@@ -136,12 +172,14 @@ create index idx_likes_user        on public.likes(user_id);
 --  ROW LEVEL SECURITY
 -- ============================================================
 
-alter table public.profiles       enable row level security;
-alter table public.restaurants    enable row level security;
+alter table public.profiles        enable row level security;
+alter table public.restaurants     enable row level security;
 alter table public.menu_categories enable row level security;
-alter table public.menu_items     enable row level security;
-alter table public.posts          enable row level security;
-alter table public.likes          enable row level security;
+alter table public.menu_items      enable row level security;
+alter table public.orders          enable row level security;
+alter table public.order_items     enable row level security;
+alter table public.posts           enable row level security;
+alter table public.likes           enable row level security;
 
 
 -- PROFILES
@@ -193,6 +231,85 @@ create policy "Owners can manage own items"
     exists (
       select 1 from public.restaurants r
       where r.id = restaurant_id and r.owner_id = auth.uid()
+    )
+  );
+
+
+-- ORDERS
+-- Helper: is the current user an admin?
+-- (Inlined as a subquery to avoid a separate function.)
+
+create policy "Customers can read own orders"
+  on public.orders for select
+  using (auth.uid() = customer_id);
+
+create policy "Restaurant owners can read their orders"
+  on public.orders for select
+  using (
+    exists (
+      select 1 from public.restaurants r
+      where r.id = restaurant_id and r.owner_id = auth.uid()
+    )
+  );
+
+create policy "Admins can read all orders"
+  on public.orders for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
+create policy "Customers can place orders"
+  on public.orders for insert
+  with check (auth.uid() = customer_id);
+
+create policy "Restaurant owners can update order status"
+  on public.orders for update
+  using (
+    exists (
+      select 1 from public.restaurants r
+      where r.id = restaurant_id and r.owner_id = auth.uid()
+    )
+  );
+
+
+-- ORDER ITEMS
+create policy "Customers can read own order items"
+  on public.order_items for select
+  using (
+    exists (
+      select 1 from public.orders o
+      where o.id = order_id and o.customer_id = auth.uid()
+    )
+  );
+
+create policy "Restaurant owners can read their order items"
+  on public.order_items for select
+  using (
+    exists (
+      select 1 from public.orders o
+      join public.restaurants r on r.id = o.restaurant_id
+      where o.id = order_id and r.owner_id = auth.uid()
+    )
+  );
+
+create policy "Admins can read all order items"
+  on public.order_items for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
+create policy "Customers can insert order items"
+  on public.order_items for insert
+  with check (
+    exists (
+      select 1 from public.orders o
+      where o.id = order_id and o.customer_id = auth.uid()
     )
   );
 

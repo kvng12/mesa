@@ -26,6 +26,10 @@ export function useAdmin() {
       supabase.from("restaurant_applications").select("*", { count: "exact", head: true })
         .eq("status", "pending"),
     ]);
+    if (r.error) console.error("[admin] restaurants count error:", r.error);
+    if (o.error) console.error("[admin] orders count error:", o.error);
+    if (u.error) console.error("[admin] profiles count error:", u.error);
+    if (p.error) console.error("[admin] pending apps count error:", p.error);
     setStats({
       restaurants: r.count ?? 0,
       orders:      o.count ?? 0,
