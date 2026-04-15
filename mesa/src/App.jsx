@@ -39,8 +39,9 @@ const POST_TYPES = [
   { id: "sold_out", label: "Sold Out", color: "#6B7280", bg: "#F3F4F6", icon: "😔" },
 ];
 
-const CATS = ["All", "Nigerian", "Grills", "Chinese", "Snacks", "Fast Food"];
-const CAT_ICONS = { All: "🍽️", Nigerian: "🍲", Grills: "🔥", Chinese: "🍜", Snacks: "🥐", "Fast Food": "🍔" };
+// CAT_ICONS is a lookup for known categories; getCatIcon falls back to 🍽️
+const CAT_ICONS = { All: "🍽️", Nigerian: "🍲", Grills: "🔥", Chinese: "🍜", Snacks: "🥐", "Fast Food": "🍔", Burgers: "🍔", Pizza: "🍕", Seafood: "🦐", Salads: "🥗", Desserts: "🍰", Drinks: "🥤", Breakfast: "🍳", Soup: "🍜", Rice: "🍚", Chicken: "🍗" };
+const getCatIcon = (cat) => CAT_ICONS[cat] || "🍽️";
 const getPostType = id => POST_TYPES.find(t => t.id === id) || POST_TYPES[2];
 
 function timeAgo(ts) {
@@ -201,11 +202,13 @@ function HCard({ r, onClick }) {
   return (
     <div onClick={onClick} style={{ flexShrink: 0, width: 190, background: "#fff", borderRadius: 20, overflow: "hidden", cursor: "pointer", border: "1px solid #F0EDE8" }}>
       <div style={{ width: "100%", height: 120, background: `linear-gradient(140deg, ${r.bg_from}, ${r.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 46, position: "relative" }}>
-        {r.badge && <div style={{ position: "absolute", top: 10, left: 10, background: CORAL, color: "#fff", fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 20 }}>{r.badge}</div>}
-        {r.is_open && <div style={{ position: "absolute", top: 10, right: 10, width: 9, height: 9, borderRadius: "50%", background: "#22C55E", border: "2px solid #fff" }} />}
+        {/* Banner image as card background if available */}
+        {r.banner_url && <img src={r.banner_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+        {r.badge && <div style={{ position: "absolute", top: 10, left: 10, background: CORAL, color: "#fff", fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 20, zIndex: 1 }}>{r.badge}</div>}
+        {r.is_open && <div style={{ position: "absolute", top: 10, right: 10, width: 9, height: 9, borderRadius: "50%", background: "#22C55E", border: "2px solid #fff", zIndex: 1 }} />}
         {r.logo_url
-          ? <img src={r.logo_url} alt={r.name} style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "3px solid rgba(255,255,255,0.4)", boxShadow: "0 2px 12px rgba(0,0,0,0.2)" }} />
-          : <span>{r.icon}</span>
+          ? <img src={r.logo_url} alt={r.name} style={{ position: "relative", zIndex: 1, width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "3px solid rgba(255,255,255,0.4)", boxShadow: "0 2px 12px rgba(0,0,0,0.2)" }} />
+          : <span style={{ position: "relative", zIndex: 1 }}>{r.icon}</span>
         }
       </div>
       <div style={{ padding: "12px 14px 14px" }}>
@@ -256,6 +259,19 @@ function LogoFileInput({ ownerR, uploadLogo }) {
   }
   return (
     <input id="logo-file-input" ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
+  );
+}
+
+// ── BannerFileInput — hidden file input for banner/cover upload ──
+function BannerFileInput({ uploadBanner }) {
+  const fileRef = useRef();
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadBanner(file);
+  }
+  return (
+    <input id="banner-file-input" ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
   );
 }
 
@@ -1247,6 +1263,12 @@ export default function App() {
   const [ownerChatTarget, setOwnerChatTarget] = useState(null); // conv for owner reply
   const [userLocation, setUserLocation]     = useState(null);  // { state } from reverse-geocode — display only
 
+  // ── Search page extra filter state ──────────────────────────
+  const [searchOpenOnly,   setSearchOpenOnly]   = useState(false);
+  const [searchActiveCats, setSearchActiveCats] = useState(new Set()); // multi-select
+  const [searchMinRating,  setSearchMinRating]  = useState(0);         // 0 = no filter
+  const [searchMenuItems,  setSearchMenuItems]  = useState([]);        // [{ item, restaurant }]
+
   useEffect(() => {
     if (appState !== "splash") return;
     const timer = setTimeout(() => setAppState(localStorage.getItem("chowli_onboarded") ? "app" : "onboarding"), 1800);
@@ -1326,6 +1348,28 @@ export default function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [tab, showProfile, showRegister, activeStoryGroup, reviewTarget, showReservation, pendingItem, activeChat, showOwnerChats, ownerChatTarget, showAnalytics]);
 
+  // ── Search: query menu items when search text changes ───────
+  useEffect(() => {
+    if (tab !== "search" || !search.trim()) { setSearchMenuItems([]); return; }
+    const s = search.toLowerCase();
+    supabase
+      .from("menu_items")
+      .select("id, name, price, restaurant_id, is_available, image_url")
+      .ilike("name", `%${s}%`)
+      .eq("is_available", true)
+      .limit(20)
+      .then(({ data }) => {
+        if (!data) return;
+        const withRest = data
+          .map(item => {
+            const restaurant = restaurants.find(r => r.id === item.restaurant_id);
+            return restaurant ? { item, restaurant } : null;
+          })
+          .filter(Boolean);
+        setSearchMenuItems(withRest);
+      });
+  }, [search, tab]);
+
   const selected  = restaurants.find(r => r.id === selectedId);
   const ownerR    = restaurants.find(r => r.id === ownerRId) || restaurants.find(r => r.owner_id === user?.id);
 
@@ -1344,12 +1388,16 @@ export default function App() {
 
   const openCount = restaurants.filter(r => r.is_open).length;
   const isOwnRestaurant = !!(user && selected?.owner_id === user.id);
-  const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, createPost, saving, togglePaymentMethod, updateOpeningHours, uploadPostMedia } = useOwnerRestaurant(ownerR?.id);
+  const { toggleOpen, toggleItem, updateItemImage, uploadFoodImage, uploadLogo, uploadBanner, createPost, saving, togglePaymentMethod, updateOpeningHours, uploadPostMedia } = useOwnerRestaurant(ownerR?.id);
   const { unreadCount: ownerUnread } = useOwnerChats(ownerR?.id || null);
   const { orders: incomingOrders, fetchOrders: fetchIncoming, updateStatus } = useIncomingOrders(ownerR?.id);
 
-  function getMatchedMenuItems() { return []; } // menu items not loaded on home screen
+  // Dynamic categories from actual restaurant data (Feature 5)
+  const dynamicCats = ["All", ...new Set(
+    restaurants.flatMap(r => Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []))
+  )].filter(Boolean);
 
+  // Home screen filter — single category + text search
   const filtered = restaurants.filter(r => {
     const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
     const mc = activeCat === "All" || cats.includes(activeCat);
@@ -1359,7 +1407,41 @@ export default function App() {
     if (r.name.toLowerCase().includes(s)) return true;
     return cats.some(c => c.toLowerCase().includes(s));
   });
+
+  // Search page filter — multi-category, open now, min rating (Feature 3)
+  const searchFiltered = restaurants.filter(r => {
+    if (searchActiveCats.size > 0) {
+      const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
+      if (!cats.some(c => searchActiveCats.has(c))) return false;
+    }
+    if (searchOpenOnly && !r.is_open) return false;
+    if (searchMinRating > 0 && (r.avg_rating || 0) < searchMinRating) return false;
+    if (search.trim()) {
+      const s = search.toLowerCase();
+      const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
+      const nameMatch = r.name.toLowerCase().includes(s);
+      const catMatch  = cats.some(c => c.toLowerCase().includes(s));
+      const tagMatch  = (r.tags || []).some(t => t.toLowerCase().includes(s));
+      if (!nameMatch && !catMatch && !tagMatch) return false;
+    }
+    return true;
+  });
+
   const openNow = restaurants.filter(r => r.is_open).slice(0, 4);
+
+  function toggleSearchCat(cat) {
+    setSearchActiveCats(prev => {
+      const next = new Set(prev);
+      next.has(cat) ? next.delete(cat) : next.add(cat);
+      return next;
+    });
+  }
+  function clearSearchFilters() {
+    setSearchActiveCats(new Set());
+    setSearchOpenOnly(false);
+    setSearchMinRating(0);
+    setSearch("");
+  }
 
   function goDetail(id) { setSelectedId(id); setDetailTab("menu"); setTab("detail"); }
 
@@ -1715,11 +1797,11 @@ export default function App() {
                 </span>
               </div>
 
-              {/* Category pills on the header itself */}
+              {/* Category pills — dynamic from DB (Feature 5) */}
               <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", marginBottom: 2 }}>
-                {CATS.map(c => (
+                {dynamicCats.map(c => (
                   <button key={c} onClick={() => setActiveCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 20, border: "none", background: activeCat === c ? "#fff" : "rgba(255,255,255,0.18)", color: activeCat === c ? CORAL : "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "background 0.2s" }}>
-                    <span style={{ fontSize: 13 }}>{CAT_ICONS[c]}</span>{c}
+                    <span style={{ fontSize: 13 }}>{getCatIcon(c)}</span>{c}
                   </button>
                 ))}
               </div>
@@ -1778,47 +1860,94 @@ export default function App() {
         {/* ══════════ SEARCH ══════════ */}
         {tab === "search" && (
           <>
-            <div style={{ background: "#fff", padding: "max(env(safe-area-inset-top), 52px) 20px 20px", borderBottom: "1px solid #F0EDE8" }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 14 }}>Find a Restaurant</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, background: BG, border: "1.5px solid #EBEBEB", borderRadius: 14, padding: "13px 16px" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#C0C0C0" strokeWidth="2"/><path d="M21 21l-3.5-3.5" stroke="#C0C0C0" strokeWidth="2" strokeLinecap="round"/></svg>
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or cuisine..." autoFocus style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 14, color: DARK, fontWeight: 500 }} />
-                {search && <span onClick={() => setSearch("")} style={{ cursor: "pointer", color: "#C0C0C0", fontSize: 14, fontWeight: 700 }}>✕</span>}
+            {/* Header */}
+            <div style={{ background: "#fff", padding: "max(env(safe-area-inset-top), 52px) 20px 16px", borderBottom: "1px solid #F0EDE8", position: "sticky", top: 0, zIndex: 50 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <button onClick={() => { setTab("home"); clearSearchFilters(); }} style={{ width: 36, height: 36, borderRadius: "50%", background: BG, border: "none", fontSize: 18, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, background: BG, border: "1.5px solid #EBEBEB", borderRadius: 14, padding: "11px 14px" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#C0C0C0" strokeWidth="2"/><path d="M21 21l-3.5-3.5" stroke="#C0C0C0" strokeWidth="2" strokeLinecap="round"/></svg>
+                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search restaurants or dishes..." autoFocus style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 14, color: DARK, fontWeight: 500 }} />
+                  {search && <span onClick={() => setSearch("")} style={{ cursor: "pointer", color: "#C0C0C0", fontSize: 14, fontWeight: 700 }}>✕</span>}
+                </div>
+              </div>
+
+              {/* Filters row: Open Now toggle + Min Rating */}
+              <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
+                <button
+                  onClick={() => setSearchOpenOnly(v => !v)}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20, border: `1.5px solid ${searchOpenOnly ? "#16A34A" : "#EBEBEB"}`, background: searchOpenOnly ? "#F0FDF4" : "#fff", color: searchOpenOnly ? "#16A34A" : "#888", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  <span style={{ fontSize: 8, color: searchOpenOnly ? "#22C55E" : "#D4CEC8" }}>●</span> Open Now
+                </button>
+                <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                  {[1,2,3,4,5].map(star => (
+                    <button key={star} onClick={() => setSearchMinRating(searchMinRating === star ? 0 : star)}
+                      style={{ fontSize: 18, background: "transparent", border: "none", cursor: "pointer", padding: "2px", opacity: star <= searchMinRating ? 1 : 0.3, lineHeight: 1 }}>
+                      ⭐
+                    </button>
+                  ))}
+                  {searchMinRating > 0 && <span style={{ fontSize: 11, color: "#888", fontWeight: 600 }}>{searchMinRating}+</span>}
+                </div>
+                {(searchActiveCats.size > 0 || searchOpenOnly || searchMinRating > 0 || search) && (
+                  <button onClick={clearSearchFilters} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: CORAL, background: "#FFF0ED", border: "none", borderRadius: 20, padding: "6px 12px", cursor: "pointer" }}>
+                    Clear all
+                  </button>
+                )}
+              </div>
+
+              {/* Category pills — multi-select, dynamic from DB */}
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none" }}>
+                {dynamicCats.filter(c => c !== "All").map(c => {
+                  const active = searchActiveCats.has(c);
+                  return (
+                    <button key={c} onClick={() => toggleSearchCat(c)}
+                      style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 20, border: `1.5px solid ${active ? CORAL : "#EBEBEB"}`, background: active ? "#FFF0ED" : "#fff", color: active ? CORAL : "#555", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
+                      <span>{getCatIcon(c)}</span>{c}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <div style={{ display: "flex", gap: 10, padding: "14px 20px 4px", overflowX: "auto", scrollbarWidth: "none" }}>
-              {CATS.map(c => <button key={c} onClick={() => setActiveCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, border: "none", background: activeCat === c ? CORAL : "#fff", color: activeCat === c ? "#fff" : "#555", fontWeight: 700, fontSize: 12, cursor: "pointer" }}><span style={{ fontSize: 14 }}>{CAT_ICONS[c]}</span>{c}</button>)}
+
+            {/* Results */}
+            <div style={{ padding: "12px 20px 4px", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0" }}>
+                {searchFiltered.length} restaurant{searchFiltered.length !== 1 ? "s" : ""}
+                {searchMenuItems.length > 0 && ` · ${searchMenuItems.length} dish${searchMenuItems.length !== 1 ? "es" : ""}`}
+              </span>
             </div>
-            <div style={{ padding: "10px 20px 4px", fontSize: 11, fontWeight: 700, color: "#B0B0B0" }}>
-              {filtered.length} result{filtered.length !== 1 ? "s" : ""}
-              {search && <span style={{ color: "#C0C0C0" }}> · searching menus too</span>}
-            </div>
+
             <div className="vlist">
-              {filtered.map(r => {
-                const matchedItems = getMatchedMenuItems(r);
-                const showItems = matchedItems.length > 0 && search &&
-                  !r.name.toLowerCase().includes(search.toLowerCase()) &&
-                  !(Array.isArray(r.category) ? r.category : [r.category]).some(c => c?.toLowerCase().includes(search.toLowerCase()));
-                return (
-                  <div key={r.id}>
-                    <VCard r={r} onClick={() => goDetail(r.id)} />
-                    {showItems && (
-                      <div style={{ marginTop: -6, marginBottom: 4, paddingLeft: 108, paddingRight: 14, display: "flex", gap: 5, flexWrap: "wrap" }}>
-                        {matchedItems.slice(0, 4).map(item => (
-                          <span key={item.id} style={{ fontSize: 10, fontWeight: 700, color: CORAL, background: "#FFF0ED", padding: "3px 8px", borderRadius: 10 }}>
-                            {item.name}
-                          </span>
-                        ))}
-                        {matchedItems.length > 4 && (
-                          <span style={{ fontSize: 10, fontWeight: 700, color: "#888", background: "#F5F5F5", padding: "3px 8px", borderRadius: 10 }}>
-                            +{matchedItems.length - 4} more
-                          </span>
-                        )}
+              {/* Matched menu items section */}
+              {searchMenuItems.length > 0 && search.trim() && (
+                <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", overflow: "hidden", marginBottom: 4 }}>
+                  <div style={{ padding: "12px 16px 8px", fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px" }}>Matching Dishes</div>
+                  {searchMenuItems.map(({ item, restaurant }) => (
+                    <div key={item.id} onClick={() => goDetail(restaurant.id)}
+                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderTop: "1px solid #F7F5F2", cursor: "pointer" }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 12, background: item.image_url ? "transparent" : `linear-gradient(135deg, ${restaurant.bg_from}, ${restaurant.bg_to})`, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
+                        {item.image_url
+                          ? <img src={item.image_url} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          : restaurant.icon}
                       </div>
-                    )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: DARK, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+                        <div style={{ fontSize: 11, color: "#888" }}>at {restaurant.name} · <span style={{ color: CORAL, fontWeight: 700 }}>₦{Number(item.price).toLocaleString()}</span></div>
+                      </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="#C0C0C0" strokeWidth="2" strokeLinecap="round"/></svg>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Restaurant results */}
+              {searchFiltered.length === 0 && !restLoading
+                ? <div style={{ textAlign: "center", padding: "48px 0" }}>
+                    <div style={{ fontSize: 36, marginBottom: 10 }}>🔍</div>
+                    <div style={{ fontSize: 14, color: "#B0B0B0", fontWeight: 600 }}>No restaurants match your filters</div>
+                    <button onClick={clearSearchFilters} style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: CORAL, background: "#FFF0ED", border: "none", borderRadius: 20, padding: "8px 18px", cursor: "pointer" }}>Clear filters</button>
                   </div>
-                );
-              })}
+                : searchFiltered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} />)
+              }
             </div>
           </>
         )}
@@ -1849,16 +1978,20 @@ export default function App() {
         {/* ══════════ DETAIL ══════════ */}
         {tab === "detail" && selected && (
           <>
-            <div style={{ width: "100%", height: 240, background: `linear-gradient(155deg, ${selected.bg_from}, ${selected.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 80, position: "relative" }}>
-              <button onClick={() => setTab("home")} style={{ position: "absolute", top: "max(env(safe-area-inset-top), 48px)", left: 16, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.92)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, fontWeight: 700 }}>←</button>
+            <div style={{ width: "100%", height: 240, background: `linear-gradient(155deg, ${selected.bg_from}, ${selected.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 80, position: "relative", overflow: "hidden" }}>
+              {/* Banner hero image */}
+              {selected.banner_url && <img src={selected.banner_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.9 }} />}
+              {/* Gradient overlay when banner is present so text stays readable */}
+              {selected.banner_url && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(0,0,0,0.4))" }} />}
+              <button onClick={() => setTab("home")} style={{ position: "absolute", top: "max(env(safe-area-inset-top), 48px)", left: 16, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.92)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, fontWeight: 700, zIndex: 2 }}>←</button>
               {(() => {
                 const sg = storyGroups.find(g => g.restaurant.id === selected.id);
                 const ringStyle = sg ? { outline: `3px solid ${CORAL}`, outlineOffset: 3, cursor: "pointer" } : { cursor: "default" };
                 return selected.logo_url
                   ? <img src={selected.logo_url} alt={selected.name} onClick={sg ? () => setActiveStoryGroup(sg) : undefined}
-                      style={{ width: 100, height: 100, borderRadius: "50%", objectFit: "cover", border: "4px solid rgba(255,255,255,0.35)", boxShadow: "0 4px 20px rgba(0,0,0,0.25)", ...ringStyle }} />
+                      style={{ position: "relative", zIndex: 2, width: 100, height: 100, borderRadius: "50%", objectFit: "cover", border: "4px solid rgba(255,255,255,0.35)", boxShadow: "0 4px 20px rgba(0,0,0,0.25)", ...ringStyle }} />
                   : <span onClick={sg ? () => setActiveStoryGroup(sg) : undefined}
-                      style={{ filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.25))", fontSize: 80, borderRadius: "50%", padding: sg ? 4 : 0, ...ringStyle }}>
+                      style={{ position: "relative", zIndex: 2, filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.25))", fontSize: 80, borderRadius: "50%", padding: sg ? 4 : 0, ...ringStyle }}>
                       {selected.icon}
                     </span>;
               })()}
@@ -2091,8 +2224,15 @@ export default function App() {
           <>
             {/* ── Compact store hero header ── */}
             <div style={{ background: `linear-gradient(135deg, ${ownerR.bg_from || CORAL}, ${ownerR.bg_to || "#FF8C6B"})`, padding: "max(env(safe-area-inset-top), 52px) 20px 20px", position: "relative", overflow: "hidden" }}>
+              {ownerR.banner_url && <img src={ownerR.banner_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }} />}
+              {ownerR.banner_url && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.45))" }} />}
               <div style={{ position: "absolute", top: -20, right: -20, width: 110, height: 110, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              {/* Change cover button */}
+              <button onClick={() => document.getElementById("banner-file-input")?.click()} style={{ position: "absolute", top: "max(env(safe-area-inset-top), 52px)", right: 20, zIndex: 2, background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 20, padding: "5px 12px", fontSize: 11, fontWeight: 700, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                🖼️ Cover
+              </button>
+              <BannerFileInput uploadBanner={uploadBanner} />
+              <div style={{ display: "flex", alignItems: "center", gap: 14, position: "relative", zIndex: 1 }}>
                 {/* Restaurant photo — tappable to change */}
                 <div style={{ position: "relative", flexShrink: 0 }} onClick={() => document.getElementById("logo-file-input")?.click()}>
                   <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "2.5px solid rgba(255,255,255,0.5)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, cursor: "pointer" }}>
@@ -2127,7 +2267,7 @@ export default function App() {
                 </div>
               </div>
               {restaurants.filter(r => r.owner_id === user.id).length > 1 && (
-                <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", marginTop: 14 }}>
+                <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", marginTop: 14, position: "relative", zIndex: 1 }}>
                   {restaurants.filter(r => r.owner_id === user.id).map(r => (
                     <button key={r.id} onClick={() => setOwnerRId(r.id)} style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer", border: "1.5px solid", borderColor: (ownerRId || ownerR.id) === r.id ? "#fff" : "rgba(255,255,255,0.3)", background: (ownerRId || ownerR.id) === r.id ? "#fff" : "rgba(255,255,255,0.15)", color: (ownerRId || ownerR.id) === r.id ? CORAL : "#fff", whiteSpace: "nowrap" }}>{r.icon} {r.name.split(" ")[0]}</button>
                   ))}

@@ -117,8 +117,9 @@ export function useCart() {
       // Notify restaurant owner for cash orders (online orders are notified via Paystack webhook)
       if (paymentMethod === "cash") {
         if (!BACKEND_URL) {
-          console.warn("[notify/new-order] VITE_BACKEND_URL is not set — skipping push notification");
+          console.warn("[notify] VITE_BACKEND_URL is not set — skipping notifications");
         } else {
+          // FCM push notification
           const notifyPayload = { orderId: order.id, restaurantId };
           console.log("[notify/new-order] calling", `${BACKEND_URL}/notify/new-order`, notifyPayload);
           fetch(`${BACKEND_URL}/notify/new-order`, {
@@ -128,6 +129,15 @@ export function useCart() {
           })
             .then(r => r.json().then(body => console.log("[notify/new-order] response:", r.status, body)))
             .catch(err => console.error("[notify/new-order] fetch failed:", err.message));
+
+          // WhatsApp notification to restaurant owner
+          fetch(`${BACKEND_URL}/notify/whatsapp`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: order.id, restaurantId }),
+          })
+            .then(r => r.json().then(body => console.log("[notify/whatsapp] response:", r.status, body)))
+            .catch(err => console.error("[notify/whatsapp] fetch failed:", err.message));
         }
       }
 

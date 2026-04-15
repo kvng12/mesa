@@ -119,6 +119,30 @@ export function useOwnerRestaurant(restaurantId) {
     return { url, error: null };
   }
 
+  async function uploadBanner(file) {
+    const ext      = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const fileName = `${restaurantId}/banner-${Date.now()}.${ext}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from("restaurant-logos") // reuse existing public bucket
+      .upload(fileName, file, { cacheControl: "3600", upsert: true, contentType: file.type });
+
+    if (uploadErr) return { url: null, error: uploadErr };
+
+    const { data: urlData } = supabase.storage
+      .from("restaurant-logos")
+      .getPublicUrl(fileName);
+
+    const url = urlData.publicUrl;
+    const { error: updateErr } = await supabase
+      .from("restaurants")
+      .update({ banner_url: url })
+      .eq("id", restaurantId);
+
+    if (updateErr) return { url: null, error: updateErr };
+    return { url, error: null };
+  }
+
   async function togglePaymentMethod(method, currentValue) {
     const { error } = await supabase
       .from("restaurants")
@@ -183,7 +207,7 @@ export function useOwnerRestaurant(restaurantId) {
   return {
     saving,
     toggleOpen, toggleItem, updateItemImage, uploadFoodImage,
-    uploadLogo, createPost, togglePaymentMethod,
+    uploadLogo, uploadBanner, createPost, togglePaymentMethod,
     updateOpeningHours, uploadPostMedia,
   };
 }

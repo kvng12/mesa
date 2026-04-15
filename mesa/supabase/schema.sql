@@ -53,6 +53,8 @@ create table public.restaurants (
   bg_to       text default '#C2410C',     -- gradient end colour
   badge       text,                        -- e.g. "Top Rated", "Popular"
   tags        text[] default '{}',         -- e.g. {"Jollof Rice","Egusi"}
+  logo_url    text,                            -- restaurant logo/profile photo
+  banner_url  text,                            -- cover/hero banner image
   is_open     boolean not null default false,
   created_at  timestamptz not null default now()
 );
