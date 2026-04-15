@@ -135,8 +135,10 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
 
   const effectivePayment = lockedPayment || paymentMethod;
 
+  const subtotal = cart.subtotal; // original price before discounts
+
   // ── Promo code helpers ───────────────────────────────────
-  async function handleApplyPromo() {
+  const handleApplyPromo = async () => {
     if (!promoInput.trim()) return;
     setPromoLoading(true);
     setPromoErr("");
@@ -269,8 +271,6 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
       })();
     }
   }
-
-  const subtotal = cart.subtotal; // original price before discounts
 
   // ── Order success screen ──────────────────────────────────
   if (orderSuccess) return (
