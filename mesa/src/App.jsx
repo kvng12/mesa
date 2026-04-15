@@ -2309,6 +2309,19 @@ export default function App() {
                         </div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: DARK, marginBottom: 4 }}>{order.profiles?.full_name || "Customer"}</div>
                         <div style={{ fontSize: 11, color: "#888", marginBottom: 8 }}>{order.fulfillment === "delivery" ? "🛵 Delivery" : "🏃 Pickup"} · {order.payment_method === "cash" ? "💵 Cash" : "💳 Online"}</div>
+                        {order.scheduled_time && (() => {
+                          const d = new Date(order.scheduled_time);
+                          const now = new Date();
+                          const isToday = d.toDateString() === now.toDateString();
+                          const tom = new Date(now); tom.setDate(now.getDate() + 1);
+                          const dayLabel = isToday ? "Today" : d.toDateString() === tom.toDateString() ? "Tomorrow" : d.toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" });
+                          const timeLabel = fmt12(`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`);
+                          return (
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#7C3AED", background: "#EDE9FE", padding: "4px 10px", borderRadius: 20, display: "inline-block", marginBottom: 8 }}>
+                              ⏰ Scheduled · {dayLabel} at {timeLabel}
+                            </div>
+                          );
+                        })()}
                         <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{(order.order_items || []).map(i => `${i.name} x${i.quantity}`).join(", ")}</div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <span style={{ fontSize: 14, fontWeight: 800, color: CORAL }}>₦{Number(order.subtotal).toLocaleString()}</span>

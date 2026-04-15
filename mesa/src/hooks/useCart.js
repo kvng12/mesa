@@ -74,7 +74,7 @@ export function useCart() {
   const subtotal    = items.reduce((s, i) => s + i.menuItem.price * i.quantity, 0);
 
   // Place the order — inserts into orders + order_items
-  async function placeOrder({ fulfillment, paymentMethod, deliveryAddress, note, userId, paystackReference }) {
+  async function placeOrder({ fulfillment, paymentMethod, deliveryAddress, note, userId, paystackReference, scheduledTime }) {
     if (!items.length || !restaurantId || !userId) return { error: "Missing data" };
 
     setSubmitting(true);
@@ -93,6 +93,7 @@ export function useCart() {
           delivery_address:  fulfillment === "delivery" ? deliveryAddress : null,
           note:              note || null,
           paystack_reference: paystackReference || null,
+          scheduled_time:    scheduledTime || null,
         })
         .select()
         .single();

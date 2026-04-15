@@ -101,6 +101,9 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
   const [note, setNote]                 = useState("");
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderErr, setOrderErr]         = useState("");
+  const [schedMode, setSchedMode]       = useState("now");   // "now" | "schedule"
+  const [schedDate, setSchedDate]       = useState("today"); // "today" | "tomorrow"
+  const [schedTime, setSchedTime]       = useState("");      // "HH:MM"
 
   // If only one payment method is available, lock to it
   const lockedPayment = acceptsOnline && !acceptsCash ? "online"
@@ -109,10 +112,46 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
 
   const effectivePayment = lockedPayment || paymentMethod;
 
+  // ── Scheduling helpers ────────────────────────────────────
+  function getTimeSlots(dateKey) {
+    const now = new Date();
+    const minMinutes = now.getHours() * 60 + now.getMinutes() + 30;
+    const slots = [];
+    for (let h = 0; h < 24; h++) {
+      for (const m of [0, 30]) {
+        if (dateKey === "today" && h * 60 + m < minMinutes) continue;
+        slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+      }
+    }
+    return slots;
+  }
+
+  function fmtSlot(t) {
+    const [h, m] = t.split(":").map(Number);
+    const suffix = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 || 12;
+    return m === 0 ? `${h12}:00 ${suffix}` : `${h12}:30 ${suffix}`;
+  }
+
+  function getScheduledTime() {
+    if (schedMode !== "schedule" || !schedTime) return null;
+    const base = new Date();
+    if (schedDate === "tomorrow") base.setDate(base.getDate() + 1);
+    const dateStr = base.toISOString().slice(0, 10);
+    return new Date(`${dateStr}T${schedTime}`).toISOString();
+  }
+
+  const schedLabel = schedMode === "schedule" && schedTime
+    ? `${schedDate === "today" ? "Today" : "Tomorrow"} at ${fmtSlot(schedTime)}`
+    : null;
+
   function handlePlaceOrder() {
     if (!user) { onSignIn(); return; }
     if (fulfillment === "delivery" && !address.trim()) {
       setOrderErr("Please enter a delivery address"); return;
+    }
+    if (schedMode === "schedule" && !schedTime) {
+      setOrderErr("Please select a scheduled time"); return;
     }
     if (!acceptsOnline && !acceptsCash) {
       setOrderErr("This restaurant has no payment methods enabled"); return;
@@ -130,6 +169,8 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
 
       setPlacingOrder(true);
 
+      const snapScheduledTime = getScheduledTime();
+
       new PaystackPop().newTransaction({
         key:      import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
         email:    user.email,
@@ -146,6 +187,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
             note:              snapNote,
             userId:            snapUserId,
             paystackReference: response.reference,
+            scheduledTime:     snapScheduledTime,
           }).then(function(result) {
             setPlacingOrder(false);
             if (result.error) { setOrderErr(result.error); return; }
@@ -166,6 +208,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
           deliveryAddress: address,
           note,
           userId: user.id,
+          scheduledTime: getScheduledTime(),
         });
         setPlacingOrder(false);
         if (error) { setOrderErr(error); return; }
@@ -251,6 +294,46 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Scheduling */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>When do you want it?</div>
+              <div style={{ display: "flex", gap: 10, marginBottom: schedMode === "schedule" ? 12 : 0 }}>
+                {[
+                  { id: "now",      label: "⚡ Now",      sub: "ASAP" },
+                  { id: "schedule", label: "⏰ Schedule", sub: "Pick a time" },
+                ].map(w => (
+                  <button key={w.id} onClick={() => setSchedMode(w.id)}
+                    style={{ flex: 1, padding: "12px 10px", borderRadius: 14, border: `2px solid ${schedMode === w.id ? CORAL : "#EBEBEB"}`, background: schedMode === w.id ? "#FFF0ED" : "#fff", cursor: "pointer", textAlign: "center" }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: schedMode === w.id ? CORAL : DARK }}>{w.label}</div>
+                    <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{w.sub}</div>
+                  </button>
+                ))}
+              </div>
+              {schedMode === "schedule" && (
+                <>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <select value={schedDate} onChange={e => { setSchedDate(e.target.value); setSchedTime(""); }}
+                      style={{ flex: 1, border: "1.5px solid #EBEBEB", borderRadius: 12, background: BG, outline: "none", fontSize: 14, color: DARK, padding: "12px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif", appearance: "none" }}>
+                      <option value="today">Today</option>
+                      <option value="tomorrow">Tomorrow</option>
+                    </select>
+                    <select value={schedTime} onChange={e => setSchedTime(e.target.value)}
+                      style={{ flex: 1, border: "1.5px solid #EBEBEB", borderRadius: 12, background: BG, outline: "none", fontSize: 14, color: schedTime ? DARK : "#B0B0B0", padding: "12px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif", appearance: "none" }}>
+                      <option value="">Pick time...</option>
+                      {getTimeSlots(schedDate).map(t => (
+                        <option key={t} value={t}>{fmtSlot(t)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {schedLabel && (
+                    <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: CORAL, textAlign: "center", padding: "8px 0", background: "#FFF0ED", borderRadius: 10 }}>
+                      Scheduled for: {schedLabel}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Delivery address */}
