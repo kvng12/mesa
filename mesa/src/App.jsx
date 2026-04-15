@@ -438,9 +438,14 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
     reader.readAsDataURL(f);
   }
 
-  async function submit() {
+  const submit = async () => {
     if (!name.trim()) { setErr("Item name is required"); return; }
     if (!price || isNaN(Number(price)) || Number(price) <= 0) { setErr("Enter a valid price"); return; }
+    if (catMode === "existing" && !selCatId) {
+      setCatMode("new");
+      setErr("Create a category first, then add your item.");
+      return;
+    }
     setSaving(true); setErr("");
 
     try {
@@ -600,7 +605,11 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
             catsLoading
               ? <div style={{ fontSize: 13, color: "#B0B0B0", padding: "10px 0" }}>Loading categories…</div>
               : cats.length === 0
-              ? <div style={{ fontSize: 13, color: "#B0B0B0", padding: "10px 0" }}>No categories yet — switch to "+ New category" to create one</div>
+              ? <div style={{ background: "#FFFBEB", border: "1.5px solid #FDE68A", borderRadius: 12, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#92400E", marginBottom: 6 }}>No categories yet</div>
+                  <div style={{ fontSize: 12, color: "#78350F", marginBottom: 10 }}>Please create a category first before adding items.</div>
+                  <button onClick={() => setCatMode("new")} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#D97706", border: "none", borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>+ Create a category</button>
+                </div>
               : <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {cats.map(c => (
                     <button key={c.id} onClick={() => setSelCatId(c.id)}
@@ -628,10 +637,16 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
 
         {err && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 12, padding: "8px 12px", background: "#FEF2F2", borderRadius: 10 }}>{err}</div>}
 
-        <button onClick={submit} disabled={busy}
-          style={{ width: "100%", padding: 14, background: busy ? "#B0B0B0" : CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: busy ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-          {uploading ? `Uploading photo… ${uploadProgress}%` : saving ? "Adding…" : "Add to Menu"}
-        </button>
+        {(() => {
+          const noCat = catMode === "existing" && !catsLoading && cats.length === 0;
+          const disabled = busy || noCat;
+          return (
+            <button onClick={submit} disabled={disabled}
+              style={{ width: "100%", padding: 14, background: disabled ? "#B0B0B0" : CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: disabled ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {uploading ? `Uploading photo… ${uploadProgress}%` : saving ? "Adding…" : "Add to Menu"}
+            </button>
+          );
+        })()}
       </div>
     </div>
   );
