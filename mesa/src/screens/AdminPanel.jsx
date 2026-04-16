@@ -1,6 +1,7 @@
 // src/screens/AdminPanel.jsx
 import { useState, useEffect } from "react";
 import { useAdmin } from "../hooks/useAdmin";
+import AdminFraudDashboard from "../components/AdminFraudDashboard";
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -67,6 +68,11 @@ export default function AdminPanel() {
             <StatCard n={stats.pending}     label="Pending"     color={stats.pending > 0 ? "#D97706" : "#16A34A"} />
           </div>
         )}
+
+        {/* Fraud & Escrow Dashboard */}
+        <AdminFraudDashboard />
+
+        <div style={{ height: 1, background: "#F0EDE8", margin: "4px 0 20px" }} />
 
         {/* Applications section */}
         <div style={{ fontSize: 15, fontWeight: 800, color: DARK, marginBottom: 14 }}>Restaurant Applications</div>

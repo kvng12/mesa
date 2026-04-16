@@ -2,7 +2,10 @@
 // Customer order history with realtime status updates.
 // Structured to be future-ready for tracking, reorder, and payment history.
 
+import { useState } from "react";
 import { useOrders } from "../hooks/useOrders";
+import DeliveryConfirmation from "../components/DeliveryConfirmation";
+import DisputeModal from "../components/DisputeModal";
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -84,7 +87,7 @@ function StatusProgress({ status, fulfillment }) {
 }
 
 // ── Single order card ─────────────────────────────────────────
-function OrderCard({ order, onReview, reviewedOrderIds, onReorder }) {
+function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispute }) {
   const r  = order.restaurants;
   const sc = STATUS[order.status] || STATUS.pending;
   const items = order.order_items || [];
@@ -188,6 +191,20 @@ function OrderCard({ order, onReview, reviewedOrderIds, onReorder }) {
           </div>
         )}
 
+        {/* Delivery confirmation — shown when delivered and customer hasn't confirmed yet */}
+        {order.status === "delivered" && !order.confirmed_at && user && !order.disputed && (
+          <DeliveryConfirmation
+            order={order}
+            onConfirmed={() => {}}
+            onDispute={(o) => onDispute?.(o)}
+          />
+        )}
+        {order.status === "delivered" && order.disputed && (
+          <div style={{ marginTop: 10, fontSize: 11, fontWeight: 700, color: "#D97706", background: "#FFFBEB", borderRadius: 10, padding: "6px 12px" }}>
+            ⚠️ Dispute submitted — under review
+          </div>
+        )}
+
         {/* Review button — only for completed, unreviewed orders */}
         {(order.status === "completed" || order.status === "delivered") && onReview && !reviewedOrderIds.has(order.id) && (
           <button
@@ -280,6 +297,7 @@ function Skeleton() {
 // ════════════════════════════════════════════════════════════
 export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds = new Set(), onReorder }) {
   const { orders, loading, error, refetch } = useOrders(user?.id);
+  const [disputeOrder, setDisputeOrder] = useState(null);
 
   // Group orders into active (non-final) and past (completed/cancelled)
   const activeOrders = orders.filter(o => !["completed", "cancelled", "delivered"].includes(o.status));
@@ -338,18 +356,28 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
           <div style={{ fontSize: 12, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>
             Active · {activeOrders.length}
           </div>
-          {activeOrders.map(order => <OrderCard key={order.id} order={order} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} />)}
+          {activeOrders.map(order => <OrderCard key={order.id} order={order} user={user} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} onDispute={setDisputeOrder} />)}
         </div>
       )}
 
-      {/* Past orders (completed, cancelled) */}
+      {/* Past orders (completed, cancelled, delivered) */}
       {!loading && !error && pastOrders.length > 0 && (
         <div style={{ padding: activeOrders.length > 0 ? "8px 20px 0" : "20px 20px 0" }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>
             Past orders · {pastOrders.length}
           </div>
-          {pastOrders.map(order => <OrderCard key={order.id} order={order} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} />)}
+          {pastOrders.map(order => <OrderCard key={order.id} order={order} user={user} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} onDispute={setDisputeOrder} />)}
         </div>
+      )}
+
+      {/* Dispute modal */}
+      {disputeOrder && user && (
+        <DisputeModal
+          order={disputeOrder}
+          user={user}
+          onClose={() => setDisputeOrder(null)}
+          onSubmitted={() => { setDisputeOrder(null); refetch(); }}
+        />
       )}
 
     </div>

@@ -27,6 +27,7 @@ import { useRegistration }                    from "./hooks/useRegistration";
 import { useChat, useOwnerChats, useUnreadCount } from "./hooks/useChat";
 import AnalyticsScreen from "./screens/AnalyticsScreen";
 import { usePushNotifications } from "./hooks/usePushNotifications";
+import DeliveryPhotoUpload from "./components/DeliveryPhotoUpload";
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -182,7 +183,11 @@ function VCard({ r, onClick }) {
         }
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: DARK, marginBottom: 4 }}>{r.name}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+          <span style={{ fontSize: 15, fontWeight: 800, color: DARK }}>{r.name}</span>
+          {r.verified && <span style={{ fontSize: 10, fontWeight: 700, color: "#16A34A", background: "#F0FDF4", padding: "2px 7px", borderRadius: 10, flexShrink: 0 }}>✓</span>}
+          {!r.verified && r.created_at && (Date.now() - new Date(r.created_at) < 30 * 24 * 3600000) && <span style={{ fontSize: 10, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", padding: "2px 7px", borderRadius: 10, flexShrink: 0 }}>New</span>}
+        </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: "#888" }}>{Array.isArray(r.category) ? r.category.join(", ") : r.category}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 3 }}><span style={{ color: r.is_open ? "#22C55E" : "#D4CEC8", fontSize: 8 }}>●</span><span style={{ fontSize: 11, fontWeight: 700, color: r.is_open ? "#22C55E" : "#B0B0B0" }}>{r.is_open ? "Open" : "Closed"}</span></span>
@@ -213,7 +218,10 @@ function HCard({ r, onClick }) {
         }
       </div>
       <div style={{ padding: "12px 14px 14px" }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: DARK, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: DARK, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</span>
+          {r.verified && <span style={{ fontSize: 9, fontWeight: 700, color: "#16A34A", background: "#F0FDF4", padding: "2px 6px", borderRadius: 8, flexShrink: 0 }}>✓</span>}
+        </div>
         <div style={{ fontSize: 10, color: "#888", fontWeight: 600, marginBottom: 4 }}>{Array.isArray(r.category) ? r.category[0] : r.category}</div>
         <div style={{ fontSize: 10, color: "#B0B0B0" }}>📍 {r.address}</div>
       </div>
@@ -1409,6 +1417,7 @@ export default function App() {
   const { orders: incomingOrders, fetchOrders: fetchIncoming, updateStatus } = useIncomingOrders(ownerR?.id);
 
   const [loyaltyMembersCount, setLoyaltyMembersCount] = useState(0);
+  const [deliveryPhotos, setDeliveryPhotos] = useState({}); // orderId → true
   useEffect(() => {
     if (!ownerR?.id) return;
     supabase
@@ -2036,7 +2045,11 @@ export default function App() {
                   <span style={{ fontSize: 7 }}>●</span>{selected.is_open ? "Open Now" : "Closed"}
                 </div>
               </div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 6, lineHeight: 1.2 }}>{selected.name}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 22, fontWeight: 800, color: DARK, lineHeight: 1.2 }}>{selected.name}</span>
+                {selected.verified && <span style={{ fontSize: 11, fontWeight: 700, color: "#16A34A", background: "#F0FDF4", padding: "3px 10px", borderRadius: 12, border: "1px solid #BBF7D0", flexShrink: 0 }}>✓ Verified</span>}
+                {!selected.verified && selected.created_at && (Date.now() - new Date(selected.created_at) < 30 * 24 * 3600000) && <span style={{ fontSize: 11, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", padding: "3px 10px", borderRadius: 12, flexShrink: 0 }}>New</span>}
+              </div>
               <div style={{ fontSize: 13, color: "#888", lineHeight: 1.6, marginBottom: 10 }}>{selected.description}</div>
               <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>📍 {selected.address}</div>
               {(() => { const info = getHoursInfo(selected); return info ? <div style={{ fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 10 }}>🕐 {info}</div> : <div style={{ marginBottom: 0 }} />; })()}
@@ -2367,6 +2380,13 @@ export default function App() {
                           );
                         })()}
                         <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{(order.order_items || []).map(i => `${i.name} x${i.quantity}`).join(", ")}</div>
+                        {order.status === "ready" && order.fulfillment === "delivery" && !deliveryPhotos[order.id] && (
+                          <DeliveryPhotoUpload
+                            orderId={order.id}
+                            restaurantId={ownerR.id}
+                            onUploaded={() => setDeliveryPhotos(prev => ({ ...prev, [order.id]: true }))}
+                          />
+                        )}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <span style={{ fontSize: 14, fontWeight: 800, color: CORAL }}>₦{Number(order.subtotal).toLocaleString()}</span>
                           <div style={{ display: "flex", gap: 8 }}>
@@ -2374,7 +2394,11 @@ export default function App() {
                             {order.status === "confirmed" && <button onClick={() => updateStatus(order.id, "preparing")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#FFF0ED", color: CORAL, cursor: "pointer" }}>Preparing</button>}
                             {order.status === "preparing" && <button onClick={() => updateStatus(order.id, "ready")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Ready</button>}
                             {order.status === "ready" && order.fulfillment !== "delivery" && <button onClick={() => updateStatus(order.id, "completed")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Completed</button>}
-                            {order.status === "ready" && order.fulfillment === "delivery" && <button onClick={() => updateStatus(order.id, "delivered")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Delivered</button>}
+                            {order.status === "ready" && order.fulfillment === "delivery" && (
+                              deliveryPhotos[order.id]
+                                ? <button onClick={() => updateStatus(order.id, "delivered")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Delivered</button>
+                                : null
+                            )}
                             {!["completed","delivered","cancelled"].includes(order.status) && <button onClick={() => updateStatus(order.id, "cancelled")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#FEF2F2", color: "#DC2626", cursor: "pointer" }}>Cancel</button>}
                           </div>
                         </div>

@@ -53,6 +53,10 @@ export function useOrders(userId) {
         note,
         delivery_address,
         created_at,
+        confirmed_at,
+        auto_release_at,
+        disputed,
+        restaurant_id,
         restaurants ( id, name, icon, bg_from, bg_to ),
         order_items ( id, menu_item_id, name, price, quantity, line_total )
       `)
@@ -87,7 +91,7 @@ export function useOrders(userId) {
           setOrders((prev) =>
             prev.map((o) =>
               o.id === payload.new.id
-                ? { ...o, status: payload.new.status, payment_status: payload.new.payment_status }
+                ? { ...o, status: payload.new.status, payment_status: payload.new.payment_status, confirmed_at: payload.new.confirmed_at, auto_release_at: payload.new.auto_release_at, disputed: payload.new.disputed }
                 : o
             )
           );

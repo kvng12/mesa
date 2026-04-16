@@ -167,6 +167,17 @@ export function useCart() {
           })
             .then(r => r.json().then(result => console.log("[WhatsApp] response:", r.status, result)))
             .catch(err => console.error("[notify/whatsapp] fetch failed:", err.message));
+
+          // WhatsApp YES/NO confirmation to customer (fraud check)
+          if (userId) {
+            fetch(`${BACKEND_URL}/notify/whatsapp-customer`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId: order.id, customerId: userId }),
+            })
+              .then(r => r.json().then(result => console.log("[WhatsApp-customer] response:", r.status, result)))
+              .catch(err => console.error("[notify/whatsapp-customer] fetch failed:", err.message));
+          }
         }
       }
 
