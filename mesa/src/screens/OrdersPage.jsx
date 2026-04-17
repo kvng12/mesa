@@ -87,21 +87,24 @@ function StatusProgress({ status, fulfillment }) {
 }
 
 // ── Single order card ─────────────────────────────────────────
-function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispute }) {
+function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispute, onConfirmed }) {
   const r  = order.restaurants;
   const sc = STATUS[order.status] || STATUS.pending;
   const items = order.order_items || [];
 
+  const awaitingConfirm = order.status === "delivered" && !order.confirmed_at && !order.disputed;
+
   return (
     <div style={{
-      background: "#fff",
+      background: awaitingConfirm ? "#FFFDF5" : "#fff",
       borderRadius: 20,
-      border: "1px solid #F0EDE8",
+      border: awaitingConfirm ? "1.5px solid #FCD34D" : "1px solid #F0EDE8",
       overflow: "hidden",
       marginBottom: 12,
+      boxShadow: awaitingConfirm ? "0 2px 12px rgba(253,186,68,0.18)" : "none",
     }}>
       {/* Coloured top strip */}
-      <div style={{ height: 4, background: sc.color, transition: "background 0.3s" }} />
+      <div style={{ height: 4, background: awaitingConfirm ? "#F59E0B" : sc.color, transition: "background 0.3s" }} />
 
       <div style={{ padding: "16px 16px 18px" }}>
 
@@ -195,13 +198,13 @@ function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispu
         {order.status === "delivered" && !order.confirmed_at && user && !order.disputed && (
           <DeliveryConfirmation
             order={order}
-            onConfirmed={() => {}}
+            onConfirmed={() => onConfirmed?.(order.id)}
             onDispute={(o) => onDispute?.(o)}
           />
         )}
         {order.status === "delivered" && order.disputed && (
-          <div style={{ marginTop: 10, fontSize: 11, fontWeight: 700, color: "#D97706", background: "#FFFBEB", borderRadius: 10, padding: "6px 12px" }}>
-            ⚠️ Dispute submitted — under review
+          <div style={{ marginTop: 12, fontSize: 11, fontWeight: 700, color: "#D97706", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px" }}>
+            ⚠️ Dispute submitted — our team is reviewing this
           </div>
         )}
 
@@ -299,9 +302,17 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
   const { orders, loading, error, refetch } = useOrders(user?.id);
   const [disputeOrder, setDisputeOrder] = useState(null);
 
-  // Group orders into active (non-final) and past (completed/cancelled)
-  const activeOrders = orders.filter(o => !["completed", "cancelled", "delivered"].includes(o.status));
-  const pastOrders   = orders.filter(o =>  ["completed", "cancelled", "delivered"].includes(o.status));
+  // A delivered order that hasn't been confirmed yet still needs customer action —
+  // keep it in "active" so the DeliveryConfirmation prompt is prominent.
+  const needsConfirmation = (o) =>
+    o.status === "delivered" && !o.confirmed_at && !o.disputed;
+
+  const activeOrders = orders.filter(o =>
+    !["completed", "cancelled", "delivered"].includes(o.status) || needsConfirmation(o)
+  );
+  const pastOrders = orders.filter(o =>
+    ["completed", "cancelled", "delivered"].includes(o.status) && !needsConfirmation(o)
+  );
 
   return (
     <div style={{ background: BG, minHeight: "100vh", paddingBottom: "calc(90px + env(safe-area-inset-bottom))" }}>
@@ -356,7 +367,7 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
           <div style={{ fontSize: 12, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>
             Active · {activeOrders.length}
           </div>
-          {activeOrders.map(order => <OrderCard key={order.id} order={order} user={user} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} onDispute={setDisputeOrder} />)}
+          {activeOrders.map(order => <OrderCard key={order.id} order={order} user={user} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} onDispute={setDisputeOrder} onConfirmed={refetch} />)}
         </div>
       )}
 
@@ -366,7 +377,7 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
           <div style={{ fontSize: 12, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>
             Past orders · {pastOrders.length}
           </div>
-          {pastOrders.map(order => <OrderCard key={order.id} order={order} user={user} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} onDispute={setDisputeOrder} />)}
+          {pastOrders.map(order => <OrderCard key={order.id} order={order} user={user} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} onDispute={setDisputeOrder} onConfirmed={refetch} />)}
         </div>
       )}
 
