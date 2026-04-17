@@ -65,10 +65,18 @@ export function useOrders(userId) {
       .limit(50);
 
     if (err) {
+      console.error("[useOrders] fetch error:", err);
       setError(err.message);
       setLoading(false);
       return;
     }
+
+    console.log("[useOrders] raw DB response for userId:", userId);
+    (data || []).forEach(o => {
+      console.log(
+        `  id=${o.id.slice(0,8)} status=${o.status} confirmed_at=${o.confirmed_at} disputed=${o.disputed} auto_release_at=${o.auto_release_at}`
+      );
+    });
 
     setOrders(data || []);
     setLoading(false);
