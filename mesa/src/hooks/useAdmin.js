@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 
 export function useAdmin() {
   const [applications, setApplications] = useState([]);
+  const [restaurantsMap, setRestaurantsMap] = useState({}); // keyed by owner_id
   const [stats, setStats]               = useState(null);
   const [loading, setLoading]           = useState(false);
   const [actionLoading, setActionLoading] = useState(null); // holds id of item being actioned
@@ -16,6 +17,53 @@ export function useAdmin() {
       .order("created_at", { ascending: false });
     setApplications(data || []);
     setLoading(false);
+
+    // Also fetch restaurants so we can show verified/suspended state on approved apps
+    await fetchRestaurants();
+  }
+
+  async function fetchRestaurants() {
+    const { data } = await supabase
+      .from("restaurants")
+      .select("id, owner_id, verified, verified_at, suspended");
+    if (data) {
+      const map = {};
+      data.forEach(r => { map[r.owner_id] = r; });
+      setRestaurantsMap(map);
+    }
+  }
+
+  async function verifyRestaurant(restaurantId) {
+    setActionLoading("verify-" + restaurantId);
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ verified: true, verified_at: new Date().toISOString() })
+      .eq("id", restaurantId);
+    setActionLoading(null);
+    if (!error) await fetchRestaurants();
+    return { error };
+  }
+
+  async function revokeVerification(restaurantId) {
+    setActionLoading("revoke-" + restaurantId);
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ verified: false, verified_at: null })
+      .eq("id", restaurantId);
+    setActionLoading(null);
+    if (!error) await fetchRestaurants();
+    return { error };
+  }
+
+  async function unsuspendRestaurant(restaurantId) {
+    setActionLoading("unsuspend-" + restaurantId);
+    const { error } = await supabase
+      .from("restaurants")
+      .update({ suspended: false })
+      .eq("id", restaurantId);
+    setActionLoading(null);
+    if (!error) await fetchRestaurants();
+    return { error };
   }
 
   async function fetchStats() {
@@ -183,8 +231,9 @@ export function useAdmin() {
   }
 
   return {
-    applications, stats, loading, actionLoading,
+    applications, restaurantsMap, stats, loading, actionLoading,
     fetchApplications, fetchStats, approveApplication, rejectApplication,
     deletePost, backfillApprovedApplications,
+    verifyRestaurant, revokeVerification, unsuspendRestaurant,
   };
 }

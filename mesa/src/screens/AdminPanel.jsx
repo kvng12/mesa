@@ -23,7 +23,11 @@ function StatCard({ n, label, color }) {
 }
 
 export default function AdminPanel() {
-  const { applications, stats, loading, actionLoading, fetchApplications, fetchStats, approveApplication, rejectApplication, backfillApprovedApplications } = useAdmin();
+  const {
+    applications, restaurantsMap, stats, loading, actionLoading,
+    fetchApplications, fetchStats, approveApplication, rejectApplication,
+    backfillApprovedApplications, verifyRestaurant, revokeVerification, unsuspendRestaurant,
+  } = useAdmin();
   const [filter, setFilter]   = useState("pending");
   const [rejectNote, setNote] = useState({});     // { [id]: noteText }
   const [showReject, setShowReject] = useState(null); // id of app showing reject input
@@ -134,6 +138,73 @@ export default function AdminPanel() {
                 {app.admin_note && (
                   <div style={{ fontSize: 11, color: "#888", background: "#FFFBEB", borderRadius: 8, padding: "6px 10px", marginBottom: 12 }}>Admin note: {app.admin_note}</div>
                 )}
+
+                {/* Verify / Suspend controls — only for approved apps */}
+                {app.status === "approved" && (() => {
+                  const rest = restaurantsMap[app.applicant_id];
+                  if (!rest) return null;
+                  const verifyKey   = "verify-"    + rest.id;
+                  const revokeKey   = "revoke-"    + rest.id;
+                  const unsuspendKey = "unsuspend-" + rest.id;
+                  const verifiedAt  = rest.verified_at
+                    ? new Date(rest.verified_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })
+                    : null;
+
+                  return (
+                    <div style={{ borderTop: "1px solid #F0EDE8", paddingTop: 12, marginTop: 4 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 10 }}>
+                        Restaurant Status
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+
+                        {/* Verified state */}
+                        {rest.verified ? (
+                          <>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 10, padding: "6px 12px" }}>
+                              <span style={{ fontSize: 13 }}>✓</span>
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 800, color: "#16A34A" }}>Verified</div>
+                                {verifiedAt && <div style={{ fontSize: 9, color: "#86EFAC" }}>{verifiedAt}</div>}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => revokeVerification(rest.id)}
+                              disabled={actionLoading === revokeKey}
+                              style={{ fontSize: 10, fontWeight: 700, color: "#888", background: "#F5F5F5", border: "1px solid #E0E0E0", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                            >
+                              {actionLoading === revokeKey ? "..." : "Revoke"}
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => verifyRestaurant(rest.id)}
+                            disabled={actionLoading === verifyKey}
+                            style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 800, color: "#fff", background: actionLoading === verifyKey ? "#86EFAC" : "#16A34A", border: "none", borderRadius: 10, padding: "8px 16px", cursor: actionLoading === verifyKey ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                          >
+                            {actionLoading === verifyKey ? "Verifying..." : "✓ Verify Restaurant"}
+                          </button>
+                        )}
+
+                        {/* Suspended state */}
+                        {rest.suspended && (
+                          <>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "6px 12px" }}>
+                              <span style={{ fontSize: 11, fontWeight: 800, color: "#DC2626" }}>⛔ Suspended</span>
+                            </div>
+                            <button
+                              onClick={() => unsuspendRestaurant(rest.id)}
+                              disabled={actionLoading === unsuspendKey}
+                              style={{ fontSize: 12, fontWeight: 800, color: "#DC2626", background: "#FEF2F2", border: "1.5px solid #FECACA", borderRadius: 10, padding: "7px 14px", cursor: actionLoading === unsuspendKey ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                            >
+                              {actionLoading === unsuspendKey ? "..." : "Unsuspend"}
+                            </button>
+                          </>
+                        )}
+
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Actions — only for pending */}
                 {app.status === "pending" && (
