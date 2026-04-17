@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useProfile }       from "../hooks/useProfile";
 import { useRegistration }  from "../hooks/useRegistration";
+import InstallAppCard       from "../components/InstallAppCard";
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -62,6 +63,9 @@ export default function ProfilePage({ user, onClose, onSignOut, onRegister }) {
       </div>
 
       <div style={{ padding: "24px 20px", flex: 1 }}>
+
+        {/* PWA install prompt — mobile only, hides once installed */}
+        <InstallAppCard />
 
         {/* Avatar + info */}
         <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: 20, marginBottom: 14, display: "flex", alignItems: "center", gap: 16 }}>
