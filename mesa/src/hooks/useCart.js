@@ -13,7 +13,8 @@ import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { awardLoyaltyPoints, redeemLoyaltyPoints } from "./useLoyaltyPoints";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_URL    = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_SECRET = import.meta.env.VITE_BACKEND_SECRET;
 
 export function useCart() {
   const [items, setItems]               = useState([]);   // { menuItem, quantity }
@@ -152,7 +153,7 @@ export function useCart() {
           console.log("[notify/new-order] calling", `${BACKEND_URL}/notify/new-order`, notifyPayload);
           fetch(`${BACKEND_URL}/notify/new-order`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
             body: JSON.stringify(notifyPayload),
           })
             .then(r => r.json().then(body => console.log("[notify/new-order] response:", r.status, body)))
@@ -162,7 +163,7 @@ export function useCart() {
           console.log("[WhatsApp] calling...");
           fetch(`${BACKEND_URL}/notify/whatsapp`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
             body: JSON.stringify({ orderId: order.id, restaurantId }),
           })
             .then(r => r.json().then(result => console.log("[WhatsApp] response:", r.status, result)))
@@ -172,7 +173,7 @@ export function useCart() {
           if (userId) {
             fetch(`${BACKEND_URL}/notify/whatsapp-customer`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
               body: JSON.stringify({ orderId: order.id, customerId: userId }),
             })
               .then(r => r.json().then(result => console.log("[WhatsApp-customer] response:", r.status, result)))

@@ -1,7 +1,8 @@
 // src/hooks/usePushNotifications.js
 import { useEffect } from "react";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_URL    = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_SECRET = import.meta.env.VITE_BACKEND_SECRET;
 const VAPID_KEY   = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
 const firebaseConfig = {
@@ -94,7 +95,7 @@ async function setupPushNotifications(userId) {
     try {
       const resp = await fetch(`${BACKEND_URL}/fcm/save-token`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
         body: JSON.stringify({ userId, token }),
       });
       const result = await resp.json();
