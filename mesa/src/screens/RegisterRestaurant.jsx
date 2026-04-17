@@ -12,6 +12,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 import { useState } from "react";
+import BankDetailsForm from "../components/BankDetailsForm";
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -46,7 +47,9 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
     icon: "🍲", bgFrom: "#7C2D12", bgTo: "#C2410C",
     tags: "",
   });
+  const [bank, setBank]   = useState({ bankName: "", bankCode: "", accountNumber: "", accountName: "", verified: false });
   const [fieldErr, setFieldErr] = useState("");
+  const [bankErr, setBankErr]   = useState("");
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })); }
 
@@ -73,25 +76,37 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
     setFieldErr(""); return true;
   }
 
+  function validateBank() {
+    if (!bank.bankCode)          { setBankErr("Please select a bank"); return false; }
+    if (bank.accountNumber.length !== 10) { setBankErr("Account number must be 10 digits"); return false; }
+    if (!bank.verified)          { setBankErr("Please wait for account verification to complete"); return false; }
+    setBankErr(""); return true;
+  }
+
   async function submit() {
     const tags = form.tags.split(",").map(t => t.trim()).filter(Boolean);
     const { error: err } = await onSubmit({
-      name:        form.name.trim(),
-      category:    form.category,          // TEXT[] array
-      description: form.description.trim(),
-      address:     form.address.trim(),
-      phone:       form.phone.trim(),
-      state:       form.state || null,
-      icon:        form.icon,
-      bg_from:     form.bgFrom,
-      bg_to:       form.bgTo,
+      name:             form.name.trim(),
+      category:         form.category,
+      description:      form.description.trim(),
+      address:          form.address.trim(),
+      phone:            form.phone.trim(),
+      state:            form.state || null,
+      icon:             form.icon,
+      bg_from:          form.bgFrom,
+      bg_to:            form.bgTo,
       tags,
+      bank_name:        bank.bankName,
+      bank_code:        bank.bankCode,
+      account_number:   bank.accountNumber,
+      account_name:     bank.accountName,
+      account_verified: bank.verified,
     });
-    if (!err) setStep(3);
+    if (!err) setStep(4);
   }
 
-  // ── Step 3: Success ──────────────────────────────────────────
-  if (step === 3) {
+  // ── Step 4: Success ──────────────────────────────────────────
+  if (step === 4) {
     return (
       <Overlay onClose={onClose} title="">
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 28px", textAlign: "center" }}>
@@ -112,10 +127,10 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
     );
   }
 
-  // ── Step 2: Preview + Submit ─────────────────────────────────
-  if (step === 2) {
+  // ── Step 3: Preview + Submit ─────────────────────────────────
+  if (step === 3) {
     return (
-      <Overlay onClose={() => setStep(1)} title="Preview" backLabel="← Back to Edit">
+      <Overlay onClose={() => setStep(2)} title="Preview" backLabel="← Back to Payment Details">
         <div style={{ padding: "0 20px 40px" }}>
           <div style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>This is how your restaurant will appear on Chowli:</div>
 
@@ -136,10 +151,45 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
             </div>
           </div>
 
+          {/* Bank summary */}
+          <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 14, padding: "12px 16px", marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 6 }}>Payout Account</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{bank.bankName}</div>
+            <div style={{ fontSize: 12, color: "#888" }}>****{bank.accountNumber.slice(-4)} · {bank.accountName}</div>
+          </div>
+
           {error && <div style={{ background: "#FFF0ED", color: CORAL, fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 16 }}>{error}</div>}
 
           <button onClick={submit} disabled={submitting} style={{ ...btnFull, opacity: submitting ? 0.6 : 1 }}>
             {submitting ? "Submitting..." : "Submit Application"}
+          </button>
+        </div>
+      </Overlay>
+    );
+  }
+
+  // ── Step 2: Payment Details ──────────────────────────────────
+  if (step === 2) {
+    return (
+      <Overlay onClose={() => setStep(1)} title="Payment Details" backLabel="← Back to Details">
+        <div style={{ padding: "0 20px 40px" }}>
+          <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 12, padding: "10px 14px", marginBottom: 20, fontSize: 12, color: "#92400E", lineHeight: 1.6 }}>
+            <strong>Where should we pay you?</strong><br />
+            Orders paid online are held in escrow and transferred to this account after delivery confirmation.
+          </div>
+
+          <BankDetailsForm value={bank} onChange={setBank} disabled={submitting} />
+
+          {bankErr && (
+            <div style={{ background: "#FFF0ED", color: CORAL, fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 16 }}>{bankErr}</div>
+          )}
+
+          <button
+            onClick={() => { if (validateBank()) setStep(3); }}
+            disabled={!bank.verified}
+            style={{ ...btnFull, opacity: bank.verified ? 1 : 0.5 }}
+          >
+            Preview & Continue →
           </button>
         </div>
       </Overlay>
@@ -264,7 +314,7 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
         {fieldErr && <div style={{ background: "#FFF0ED", color: CORAL, fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 16 }}>{fieldErr}</div>}
 
         <button onClick={() => { if (validateStep1()) setStep(2); }} style={btnFull}>
-          Preview & Continue →
+          Payment Details →
         </button>
       </div>
     </Overlay>

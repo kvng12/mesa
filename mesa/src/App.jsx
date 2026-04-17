@@ -28,6 +28,7 @@ import { useChat, useOwnerChats, useUnreadCount } from "./hooks/useChat";
 import AnalyticsScreen from "./screens/AnalyticsScreen";
 import { usePushNotifications } from "./hooks/usePushNotifications";
 import DeliveryPhotoUpload from "./components/DeliveryPhotoUpload";
+import BankDetailsForm from "./components/BankDetailsForm";
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -880,6 +881,97 @@ function PaymentSettingsCard({ ownerR, togglePaymentMethod }) {
       {!localOnline && !localCash && (
         <div style={{ fontSize: 11, color: "#DC2626", fontWeight: 600, marginTop: 10, padding: "8px 10px", background: "#FEF2F2", borderRadius: 10 }}>
           ⚠️ At least one payment method must be enabled
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ── PayoutAccountCard — bank details for restaurant owner ────
+function PayoutAccountCard({ ownerR }) {
+  const [editing, setEditing]     = useState(false);
+  const [bank, setBank]           = useState({
+    bankName:      ownerR?.bank_name       || "",
+    bankCode:      ownerR?.bank_code       || "",
+    accountNumber: ownerR?.account_number  || "",
+    accountName:   ownerR?.account_name    || "",
+    verified:      ownerR?.account_verified || false,
+  });
+  const [saving, setSaving]   = useState(false);
+  const [saveErr, setSaveErr] = useState("");
+
+  // Keep in sync if ownerR changes (e.g., realtime update)
+  useEffect(() => {
+    setBank({
+      bankName:      ownerR?.bank_name       || "",
+      bankCode:      ownerR?.bank_code       || "",
+      accountNumber: ownerR?.account_number  || "",
+      accountName:   ownerR?.account_name    || "",
+      verified:      ownerR?.account_verified || false,
+    });
+  }, [ownerR?.id]);
+
+  const handleSave = async () => {
+    if (!bank.verified) { setSaveErr("Please verify your account first"); return; }
+    setSaving(true);
+    setSaveErr("");
+    const { error } = await supabase.from("restaurants").update({
+      bank_name:        bank.bankName,
+      bank_code:        bank.bankCode,
+      account_number:   bank.accountNumber,
+      account_name:     bank.accountName,
+      account_verified: true,
+      bank_updated_at:  new Date().toISOString(),
+    }).eq("id", ownerR.id);
+    setSaving(false);
+    if (error) { setSaveErr(error.message); return; }
+    setEditing(false);
+  };
+
+  const hasAccount = ownerR?.account_number && ownerR?.account_verified;
+  const updatedAt  = ownerR?.bank_updated_at
+    ? new Date(ownerR.bank_updated_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })
+    : null;
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: "16px 18px", marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px" }}>Payout Account</div>
+        {!editing && (
+          <button onClick={() => setEditing(true)}
+            style={{ fontSize: 11, fontWeight: 700, color: CORAL, background: "#FFF0ED", border: "none", borderRadius: 10, padding: "5px 12px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            {hasAccount ? "Update" : "+ Add"}
+          </button>
+        )}
+      </div>
+
+      {!editing && (
+        hasAccount ? (
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#1C1C1E", marginBottom: 2 }}>{ownerR.bank_name}</div>
+            <div style={{ fontSize: 12, color: "#888" }}>****{ownerR.account_number.slice(-4)} · {ownerR.account_name}</div>
+            {updatedAt && <div style={{ fontSize: 10, color: "#B0B0B0", marginTop: 4 }}>Updated {updatedAt}</div>}
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: "#B0B0B0" }}>No payout account linked. Add one to receive payments.</div>
+        )
+      )}
+
+      {editing && (
+        <div>
+          <BankDetailsForm value={bank} onChange={setBank} disabled={saving} />
+          {saveErr && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 10 }}>{saveErr}</div>}
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button onClick={() => { setEditing(false); setSaveErr(""); }}
+              style={{ flex: 1, padding: "10px", background: "#F5F5F5", color: "#888", border: "none", borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Cancel
+            </button>
+            <button onClick={handleSave} disabled={!bank.verified || saving}
+              style={{ flex: 2, padding: "10px", background: bank.verified ? CORAL : "#F5F5F5", color: bank.verified ? "#fff" : "#C0C0C0", border: "none", borderRadius: 12, fontSize: 12, fontWeight: 800, cursor: bank.verified ? "pointer" : "not-allowed", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {saving ? "Saving..." : "Save Account"}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -2339,6 +2431,9 @@ export default function App() {
 
               {/* ── Payment method settings ── */}
               <PaymentSettingsCard ownerR={ownerR} togglePaymentMethod={togglePaymentMethod} />
+
+              {/* ── Payout account ── */}
+              <PayoutAccountCard ownerR={ownerR} />
 
               {/* ── Restaurant location ── */}
               <LocationCard ownerR={ownerR} />

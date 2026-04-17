@@ -65,18 +65,24 @@ export function useAdmin() {
       const { error: insertErr } = await supabase
         .from("restaurants")
         .insert({
-          name:        app.name,
-          owner_id:    app.applicant_id,
-          category:    app.category,
-          description: app.description,
-          address:     app.address,
-          phone:       app.phone,
-          state:       app.state,
-          icon:        app.icon,
-          bg_from:     app.bg_from,
-          bg_to:       app.bg_to,
-          tags:        app.tags || [],
-          is_open:     false,
+          name:             app.name,
+          owner_id:         app.applicant_id,
+          category:         app.category,
+          description:      app.description,
+          address:          app.address,
+          phone:            app.phone,
+          state:            app.state,
+          icon:             app.icon,
+          bg_from:          app.bg_from,
+          bg_to:            app.bg_to,
+          tags:             app.tags || [],
+          is_open:          false,
+          bank_name:        app.bank_name        || null,
+          bank_code:        app.bank_code        || null,
+          account_number:   app.account_number   || null,
+          account_name:     app.account_name     || null,
+          account_verified: app.account_verified || false,
+          bank_updated_at:  app.account_verified ? new Date().toISOString() : null,
         });
 
       if (insertErr) {
@@ -127,18 +133,24 @@ export function useAdmin() {
     const toInsert = approved
       .filter(app => !existingOwnerIds.has(app.applicant_id))
       .map(app => ({
-        name:        app.name,
-        owner_id:    app.applicant_id,
-        category:    app.category,
-        description: app.description,
-        address:     app.address,
-        phone:       app.phone,
-        state:       app.state,
-        icon:        app.icon,
-        bg_from:     app.bg_from,
-        bg_to:       app.bg_to,
-        tags:        app.tags || [],
-        is_open:     false,
+        name:             app.name,
+        owner_id:         app.applicant_id,
+        category:         app.category,
+        description:      app.description,
+        address:          app.address,
+        phone:            app.phone,
+        state:            app.state,
+        icon:             app.icon,
+        bg_from:          app.bg_from,
+        bg_to:            app.bg_to,
+        tags:             app.tags || [],
+        is_open:          false,
+        bank_name:        app.bank_name        || null,
+        bank_code:        app.bank_code        || null,
+        account_number:   app.account_number   || null,
+        account_name:     app.account_name     || null,
+        account_verified: app.account_verified || false,
+        bank_updated_at:  app.account_verified ? new Date().toISOString() : null,
       }));
 
     if (!toInsert.length) return { created: 0 };

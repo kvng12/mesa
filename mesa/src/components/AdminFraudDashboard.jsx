@@ -20,6 +20,7 @@ const TABS = [
   { id: "restaurants",  label: "🏪 Suspicious Restaurants" },
   { id: "disputes",     label: "⚠️ Open Disputes"          },
   { id: "escrow",       label: "💰 Escrow Ledger"          },
+  { id: "payouts",      label: "🏦 Daily Payouts"          },
 ];
 
 export default function AdminFraudDashboard() {
@@ -28,6 +29,7 @@ export default function AdminFraudDashboard() {
   const [restaurants, setRestaurants] = useState([]);
   const [disputes, setDisputes]     = useState([]);
   const [escrow, setEscrow]         = useState({ held: 0, releasedWeek: 0, pending: [] });
+  const [payouts, setPayouts]       = useState([]);
   const [loading, setLoading]       = useState(false);
   const [actionBusy, setActionBusy] = useState(null);
 
@@ -38,6 +40,53 @@ export default function AdminFraudDashboard() {
     else if (t === "restaurants") fetchSuspiciousRestaurants();
     else if (t === "disputes")    fetchOpenDisputes();
     else if (t === "escrow")      fetchEscrowSummary();
+    else if (t === "payouts")     fetchPayouts();
+  };
+
+  const fetchPayouts = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("restaurant_payouts")
+      .select("*, restaurants(name, icon, account_name, bank_name, account_number)")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    setPayouts(data || []);
+    setLoading(false);
+  };
+
+  const markAsPaid = async (payoutId) => {
+    setActionBusy(payoutId);
+    await supabase
+      .from("restaurant_payouts")
+      .update({ status: "paid", paid_at: new Date().toISOString() })
+      .eq("id", payoutId);
+    setActionBusy(null);
+    fetchPayouts();
+  };
+
+  const exportCSV = () => {
+    const pending = payouts.filter(p => p.status === "pending");
+    if (!pending.length) { alert("No pending payouts to export."); return; }
+    const rows = [
+      ["Restaurant", "Bank", "Account Number", "Account Name", "Amount (NGN)", "Period Start", "Period End"],
+      ...pending.map(p => [
+        p.restaurants?.name || "",
+        p.restaurants?.bank_name || p.bank_name || "",
+        p.restaurants?.account_number || p.account_number || "",
+        p.restaurants?.account_name || p.account_name || "",
+        p.amount,
+        p.period_start,
+        p.period_end,
+      ]),
+    ];
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `chowli-payouts-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const fetchRiskyCustomers = async () => {
@@ -272,6 +321,85 @@ export default function AdminFraudDashboard() {
                 </div>
               ))}
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── Daily Payouts ─────────────────────────────────────── */}
+      {!loading && tab === "payouts" && (
+        <div>
+          {/* Summary row */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            <StatBox
+              n={`₦${payouts.filter(p => p.status === "pending").reduce((s, p) => s + Number(p.amount), 0).toLocaleString()}`}
+              label="Pending Total"
+              color={CORAL}
+            />
+            <StatBox
+              n={payouts.filter(p => p.status === "pending").length}
+              label="Pending Count"
+              color="#D97706"
+            />
+            <StatBox
+              n={payouts.filter(p => p.status === "paid").length}
+              label="Paid"
+              color="#16A34A"
+            />
+          </div>
+
+          {/* Export button */}
+          <button onClick={exportCSV}
+            style={{ width: "100%", padding: "10px", background: "#EFF6FF", color: "#2563EB", border: "1.5px solid #BFDBFE", borderRadius: 12, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", marginBottom: 14 }}>
+            ⬇ Export Pending Payouts CSV
+          </button>
+
+          {payouts.length === 0 ? (
+            <EmptyCard>No payout records yet</EmptyCard>
+          ) : (
+            payouts.map(p => {
+              const r    = p.restaurants || {};
+              const paid = p.status === "paid";
+              const dtStart = p.period_start ? new Date(p.period_start).toLocaleDateString("en-NG", { day: "numeric", month: "short" }) : "";
+              const dtEnd   = p.period_end   ? new Date(p.period_end).toLocaleDateString("en-NG",   { day: "numeric", month: "short" }) : "";
+              return (
+                <div key={p.id} style={{ background: "#fff", borderRadius: 14, border: `1px solid ${paid ? "#F0EDE8" : "#FED7AA"}`, padding: "12px 14px", marginBottom: 8, opacity: paid ? 0.7 : 1 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 6 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: DARK }}>{r.icon} {r.name || "Unknown restaurant"}</div>
+                      <div style={{ fontSize: 11, color: "#888" }}>{dtStart} – {dtEnd}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: paid ? "#16A34A" : CORAL }}>₦{Number(p.amount).toLocaleString()}</div>
+                      <Tag bg={paid ? "#F0FDF4" : "#FFFBEB"} color={paid ? "#16A34A" : "#D97706"}>
+                        {paid ? "✓ Paid" : "Pending"}
+                      </Tag>
+                    </div>
+                  </div>
+                  {/* Bank details */}
+                  <div style={{ background: BG, borderRadius: 8, padding: "7px 10px", marginBottom: 8, fontSize: 11, color: "#888" }}>
+                    <span style={{ fontWeight: 700, color: DARK }}>{r.bank_name || p.bank_name || "No bank on file"}</span>
+                    {(r.account_number || p.account_number) && (
+                      <> · ****{(r.account_number || p.account_number).slice(-4)} · {r.account_name || p.account_name}</>
+                    )}
+                  </div>
+                  {p.notes && <div style={{ fontSize: 11, color: "#888", marginBottom: 8 }}>{p.notes}</div>}
+                  {!paid && (
+                    <button
+                      onClick={() => markAsPaid(p.id)}
+                      disabled={actionBusy === p.id}
+                      style={{ ...btnStyle("#F0FDF4", "#16A34A"), width: "100%" }}
+                    >
+                      {actionBusy === p.id ? "Marking..." : "✓ Mark as Paid"}
+                    </button>
+                  )}
+                  {paid && p.paid_at && (
+                    <div style={{ fontSize: 11, color: "#16A34A", fontWeight: 600 }}>
+                      Paid {new Date(p.paid_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       )}
