@@ -29,6 +29,8 @@ import AnalyticsScreen from "./screens/AnalyticsScreen";
 import { usePushNotifications } from "./hooks/usePushNotifications";
 import DeliveryPhotoUpload from "./components/DeliveryPhotoUpload";
 import BankDetailsForm from "./components/BankDetailsForm";
+import EmailVerification from "./screens/EmailVerification";
+import PhoneVerification from "./screens/PhoneVerification";
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -1331,7 +1333,7 @@ const OrdersSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24
 //  MAIN APP
 // ════════════════════════════════════════════════════════════
 export default function App() {
-  const { user, profile, loading: authLoading, isOwner, isAdmin, signUp, signIn, signInWithMagicLink, signOut } = useAuth();
+  const { user, profile, loading: authLoading, isOwner, isAdmin, signUp, signIn, signInWithMagicLink, signOut, refreshProfile } = useAuth();
   const { restaurants, loading: restLoading } = useRestaurants();
   const { posts, likedIds, toggleLike, loading: feedLoading, error: feedError, loadingMore, hasMore, fetchMore, fetchComments, addComment } = useFeed(user?.id);
   const { grouped: storyGroups, markViewed }  = useStories(user?.id);
@@ -1672,6 +1674,28 @@ export default function App() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: BG, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <div style={{ textAlign: "center" }}><img src="/logo.png" alt="Chowli" style={{ width: 72, height: 72, borderRadius: 16, objectFit: "cover", marginBottom: 12, animation: "floatUp 1.4s ease-in-out infinite" }} /><div style={{ fontSize: 14, color: "#888", fontWeight: 600 }}>Loading Chowli...</div></div>
     </div>
+  );
+
+  // ── Email verification gate ───────────────────────────────────
+  // Only shown to logged-in users who haven't confirmed their email yet.
+  // EmailVerification calls supabase.auth.refreshSession() which fires
+  // onAuthStateChange in useAuth → updates `user` → gate disappears automatically.
+  if (user && !user.email_confirmed_at) return (
+    <EmailVerification
+      user={user}
+      onVerified={() => {}}
+    />
+  );
+
+  // ── Phone verification gate ───────────────────────────────────
+  // Only shown after email is confirmed and profile.phone_verified is false.
+  if (user && user.email_confirmed_at && profile && !profile.phone_verified) return (
+    <PhoneVerification
+      user={user}
+      onVerified={async () => {
+        await refreshProfile();
+      }}
+    />
   );
 
   return (
@@ -2482,13 +2506,31 @@ export default function App() {
                             onUploaded={() => setDeliveryPhotos(prev => ({ ...prev, [order.id]: true }))}
                           />
                         )}
+                        {order.status === "ready" && order.fulfillment !== "delivery" && !deliveryPhotos[order.id] && (
+                          <div style={{ marginBottom: 8 }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: "#888", marginBottom: 4 }}>
+                              📸 Handover photo <span style={{ fontWeight: 400 }}>(optional)</span>
+                            </div>
+                            <DeliveryPhotoUpload
+                              orderId={order.id}
+                              restaurantId={ownerR.id}
+                              onUploaded={() => setDeliveryPhotos(prev => ({ ...prev, [order.id]: true }))}
+                            />
+                            <button
+                              onClick={() => setDeliveryPhotos(prev => ({ ...prev, [order.id]: "skipped" }))}
+                              style={{ fontSize: 11, color: "#888", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                            >
+                              Skip — no photo needed
+                            </button>
+                          </div>
+                        )}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <span style={{ fontSize: 14, fontWeight: 800, color: CORAL }}>₦{Number(order.subtotal).toLocaleString()}</span>
                           <div style={{ display: "flex", gap: 8 }}>
                             {order.status === "pending" && <button onClick={() => updateStatus(order.id, "confirmed")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Confirm</button>}
                             {order.status === "confirmed" && <button onClick={() => updateStatus(order.id, "preparing")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#FFF0ED", color: CORAL, cursor: "pointer" }}>Preparing</button>}
                             {order.status === "preparing" && <button onClick={() => updateStatus(order.id, "ready")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Ready</button>}
-                            {order.status === "ready" && order.fulfillment !== "delivery" && <button onClick={() => updateStatus(order.id, "completed")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Completed</button>}
+                            {order.status === "ready" && order.fulfillment !== "delivery" && <button onClick={() => updateStatus(order.id, "delivered")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Handed Over</button>}
                             {order.status === "ready" && order.fulfillment === "delivery" && (
                               deliveryPhotos[order.id]
                                 ? <button onClick={() => updateStatus(order.id, "delivered")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Delivered</button>

@@ -86,8 +86,14 @@ export function useAuth() {
     await supabase.auth.signOut();
   }
 
+  // Re-fetch profile from DB (e.g. after phone verification updates phone_verified)
+  async function refreshProfile() {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser) await fetchProfile(currentUser.id);
+  }
+
   const isOwner = profile?.role === "owner" || profile?.role === "admin";
   const isAdmin = profile?.role === "admin";
 
-  return { user, profile, loading, isOwner, isAdmin, signUp, signIn, signInWithMagicLink, signOut };
+  return { user, profile, loading, isOwner, isAdmin, signUp, signIn, signInWithMagicLink, signOut, refreshProfile };
 }
