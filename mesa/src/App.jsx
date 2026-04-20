@@ -30,7 +30,7 @@ import { usePushNotifications } from "./hooks/usePushNotifications";
 import DeliveryPhotoUpload from "./components/DeliveryPhotoUpload";
 import BankDetailsForm from "./components/BankDetailsForm";
 import EmailVerification from "./screens/EmailVerification";
-import PhoneVerification from "./screens/PhoneVerification";
+// import PhoneVerification from "./screens/PhoneVerification"; // disabled — re-enable when cash/phone-OTP re-launches
 
 const CORAL = "#FF6240";
 const DARK  = "#1C1C1E";
@@ -1687,16 +1687,11 @@ export default function App() {
     />
   );
 
-  // ── Phone verification gate ───────────────────────────────────
-  // Only shown after email is confirmed and profile.phone_verified is false.
-  if (user && user.email_confirmed_at && profile && !profile.phone_verified) return (
-    <PhoneVerification
-      user={user}
-      onVerified={async () => {
-        await refreshProfile();
-      }}
-    />
-  );
+  // ── Phone verification gate — DISABLED for online-only launch ──
+  // Re-enable this block (and the PhoneVerification import above) when cash orders return.
+  // if (user && user.email_confirmed_at && profile && !profile.phone_verified) return (
+  //   <PhoneVerification user={user} onVerified={async () => { await refreshProfile(); }} />
+  // );
 
   return (
     <>

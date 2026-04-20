@@ -96,9 +96,12 @@ export function ReservationScreen({ restaurant, user, onClose, onSignIn, makeRes
 export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlaced, acceptsOnline = true, acceptsCash = true }) {
   const [fulfillment, setFulfillment]   = useState("pickup");
   const [orderSuccess, setOrderSuccess] = useState(null); // { orderId, method }
-  const [paymentMethod, setPaymentMethod] = useState(
-    acceptsCash ? "cash" : "online"  // default to cash if available, else online
-  );
+  const [paymentMethod, setPaymentMethod] = useState("online"); // cash disabled for online-only launch
+
+  // Safety reset: if state is somehow "cash" (e.g. stale session), switch to online
+  useEffect(() => {
+    if (paymentMethod === "cash") setPaymentMethod("online");
+  }, [paymentMethod]);
   const [address, setAddress]           = useState("");
   const [note, setNote]                 = useState("");
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -422,19 +425,21 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
                 </div>
               )}
 
-              {/* Both available — let customer choose */}
+              {/* Both available — Cash disabled for online-only launch, Card always active */}
               {!lockedPayment && (
                 <div style={{ display: "flex", gap: 10 }}>
-                  {[
-                    { id: "cash", label: "💵 Cash", sub: "Pay on pickup/delivery" },
-                    { id: "online", label: "💳 Card", sub: "Pay now via Paystack" },
-                  ].map(p => (
-                    <button key={p.id} onClick={() => setPaymentMethod(p.id)}
-                      style={{ flex: 1, padding: "12px 10px", borderRadius: 14, border: `2px solid ${effectivePayment === p.id ? CORAL : "#EBEBEB"}`, background: effectivePayment === p.id ? "#FFF0ED" : "#fff", cursor: "pointer", textAlign: "center" }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: effectivePayment === p.id ? CORAL : DARK }}>{p.label}</div>
-                      <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{p.sub}</div>
-                    </button>
-                  ))}
+                  {/* Cash — visually disabled; re-enable when cash orders re-launch */}
+                  <div style={{ flex: 1, padding: "12px 10px", borderRadius: 14, border: "2px solid #EBEBEB", background: "#F9F9F9", cursor: "not-allowed", textAlign: "center", opacity: 0.45, pointerEvents: "none", position: "relative" }}>
+                    <div style={{ position: "absolute", top: -8, right: 8, background: "#888", color: "#fff", fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 20, letterSpacing: "0.5px" }}>COMING SOON</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: DARK }}>💵 Cash</div>
+                    <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>Coming soon — use Card for now</div>
+                  </div>
+                  {/* Card — always active and selected */}
+                  <button onClick={() => setPaymentMethod("online")}
+                    style={{ flex: 1, padding: "12px 10px", borderRadius: 14, border: `2px solid ${CORAL}`, background: "#FFF0ED", cursor: "pointer", textAlign: "center" }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: CORAL }}>💳 Card</div>
+                    <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>Pay now via Paystack</div>
+                  </button>
                 </div>
               )}
             </div>
