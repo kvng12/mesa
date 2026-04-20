@@ -7,7 +7,7 @@ import { supabase } from "../lib/supabase";
 
 const BG = "#F5F5F5";
 
-export default function DeliveryPhotoUpload({ orderId, restaurantId, onUploaded }) {
+export default function DeliveryPhotoUpload({ orderId, restaurantId, onUploaded, hideLabel = false }) {
   const [photo, setPhoto]     = useState(null);
   const [preview, setPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -54,9 +54,11 @@ export default function DeliveryPhotoUpload({ orderId, restaurantId, onUploaded 
 
   return (
     <div style={{ marginBottom: 8, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: "#D97706", marginBottom: 6 }}>
-        📸 Upload delivery photo to enable "Mark Delivered"
-      </div>
+      {!hideLabel && (
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#D97706", marginBottom: 6 }}>
+          📸 Upload delivery photo to enable "Mark Delivered"
+        </div>
+      )}
       <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: "none" }} />
       {!preview ? (
         <div

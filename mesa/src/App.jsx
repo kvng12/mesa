@@ -2510,6 +2510,7 @@ export default function App() {
                               orderId={order.id}
                               restaurantId={ownerR.id}
                               onUploaded={() => setDeliveryPhotos(prev => ({ ...prev, [order.id]: true }))}
+                              hideLabel
                             />
                             <button
                               onClick={() => setDeliveryPhotos(prev => ({ ...prev, [order.id]: "skipped" }))}
