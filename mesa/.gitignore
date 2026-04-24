@@ -10,3 +10,5 @@ build/
 .vite/
 .claude/
 ../chowli-backend/
+chowli-backend/
+supabase/.temp/
