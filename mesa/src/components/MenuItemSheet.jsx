@@ -13,7 +13,15 @@ const BG           = "#FFFFFF";
 const BG_SOFT      = "#F7F5F2";
 const BORDER       = "#ECE6DE";
 
-export default function MenuItemSheet({ item, restaurant, allItems, cart, onClose, onAddToCart }) {
+function HeartIcon({ filled, size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? PRIMARY : "none"} stroke={filled ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
+
+export default function MenuItemSheet({ item, restaurant, allItems, cart, onClose, onAddToCart, favorites, toggleFavorite }) {
   const [qty, setQty] = useState(1);
   const [visible, setVisible] = useState(false);
 
@@ -98,6 +106,22 @@ export default function MenuItemSheet({ item, restaurant, allItems, cart, onClos
             color: DARK,
           }}
         >✕</button>
+
+        {/* Heart / favorites toggle — PHASE 3 */}
+        {favorites && toggleFavorite && (
+          <button
+            onClick={e => { e.stopPropagation(); toggleFavorite(item.id); }}
+            style={{
+              position: "absolute", top: 16, right: 56,
+              width: 32, height: 32, borderRadius: "50%",
+              background: BG_SOFT, border: "none",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <HeartIcon filled={favorites.has(item.id)} />
+          </button>
+        )}
 
         {/* Hero image */}
         {item.image_url ? (
@@ -211,7 +235,7 @@ export default function MenuItemSheet({ item, restaurant, allItems, cart, onClos
           )}
         </div>
 
-        {/* PHASE 3: favorites toggle goes here */}
+        {/* favorites toggle rendered near close button above */}
       </div>
 
       {/* Sticky Add-to-Cart button */}

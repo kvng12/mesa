@@ -32,6 +32,8 @@ import BankDetailsForm from "./components/BankDetailsForm";
 import EmailVerification from "./screens/EmailVerification";
 // import PhoneVerification from "./screens/PhoneVerification"; // disabled — re-enable when cash/phone-OTP re-launches
 import MenuItemSheet from "./components/MenuItemSheet";
+import FavoritesScreen from "./screens/FavoritesScreen";
+import { useFavorites } from "./hooks/useFavorites";
 
 const PRIMARY      = "#8B1A1A";
 const PRIMARY_DARK = "#6B1414";
@@ -1308,8 +1310,9 @@ function BottomNav({ tab, setTab, cartCount }) {
     { id: "home",   label: "Home",   SVG: HomeSVG   },
     { id: "feed",   label: "Feed",   SVG: FeedSVG   },
     { id: "cart",   label: "Cart",   SVG: CartSVG,  badge: cartCount },
-    { id: "store",  label: "Store",  SVG: StoreSVG  },
-    { id: "orders", label: "Orders", SVG: OrdersSVG },
+    { id: "store",     label: "Store",     SVG: StoreSVG     },
+    { id: "favorites", label: "Favorites", SVG: FavoritesSVG },
+    { id: "orders",    label: "Orders",    SVG: OrdersSVG    },
   ];
   return (
     <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: "#fff", borderTop: "1px solid #F0EDE8", display: "flex", paddingTop: 10, paddingBottom: "calc(14px + env(safe-area-inset-bottom))", zIndex: 100 }}>
@@ -1333,7 +1336,8 @@ const SearchSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24
 const FeedSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M18 8h1a4 4 0 0 1 0 8h-1" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M6 1v3M10 1v3M14 1v3" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
 const CartSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="21" r="1.5" fill={active ? PRIMARY : "#C0C0C0"}/><circle cx="19" cy="21" r="1.5" fill={active ? PRIMARY : "#C0C0C0"}/><path d="M2 3h2l2.68 10.39a2 2 0 0 0 1.94 1.61h9.72a2 2 0 0 0 1.94-1.51L22 7H6" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 const StoreSVG  = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9l1-6h16l1 6" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M5 21V9M19 9v12M5 21h14" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
-const OrdersSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/><rect x="9" y="3" width="6" height="4" rx="1" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M9 12h6M9 16h4" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
+const OrdersSVG    = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/><rect x="9" y="3" width="6" height="4" rx="1" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M9 12h6M9 16h4" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
+const FavoritesSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? PRIMARY : "none"} stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
 
 // ════════════════════════════════════════════════════════════
 //  MAIN APP
@@ -1351,6 +1355,7 @@ export default function App() {
   const chatUnread = useUnreadCount(user?.id);
   const isOnline   = useOnlineStatus();
   usePushNotifications(user?.id); // request permission + save FCM token
+  const { favorites, toggleFavorite } = useFavorites(user?.id);
 
   const [appState, setAppState]       = useState("splash");
   const [authMode, setAuthMode]       = useState(null);
@@ -1939,6 +1944,8 @@ export default function App() {
             cart={cart}
             onClose={() => setSelectedMenuItem(null)}
             onAddToCart={handleAddToCart}
+            favorites={user ? favorites : null}
+            toggleFavorite={user ? toggleFavorite : null}
           />
         )}
 
@@ -2258,7 +2265,18 @@ export default function App() {
                       {(cat.menu_items || []).map(item => {
                         const qty = cart.getQuantity(item.id);
                         return (
-                          <div key={item.id} style={{ borderBottom: "1px solid #F5F5F5", paddingBottom: 14, marginBottom: 2 }}>
+                          <div key={item.id} style={{ borderBottom: "1px solid #F5F5F5", paddingBottom: 14, marginBottom: 2, position: "relative" }}>
+                            {/* Heart / favorite toggle */}
+                            {user && !isOwnRestaurant && (
+                              <button
+                                onClick={e => { e.stopPropagation(); toggleFavorite(item.id); }}
+                                style={{ position: "absolute", top: 14, right: 0, width: 30, height: 30, borderRadius: "50%", background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}
+                              >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill={favorites.has(item.id) ? PRIMARY : "none"} stroke={favorites.has(item.id) ? PRIMARY : "#C8C8C8"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                              </button>
+                            )}
                             <div
                               style={{ display: "flex", alignItems: "flex-start", gap: 12, paddingTop: 14, cursor: item.is_available ? "pointer" : "default" }}
                               onClick={() => item.is_available && !isOwnRestaurant && setSelectedMenuItem(item)}
@@ -2692,6 +2710,18 @@ export default function App() {
               ))}
             </div>
           </>
+        )}
+
+        {/* ══════════ FAVORITES ══════════ */}
+        {tab === "favorites" && (
+          <FavoritesScreen
+            user={user}
+            favorites={favorites}
+            toggleFavorite={toggleFavorite}
+            restaurants={restaurants}
+            cart={cart}
+            onAddToCart={handleAddToCart}
+          />
         )}
 
         {/* ══════════ ORDERS ══════════ */}
