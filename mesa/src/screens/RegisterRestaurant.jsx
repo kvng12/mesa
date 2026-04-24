@@ -14,7 +14,7 @@
 import { useState } from "react";
 import BankDetailsForm from "../components/BankDetailsForm";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 const BG    = "#F5F5F5";
 
@@ -158,7 +158,7 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
             <div style={{ fontSize: 12, color: "#888" }}>****{bank.accountNumber.slice(-4)} · {bank.accountName}</div>
           </div>
 
-          {error && <div style={{ background: "#FFF0ED", color: CORAL, fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 16 }}>{error}</div>}
+          {error && <div style={{ background: "rgba(139,26,26,0.06)", color: PRIMARY, fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 16 }}>{error}</div>}
 
           <button onClick={submit} disabled={submitting} style={{ ...btnFull, opacity: submitting ? 0.6 : 1 }}>
             {submitting ? "Submitting..." : "Submit Application"}
@@ -181,7 +181,7 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
           <BankDetailsForm value={bank} onChange={setBank} disabled={submitting} />
 
           {bankErr && (
-            <div style={{ background: "#FFF0ED", color: CORAL, fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 16 }}>{bankErr}</div>
+            <div style={{ background: "rgba(139,26,26,0.06)", color: PRIMARY, fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 16 }}>{bankErr}</div>
           )}
 
           <button
@@ -256,9 +256,9 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
                     padding: "7px 14px",
                     borderRadius: 20,
                     border: "1.5px solid",
-                    borderColor: selected ? CORAL : "#EBEBEB",
-                    background:  selected ? "#FFF0ED" : "#fff",
-                    color:       selected ? CORAL : "#888",
+                    borderColor: selected ? PRIMARY : "#EBEBEB",
+                    background:  selected ? "rgba(139,26,26,0.06)" : "#fff",
+                    color:       selected ? PRIMARY : "#888",
                     fontSize: 12,
                     fontWeight: 700,
                     cursor: "pointer",
@@ -293,7 +293,7 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {ICONS.map(ico => (
               <button key={ico} onClick={() => set("icon", ico)}
-                style={{ width: 44, height: 44, borderRadius: 12, border: `2px solid ${form.icon === ico ? CORAL : "#EBEBEB"}`, background: form.icon === ico ? "#FFF0ED" : "#fff", fontSize: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                style={{ width: 44, height: 44, borderRadius: 12, border: `2px solid ${form.icon === ico ? PRIMARY : "#EBEBEB"}`, background: form.icon === ico ? "rgba(139,26,26,0.06)" : "#fff", fontSize: 22, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {ico}
               </button>
             ))}
@@ -306,12 +306,12 @@ export default function RegisterRestaurant({ onClose, onSubmit, submitting, erro
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {PRESETS.map(p => (
               <button key={p.label} onClick={() => { set("bgFrom", p.bgFrom); set("bgTo", p.bgTo); }}
-                style={{ width: 44, height: 44, borderRadius: 12, border: `3px solid ${form.bgFrom === p.bgFrom ? "#fff" : "transparent"}`, outline: form.bgFrom === p.bgFrom ? `2px solid ${CORAL}` : "none", background: `linear-gradient(135deg, ${p.bgFrom}, ${p.bgTo})`, cursor: "pointer" }} />
+                style={{ width: 44, height: 44, borderRadius: 12, border: `3px solid ${form.bgFrom === p.bgFrom ? "#fff" : "transparent"}`, outline: form.bgFrom === p.bgFrom ? `2px solid ${PRIMARY}` : "none", background: `linear-gradient(135deg, ${p.bgFrom}, ${p.bgTo})`, cursor: "pointer" }} />
             ))}
           </div>
         </div>
 
-        {fieldErr && <div style={{ background: "#FFF0ED", color: CORAL, fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 16 }}>{fieldErr}</div>}
+        {fieldErr && <div style={{ background: "rgba(139,26,26,0.06)", color: PRIMARY, fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 16 }}>{fieldErr}</div>}
 
         <button onClick={() => { if (validateStep1()) setStep(2); }} style={btnFull}>
           Payment Details →
@@ -345,4 +345,4 @@ function Field({ label, value, onChange, placeholder, type = "text" }) {
 }
 
 const labelStyle = { fontSize: 12, fontWeight: 700, color: "#888", marginBottom: 8 };
-const btnFull    = { width: "100%", padding: 14, background: CORAL, color: "#fff", border: "none", borderRadius: 16, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" };
+const btnFull    = { width: "100%", padding: 14, background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" };

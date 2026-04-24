@@ -4,7 +4,7 @@ import PaystackPop from "@paystack/inline-js";
 import { supabase } from "../lib/supabase";
 import { validatePromoCode } from "../hooks/usePromoCodes";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 const BG    = "#F5F5F5";
 
@@ -37,7 +37,7 @@ export function ReservationScreen({ restaurant, user, onClose, onSignIn, makeRes
         <div style={{ fontSize: 14, color: "#888", lineHeight: 1.6, marginBottom: 28 }}>
           {restaurant.name} will confirm shortly. Check your reservations in your profile.
         </div>
-        <button onClick={onClose} style={{ width: "100%", padding: 14, background: CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Done</button>
+        <button onClick={onClose} style={{ width: "100%", padding: 14, background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Done</button>
       </div>
     </div>
   );
@@ -68,7 +68,7 @@ export function ReservationScreen({ restaurant, user, onClose, onSignIn, makeRes
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <button onClick={() => setParty(p => Math.max(1, p - 1))} style={{ width: 36, height: 36, borderRadius: 10, border: "1.5px solid #EBEBEB", background: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer" }}>−</button>
             <span style={{ fontSize: 18, fontWeight: 800, color: DARK, minWidth: 30, textAlign: "center" }}>{party}</span>
-            <button onClick={() => setParty(p => Math.min(20, p + 1))} style={{ width: 36, height: 36, borderRadius: 10, background: CORAL, border: "none", color: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer" }}>+</button>
+            <button onClick={() => setParty(p => Math.min(20, p + 1))} style={{ width: 36, height: 36, borderRadius: 10, background: PRIMARY, border: "none", color: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer" }}>+</button>
             <span style={{ fontSize: 13, color: "#888" }}>{party === 1 ? "person" : "people"}</span>
           </div>
         </div>
@@ -83,7 +83,7 @@ export function ReservationScreen({ restaurant, user, onClose, onSignIn, makeRes
         {error && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 12, padding: "8px 12px", background: "#FEF2F2", borderRadius: 10 }}>{error}</div>}
 
         <button onClick={submit} disabled={submitting || !date || !time}
-          style={{ width: "100%", padding: 14, background: !date || !time ? "#E0E0E0" : CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: !date || !time ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          style={{ width: "100%", padding: 14, background: !date || !time ? "#E0E0E0" : PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: !date || !time ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           {submitting ? "Sending..." : "Request Reservation"}
         </button>
       </div>
@@ -289,7 +289,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
         Order #{orderSuccess.orderId?.slice(0, 8).toUpperCase()}
       </div>
       <button onClick={() => onOrderPlaced({ id: orderSuccess.orderId })}
-        style={{ width: "100%", padding: 16, background: CORAL, color: "#fff", border: "none", borderRadius: 16, fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        style={{ width: "100%", padding: 16, background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         Track My Order
       </button>
     </div>
@@ -321,12 +321,12 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
                 <div key={menuItem.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: "1px solid #EBEBEB" }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 2 }}>{menuItem.name}</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: CORAL }}>₦{Number(menuItem.price).toLocaleString()}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: PRIMARY }}>₦{Number(menuItem.price).toLocaleString()}</div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                     <button onClick={() => cart.removeItem(menuItem.id)} style={{ width: 28, height: 28, borderRadius: 8, border: "1.5px solid #EBEBEB", background: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
                     <span style={{ fontSize: 14, fontWeight: 800, color: DARK, minWidth: 18, textAlign: "center" }}>{quantity}</span>
-                    <button onClick={() => cart.addItem(menuItem, { id: cart.restaurantId, name: cart.restaurantName })} style={{ width: 28, height: 28, borderRadius: 8, background: CORAL, border: "none", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                    <button onClick={() => cart.addItem(menuItem, { id: cart.restaurantId, name: cart.restaurantName })} style={{ width: 28, height: 28, borderRadius: 8, background: PRIMARY, border: "none", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: DARK, minWidth: 64, textAlign: "right", flexShrink: 0 }}>
                     ₦{Number(menuItem.price * quantity).toLocaleString()}
@@ -344,8 +344,8 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
                   { id: "delivery", label: "🛵 Delivery", sub: "Bring it to me" },
                 ].map(f => (
                   <button key={f.id} onClick={() => setFulfillment(f.id)}
-                    style={{ flex: 1, padding: "12px 10px", borderRadius: 14, border: `2px solid ${fulfillment === f.id ? CORAL : "#EBEBEB"}`, background: fulfillment === f.id ? "#FFF0ED" : "#fff", cursor: "pointer", textAlign: "center" }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: fulfillment === f.id ? CORAL : DARK }}>{f.label}</div>
+                    style={{ flex: 1, padding: "12px 10px", borderRadius: 14, border: `2px solid ${fulfillment === f.id ? PRIMARY : "#EBEBEB"}`, background: fulfillment === f.id ? "rgba(139,26,26,0.06)" : "#fff", cursor: "pointer", textAlign: "center" }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: fulfillment === f.id ? PRIMARY : DARK }}>{f.label}</div>
                     <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{f.sub}</div>
                   </button>
                 ))}
@@ -361,8 +361,8 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
                   { id: "schedule", label: "⏰ Schedule", sub: "Pick a time" },
                 ].map(w => (
                   <button key={w.id} onClick={() => setSchedMode(w.id)}
-                    style={{ flex: 1, padding: "12px 10px", borderRadius: 14, border: `2px solid ${schedMode === w.id ? CORAL : "#EBEBEB"}`, background: schedMode === w.id ? "#FFF0ED" : "#fff", cursor: "pointer", textAlign: "center" }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: schedMode === w.id ? CORAL : DARK }}>{w.label}</div>
+                    style={{ flex: 1, padding: "12px 10px", borderRadius: 14, border: `2px solid ${schedMode === w.id ? PRIMARY : "#EBEBEB"}`, background: schedMode === w.id ? "rgba(139,26,26,0.06)" : "#fff", cursor: "pointer", textAlign: "center" }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: schedMode === w.id ? PRIMARY : DARK }}>{w.label}</div>
                     <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{w.sub}</div>
                   </button>
                 ))}
@@ -384,7 +384,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
                     </select>
                   </div>
                   {schedLabel && (
-                    <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: CORAL, textAlign: "center", padding: "8px 0", background: "#FFF0ED", borderRadius: 10 }}>
+                    <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: PRIMARY, textAlign: "center", padding: "8px 0", background: "rgba(139,26,26,0.06)", borderRadius: 10 }}>
                       Scheduled for: {schedLabel}
                     </div>
                   )}
@@ -436,8 +436,8 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
                   </div>
                   {/* Card — always active and selected */}
                   <button onClick={() => setPaymentMethod("online")}
-                    style={{ flex: 1, padding: "12px 10px", borderRadius: 14, border: `2px solid ${CORAL}`, background: "#FFF0ED", cursor: "pointer", textAlign: "center" }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: CORAL }}>💳 Card</div>
+                    style={{ flex: 1, padding: "12px 10px", borderRadius: 999, border: `2px solid ${PRIMARY}`, background: "rgba(139,26,26,0.06)", cursor: "pointer", textAlign: "center" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: PRIMARY }}>💳 Card</div>
                     <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>Pay now via Paystack</div>
                   </button>
                 </div>
@@ -481,7 +481,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
                   <button
                     onClick={handleApplyPromo}
                     disabled={promoLoading || !promoInput.trim()}
-                    style={{ padding: "10px 18px", background: promoInput.trim() ? CORAL : "#E0E0E0", color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: promoInput.trim() ? "pointer" : "default" }}>
+                    style={{ padding: "10px 18px", background: promoInput.trim() ? PRIMARY : "#E0E0E0", color: "#fff", border: "none", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: promoInput.trim() ? "pointer" : "default" }}>
                     {promoLoading ? "..." : "Apply"}
                   </button>
                 </div>
@@ -528,7 +528,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
               )}
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ fontSize: 14, fontWeight: 800, color: DARK }}>Total</span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: CORAL }}>₦{Number(finalTotal).toLocaleString()}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: PRIMARY }}>₦{Number(finalTotal).toLocaleString()}</span>
               </div>
             </div>
           </>
@@ -540,7 +540,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
         <div style={{ padding: "14px 20px", paddingBottom: "calc(14px + env(safe-area-inset-bottom))", background: "#fff", borderTop: "1px solid #F0EDE8" }}>
           {orderErr && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 10, padding: "8px 12px", background: "#FEF2F2", borderRadius: 10 }}>{orderErr}</div>}
           <button onClick={handlePlaceOrder} disabled={placingOrder || (!acceptsOnline && !acceptsCash)}
-            style={{ width: "100%", padding: 16, background: placingOrder || (!acceptsOnline && !acceptsCash) ? "#C0C0C0" : CORAL, color: "#fff", border: "none", borderRadius: 16, fontSize: 15, fontWeight: 800, cursor: placingOrder ? "wait" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            style={{ width: "100%", padding: 16, background: placingOrder || (!acceptsOnline && !acceptsCash) ? "#C0C0C0" : PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 15, fontWeight: 700, cursor: placingOrder ? "wait" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             {placingOrder ? "Processing..." : effectivePayment === "online" ? `Pay ₦${Number(finalTotal).toLocaleString()} with Card` : `Place Order — Pay ₦${Number(finalTotal).toLocaleString()} in Cash`}
           </button>
         </div>

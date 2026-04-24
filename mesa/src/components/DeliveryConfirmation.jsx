@@ -7,7 +7,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 
 function formatCountdown(ms) {

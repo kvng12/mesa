@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 
 export default function EmailVerification({ user, onVerified }) {
   const [sending, setSending]     = useState(false);
@@ -86,7 +86,7 @@ export default function EmailVerification({ user, onVerified }) {
         width: 80,
         height: 80,
         borderRadius: 24,
-        background: "#FFF0ED",
+        background: "rgba(139,26,26,0.06)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -103,7 +103,7 @@ export default function EmailVerification({ user, onVerified }) {
       <div style={{ fontSize: 14, color: "#888", lineHeight: 1.6, textAlign: "center", marginBottom: 8 }}>
         We sent a confirmation link to
       </div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: CORAL, marginBottom: 28, textAlign: "center", wordBreak: "break-all" }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: PRIMARY, marginBottom: 28, textAlign: "center", wordBreak: "break-all" }}>
         {user.email}
       </div>
       <div style={{ fontSize: 13, color: "#B0B0B0", lineHeight: 1.6, textAlign: "center", marginBottom: 32 }}>
@@ -117,12 +117,12 @@ export default function EmailVerification({ user, onVerified }) {
         style={{
           width: "100%",
           padding: "16px",
-          background: checking ? "#ccc" : CORAL,
+          background: checking ? "#ccc" : PRIMARY,
           color: "#fff",
           border: "none",
-          borderRadius: 16,
+          borderRadius: 999,
           fontSize: 15,
-          fontWeight: 800,
+          fontWeight: 700,
           cursor: checking ? "default" : "pointer",
           marginBottom: 12,
           fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -142,7 +142,7 @@ export default function EmailVerification({ user, onVerified }) {
           background: "#fff",
           color: countdown > 0 ? "#B0B0B0" : "#1C1C1E",
           border: "1.5px solid #EBEBEB",
-          borderRadius: 16,
+          borderRadius: 999,
           fontSize: 13,
           fontWeight: 700,
           cursor: (sending || countdown > 0) ? "default" : "pointer",

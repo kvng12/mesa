@@ -32,13 +32,18 @@ import BankDetailsForm from "./components/BankDetailsForm";
 import EmailVerification from "./screens/EmailVerification";
 // import PhoneVerification from "./screens/PhoneVerification"; // disabled — re-enable when cash/phone-OTP re-launches
 
-const CORAL = "#FF6240";
-const DARK  = "#1C1C1E";
-const BG    = "#F5F5F5";
+const PRIMARY      = "#8B1A1A";
+const PRIMARY_DARK = "#6B1414";
+const ACCENT       = "#F4C430";
+const DARK         = "#1C1C1E";
+const TEXT_MUTED   = "#666666";
+const BG           = "#FFFFFF";
+const BG_SOFT      = "#F7F5F2";
+const BORDER       = "#ECE6DE";
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');`;
 
 const POST_TYPES = [
-  { id: "new",      label: "New Item", color: CORAL,     bg: "#FFF0ED", icon: "✨" },
+  { id: "new",      label: "New Item", color: PRIMARY,     bg: BG_SOFT, icon: "✨" },
   { id: "promo",    label: "Promo",    color: "#D97706", bg: "#FFFBEB", icon: "🎉" },
   { id: "update",   label: "Update",   color: "#2563EB", bg: "#EFF6FF", icon: "📢" },
   { id: "sold_out", label: "Sold Out", color: "#6B7280", bg: "#F3F4F6", icon: "😔" },
@@ -98,7 +103,7 @@ function greet() {
 }
 
 // ── Status helpers ───────────────────────────────────────────
-const ORDER_STATUS = { pending: { label: "Received", color: "#D97706", bg: "#FFFBEB" }, confirmed: { label: "Confirmed", color: "#2563EB", bg: "#EFF6FF" }, preparing: { label: "Preparing", color: CORAL, bg: "#FFF0ED" }, ready: { label: "Ready!", color: "#16A34A", bg: "#F0FDF4" }, completed: { label: "Completed", color: "#6B7280", bg: "#F3F4F6" }, delivered: { label: "Delivered", color: "#16A34A", bg: "#F0FDF4" }, cancelled: { label: "Cancelled", color: "#DC2626", bg: "#FEF2F2" } };
+const ORDER_STATUS = { pending: { label: "Received", color: "#D97706", bg: "#FFFBEB" }, confirmed: { label: "Confirmed", color: "#2563EB", bg: "#EFF6FF" }, preparing: { label: "Preparing", color: PRIMARY, bg: BG_SOFT }, ready: { label: "Ready!", color: "#16A34A", bg: "#F0FDF4" }, completed: { label: "Completed", color: "#6B7280", bg: "#F3F4F6" }, delivered: { label: "Delivered", color: "#16A34A", bg: "#F0FDF4" }, cancelled: { label: "Cancelled", color: "#DC2626", bg: "#FEF2F2" } };
 const RES_STATUS  = { pending: { label: "Pending", color: "#D97706", bg: "#FFFBEB" }, confirmed: { label: "Confirmed", color: "#16A34A", bg: "#F0FDF4" }, rejected: { label: "Declined", color: "#DC2626", bg: "#FEF2F2" }, completed: { label: "Done", color: "#6B7280", bg: "#F3F4F6" } };
 
 // ════════════════════════════════════════════════════════════
@@ -109,7 +114,7 @@ function StoryRing({ group, onClick }) {
   const r = group.restaurant;
   return (
     <div onClick={onClick} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", flexShrink: 0 }}>
-      <div style={{ width: 66, height: 66, borderRadius: "50%", padding: 2.5, background: group.hasUnviewed ? `linear-gradient(135deg, ${CORAL}, #FF8C6B)` : "rgba(0,0,0,0.08)" }}>
+      <div style={{ width: 66, height: 66, borderRadius: "50%", padding: 2.5, background: group.hasUnviewed ? `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY_DARK})` : "rgba(0,0,0,0.08)" }}>
         <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: `linear-gradient(135deg, ${r.bg_from}, ${r.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, border: "2.5px solid #fff" }}>{r.icon}</div>
       </div>
       <div style={{ fontSize: 10, fontWeight: 600, color: DARK, maxWidth: 64, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name.split(" ")[0]}</div>
@@ -156,9 +161,9 @@ function StoryUploadCard({ restaurantId, restaurant }) {
             </div>
         }
         {preview && <textarea value={caption} onChange={e => setCaption(e.target.value.slice(0, 120))} placeholder="Caption (optional)..." style={{ width: "100%", marginTop: 10, border: "none", background: BG, outline: "none", borderRadius: 12, padding: "10px 12px", fontSize: 13, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", resize: "none", minHeight: 54 }} />}
-        {error && <div style={{ fontSize: 12, color: CORAL, fontWeight: 600, marginTop: 8 }}>{error}</div>}
+        {error && <div style={{ fontSize: 12, color: PRIMARY, fontWeight: 600, marginTop: 8 }}>{error}</div>}
         {done  && <div style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, marginTop: 8 }}>✓ Story live for 24 hours.</div>}
-        {preview && <button disabled={uploading} onClick={submit} style={{ width: "100%", marginTop: 12, padding: "13px", background: CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", opacity: uploading ? 0.6 : 1 }}>{uploading ? "Uploading..." : "Post Story"}</button>}
+        {preview && <button disabled={uploading} onClick={submit} style={{ width: "100%", marginTop: 12, padding: "13px", background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", opacity: uploading ? 0.6 : 1 }}>{uploading ? "Uploading..." : "Post Story"}</button>}
       </div>
     </div>
   );
@@ -168,7 +173,7 @@ function Toggle({ checked, onChange }) {
   return (
     <label style={{ position: "relative", width: 52, height: 30, display: "inline-block", flexShrink: 0 }}>
       <input type="checkbox" checked={checked} onChange={onChange} style={{ opacity: 0, width: 0, height: 0 }} />
-      <span style={{ position: "absolute", inset: 0, borderRadius: 30, background: checked ? CORAL : "#E0E0E0", transition: "0.3s", cursor: "pointer" }}>
+      <span style={{ position: "absolute", inset: 0, borderRadius: 30, background: checked ? PRIMARY : "#E0E0E0", transition: "0.3s", cursor: "pointer" }}>
         <span style={{ position: "absolute", left: checked ? 25 : 3, top: 3, width: 24, height: 24, borderRadius: "50%", background: "#fff", transition: "0.3s", boxShadow: "0 1px 4px rgba(0,0,0,0.12)" }} />
       </span>
     </label>
@@ -200,7 +205,7 @@ function VCard({ r, onClick }) {
         <div style={{ fontSize: 12, color: "#B0B0B0", marginBottom: 8, lineHeight: 1.4 }}>{r.description}</div>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           {(r.tags || []).slice(0, 3).map(t => <span key={t} style={{ fontSize: 9, fontWeight: 700, color: "#888", background: BG, padding: "3px 8px", borderRadius: 10 }}>{t}</span>)}
-          {r.is_open && all.filter(i => i.is_available).length > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: CORAL, background: "#FFF0ED", padding: "3px 8px", borderRadius: 10 }}>{all.filter(i => i.is_available).length} available</span>}
+          {r.is_open && all.filter(i => i.is_available).length > 0 && <span style={{ fontSize: 9, fontWeight: 700, color: PRIMARY, background: BG_SOFT, padding: "3px 8px", borderRadius: 10 }}>{all.filter(i => i.is_available).length} available</span>}
         </div>
       </div>
     </div>
@@ -213,7 +218,7 @@ function HCard({ r, onClick }) {
       <div style={{ width: "100%", height: 120, background: `linear-gradient(140deg, ${r.bg_from}, ${r.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 46, position: "relative" }}>
         {/* Banner image as card background if available */}
         {r.banner_url && <img src={r.banner_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
-        {r.badge && <div style={{ position: "absolute", top: 10, left: 10, background: CORAL, color: "#fff", fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 20, zIndex: 1 }}>{r.badge}</div>}
+        {r.badge && <div style={{ position: "absolute", top: 10, left: 10, background: PRIMARY, color: "#fff", fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 20, zIndex: 1 }}>{r.badge}</div>}
         {r.is_open && <div style={{ position: "absolute", top: 10, right: 10, width: 9, height: 9, borderRadius: "50%", background: "#22C55E", border: "2px solid #fff", zIndex: 1 }} />}
         {r.logo_url
           ? <img src={r.logo_url} alt={r.name} style={{ position: "relative", zIndex: 1, width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "3px solid rgba(255,255,255,0.4)", boxShadow: "0 2px 12px rgba(0,0,0,0.2)" }} />
@@ -248,11 +253,11 @@ function PostCard({ post, liked, onLike, onViewRest }) {
         </div>
         <div style={{ fontSize: 14, color: "#2D2D2D", lineHeight: 1.65, fontWeight: 500, marginBottom: 14 }}>{post.text}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 12, borderTop: "1px solid #F7F5F2" }}>
-          <button onClick={onLike} style={{ display: "flex", alignItems: "center", gap: 6, background: liked ? "#FFF0ED" : "transparent", border: "none", borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          <button onClick={onLike} style={{ display: "flex", alignItems: "center", gap: 6, background: liked ? BG_SOFT : "transparent", border: "none", borderRadius: 20, padding: "6px 12px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <span style={{ fontSize: 14 }}>{liked ? "❤️" : "🤍"}</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: liked ? CORAL : "#B0B0B0" }}>{post.like_count}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: liked ? PRIMARY : "#B0B0B0" }}>{post.like_count}</span>
           </button>
-          <button onClick={onViewRest} style={{ fontSize: 11, fontWeight: 700, color: CORAL, background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>View Restaurant →</button>
+          <button onClick={onViewRest} style={{ fontSize: 11, fontWeight: 700, color: PRIMARY, background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>View Restaurant →</button>
         </div>
       </div>
     </div>
@@ -340,7 +345,7 @@ function DashMenuItem({ item, restaurantId, onToggle, onDelete, onImageUploaded 
         {/* Info column */}
         <div style={{ flex: 1, padding: "12px 14px", minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: item.is_available ? "#1C1C1E" : "#C0C0C0", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: item.is_available ? "#FF6240" : "#EDE9E4", marginBottom: 6 }}>₦{Number(item.price).toLocaleString()}</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: item.is_available ? "#8B1A1A" : "#EDE9E4", marginBottom: 6 }}>₦{Number(item.price).toLocaleString()}</div>
           {onDelete && (
             <button onClick={e => { e.stopPropagation(); onDelete(); }}
               style={{ fontSize: 10, fontWeight: 700, color: "#DC2626", background: "#FEF2F2", border: "none", borderRadius: 8, padding: "3px 8px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -575,10 +580,10 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
                 <div style={{ marginTop: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                     <span style={{ fontSize: 10, color: "#888", fontWeight: 600 }}>Uploading…</span>
-                    <span style={{ fontSize: 10, color: CORAL, fontWeight: 700 }}>{uploadProgress}%</span>
+                    <span style={{ fontSize: 10, color: PRIMARY, fontWeight: 700 }}>{uploadProgress}%</span>
                   </div>
                   <div style={{ height: 4, borderRadius: 4, background: "#F0EDE8", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${uploadProgress}%`, background: CORAL, borderRadius: 4, transition: "width 0.3s" }} />
+                    <div style={{ height: "100%", width: `${uploadProgress}%`, background: PRIMARY, borderRadius: 4, transition: "width 0.3s" }} />
                   </div>
                 </div>
               )}
@@ -606,7 +611,7 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
           <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             {["existing", "new"].map(m => (
               <button key={m} onClick={() => setCatMode(m)}
-                style={{ flex: 1, padding: "9px", borderRadius: 12, border: `1.5px solid ${catMode === m ? CORAL : "#EBEBEB"}`, background: catMode === m ? "#FFF0ED" : "#fff", color: catMode === m ? CORAL : "#888", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                style={{ flex: 1, padding: "9px", borderRadius: 12, border: `1.5px solid ${catMode === m ? PRIMARY : "#EBEBEB"}`, background: catMode === m ? BG_SOFT : "#fff", color: catMode === m ? PRIMARY : "#888", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                 {m === "existing" ? "Existing category" : "+ New category"}
               </button>
             ))}
@@ -624,7 +629,7 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
               : <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {cats.map(c => (
                     <button key={c.id} onClick={() => setSelCatId(c.id)}
-                      style={{ textAlign: "left", padding: "11px 14px", borderRadius: 12, border: `1.5px solid ${selCatId === c.id ? CORAL : "#EBEBEB"}`, background: selCatId === c.id ? "#FFF0ED" : BG, color: selCatId === c.id ? CORAL : DARK, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                      style={{ textAlign: "left", padding: "11px 14px", borderRadius: 12, border: `1.5px solid ${selCatId === c.id ? PRIMARY : "#EBEBEB"}`, background: selCatId === c.id ? BG_SOFT : BG, color: selCatId === c.id ? PRIMARY : DARK, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                       {c.name}
                     </button>
                   ))}
@@ -635,7 +640,7 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
                 {DEFAULT_MENU_CATS.map(dc => (
                   <button key={dc.label} onClick={() => { setCustomCat(""); setNewCatName(dc.label); }}
-                    style={{ padding: "7px 12px", borderRadius: 20, border: `1.5px solid ${newCatName === dc.label && !customCat ? CORAL : "#EBEBEB"}`, background: newCatName === dc.label && !customCat ? "#FFF0ED" : "#fff", color: newCatName === dc.label && !customCat ? CORAL : "#555", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    style={{ padding: "7px 12px", borderRadius: 20, border: `1.5px solid ${newCatName === dc.label && !customCat ? PRIMARY : "#EBEBEB"}`, background: newCatName === dc.label && !customCat ? BG_SOFT : "#fff", color: newCatName === dc.label && !customCat ? PRIMARY : "#555", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                     {dc.icon} {dc.label}
                   </button>
                 ))}
@@ -653,7 +658,7 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
           const disabled = busy || noCat;
           return (
             <button onClick={submit} disabled={disabled}
-              style={{ width: "100%", padding: 14, background: disabled ? "#B0B0B0" : CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: disabled ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              style={{ width: "100%", padding: 14, background: disabled ? "#B0B0B0" : PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: disabled ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               {uploading ? `Uploading photo… ${uploadProgress}%` : saving ? "Adding…" : "Add to Menu"}
             </button>
           );
@@ -700,7 +705,7 @@ function ChatScreen({ user, restaurant, conversationId, customerId, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 300, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       {/* Header */}
-      <div style={{ background: `linear-gradient(135deg, ${restaurant.bg_from || CORAL}, ${restaurant.bg_to || "#FF8C6B"})`, padding: "max(env(safe-area-inset-top), 52px) 16px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ background: `linear-gradient(135deg, ${restaurant.bg_from || PRIMARY}, ${restaurant.bg_to || "#FF8C6B"})`, padding: "max(env(safe-area-inset-top), 52px) 16px 16px", display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>←</button>
         <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.4)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
           {restaurant.logo_url ? <img src={restaurant.logo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : restaurant.icon}
@@ -734,7 +739,7 @@ function ChatScreen({ user, restaurant, conversationId, customerId, onClose }) {
               <div style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
                 <div style={{
                   maxWidth: "78%", padding: "10px 14px", borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                  background: isMine ? CORAL : "#fff",
+                  background: isMine ? PRIMARY : "#fff",
                   color: isMine ? "#fff" : DARK,
                   fontSize: 14, lineHeight: 1.5, fontWeight: 500,
                   boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
@@ -760,7 +765,7 @@ function ChatScreen({ user, restaurant, conversationId, customerId, onClose }) {
           style={{ flex: 1, border: "1.5px solid #EBEBEB", borderRadius: 20, padding: "10px 14px", fontSize: 14, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", outline: "none", resize: "none", lineHeight: 1.5, maxHeight: 100, overflowY: "auto", background: "#F7F5F2" }}
         />
         <button onClick={handleSend} disabled={!text.trim() || sending}
-          style={{ width: 42, height: 42, borderRadius: "50%", background: text.trim() ? CORAL : "#E0E0E0", border: "none", cursor: text.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
+          style={{ width: 42, height: 42, borderRadius: "50%", background: text.trim() ? PRIMARY : "#E0E0E0", border: "none", cursor: text.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M22 2L11 13" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -776,7 +781,7 @@ function OwnerChatList({ restaurantId, ownerId, onSelectChat, onClose }) {
   const { conversations, loading } = useOwnerChats(restaurantId);
   return (
     <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 300, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <div style={{ background: CORAL, padding: "max(env(safe-area-inset-top), 52px) 20px 18px", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ background: PRIMARY, padding: "max(env(safe-area-inset-top), 52px) 20px 18px", display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
         <div style={{ fontSize: 17, fontWeight: 800, color: "#fff" }}>Customer Messages</div>
       </div>
@@ -792,7 +797,7 @@ function OwnerChatList({ restaurantId, ownerId, onSelectChat, onClose }) {
         ) : conversations.map(conv => (
           <div key={conv.id} onClick={() => onSelectChat(conv)}
             style={{ background: "#fff", borderBottom: "1px solid #F0EDE8", padding: "14px 20px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 46, height: 46, borderRadius: "50%", background: `linear-gradient(135deg, ${CORAL}, #FF8C6B)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+            <div style={{ width: 46, height: 46, borderRadius: "50%", background: `linear-gradient(135deg, ${PRIMARY}, PRIMARY_DARK)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
               {conv.profiles?.full_name?.[0]?.toUpperCase() || "?"}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -942,7 +947,7 @@ function PayoutAccountCard({ ownerR }) {
         <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px" }}>Payout Account</div>
         {!editing && (
           <button onClick={() => setEditing(true)}
-            style={{ fontSize: 11, fontWeight: 700, color: CORAL, background: "#FFF0ED", border: "none", borderRadius: 10, padding: "5px 12px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            style={{ fontSize: 11, fontWeight: 700, color: PRIMARY, background: BG_SOFT, border: "none", borderRadius: 999, padding: "5px 14px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             {hasAccount ? "Update" : "+ Add"}
           </button>
         )}
@@ -970,7 +975,7 @@ function PayoutAccountCard({ ownerR }) {
               Cancel
             </button>
             <button onClick={handleSave} disabled={!bank.verified || saving}
-              style={{ flex: 2, padding: "10px", background: bank.verified ? CORAL : "#F5F5F5", color: bank.verified ? "#fff" : "#C0C0C0", border: "none", borderRadius: 12, fontSize: 12, fontWeight: 800, cursor: bank.verified ? "pointer" : "not-allowed", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              style={{ flex: 2, padding: "10px", background: bank.verified ? PRIMARY : "#F5F5F5", color: bank.verified ? "#fff" : "#C0C0C0", border: "none", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: bank.verified ? "pointer" : "not-allowed", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               {saving ? "Saving..." : "Save Account"}
             </button>
           </div>
@@ -1066,7 +1071,7 @@ function OpeningHoursCard({ ownerR, updateOpeningHours }) {
           ))}
           {saved && <div style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, marginTop: 10 }}>✓ Hours saved</div>}
           <button onClick={save} disabled={saving}
-            style={{ width: "100%", marginTop: 14, padding: "12px", background: CORAL, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", opacity: saving ? 0.6 : 1 }}>
+            style={{ width: "100%", marginTop: 14, padding: "12px", background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: saving ? "default" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", opacity: saving ? 0.6 : 1 }}>
             {saving ? "Saving..." : "Save Hours"}
           </button>
         </div>
@@ -1193,16 +1198,16 @@ function PostMediaCard({ ownerR, uploadPostMedia, createPost }) {
           <div style={{ marginTop: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
               <span style={{ fontSize: 11, color: "#888", fontWeight: 600 }}>Uploading…</span>
-              <span style={{ fontSize: 11, color: CORAL, fontWeight: 700 }}>{progress}%</span>
+              <span style={{ fontSize: 11, color: PRIMARY, fontWeight: 700 }}>{progress}%</span>
             </div>
             <div style={{ height: 4, borderRadius: 4, background: "#F0EDE8", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${progress}%`, background: CORAL, borderRadius: 4, transition: "width 0.3s" }} />
+              <div style={{ height: "100%", width: `${progress}%`, background: PRIMARY, borderRadius: 4, transition: "width 0.3s" }} />
             </div>
           </div>
         )}
         {preview && (
           <button disabled={uploading} onClick={submit}
-            style={{ width: "100%", marginTop: 12, padding: "13px", background: CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", opacity: uploading ? 0.6 : 1 }}>
+            style={{ width: "100%", marginTop: 12, padding: "13px", background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", opacity: uploading ? 0.6 : 1 }}>
             {uploading ? "Uploading…" : "Post to Feed"}
           </button>
         )}
@@ -1238,7 +1243,7 @@ function LocationCard({ ownerR }) {
         style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 12, padding: "11px 14px", fontSize: 13, color: DARK, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box", marginBottom: 12 }}
       />
       <button onClick={save} disabled={saving}
-        style={{ width: "100%", padding: "11px", background: saved ? "#16A34A" : CORAL, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, fontFamily: "'Plus Jakarta Sans', sans-serif", transition: "background 0.2s" }}>
+        style={{ width: "100%", padding: "11px", background: saved ? "#16A34A" : PRIMARY, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, fontFamily: "'Plus Jakarta Sans', sans-serif", transition: "background 0.2s" }}>
         {saving ? "Saving..." : saved ? "✓ Saved" : "Save Region"}
       </button>
     </div>
@@ -1312,9 +1317,9 @@ function BottomNav({ tab, setTab, cartCount }) {
         return (
           <button key={id} onClick={() => setTab(id)} className="nav-btn" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, border: "none", background: "transparent", cursor: "pointer", padding: "2px 0", fontFamily: "'Plus Jakarta Sans', sans-serif", position: "relative" }}>
             <SVG active={active} />
-            {badge > 0 && <div style={{ position: "absolute", top: -2, right: "18%", background: CORAL, color: "#fff", fontSize: 9, fontWeight: 800, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>{badge > 9 ? "9+" : badge}</div>}
-            <span style={{ fontSize: 10, fontWeight: 600, color: active ? CORAL : "#B0B0B0" }}>{label}</span>
-            {active && <div className="tab-dot" style={{ width: 4, height: 4, borderRadius: "50%", background: CORAL }} />}
+            {badge > 0 && <div style={{ position: "absolute", top: -2, right: "18%", background: PRIMARY, color: "#fff", fontSize: 9, fontWeight: 800, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>{badge > 9 ? "9+" : badge}</div>}
+            <span style={{ fontSize: 10, fontWeight: 600, color: active ? PRIMARY : "#B0B0B0" }}>{label}</span>
+            {active && <div className="tab-dot" style={{ width: 4, height: 4, borderRadius: "50%", background: PRIMARY }} />}
           </button>
         );
       })}
@@ -1322,12 +1327,12 @@ function BottomNav({ tab, setTab, cartCount }) {
   );
 }
 
-const HomeSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 21V12h6v9" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
-const SearchSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2"/><path d="M21 21l-3.5-3.5" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
-const FeedSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M18 8h1a4 4 0 0 1 0 8h-1" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2"/><path d="M6 1v3M10 1v3M14 1v3" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
-const CartSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="21" r="1.5" fill={active ? CORAL : "#C0C0C0"}/><circle cx="19" cy="21" r="1.5" fill={active ? CORAL : "#C0C0C0"}/><path d="M2 3h2l2.68 10.39a2 2 0 0 0 1.94 1.61h9.72a2 2 0 0 0 1.94-1.51L22 7H6" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
-const StoreSVG  = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9l1-6h16l1 6" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2"/><path d="M5 21V9M19 9v12M5 21h14" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
-const OrdersSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/><rect x="9" y="3" width="6" height="4" rx="1" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2"/><path d="M9 12h6M9 16h4" stroke={active ? CORAL : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
+const HomeSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 21V12h6v9" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const SearchSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M21 21l-3.5-3.5" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
+const FeedSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M18 8h1a4 4 0 0 1 0 8h-1" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M6 1v3M10 1v3M14 1v3" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
+const CartSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="21" r="1.5" fill={active ? PRIMARY : "#C0C0C0"}/><circle cx="19" cy="21" r="1.5" fill={active ? PRIMARY : "#C0C0C0"}/><path d="M2 3h2l2.68 10.39a2 2 0 0 0 1.94 1.61h9.72a2 2 0 0 0 1.94-1.51L22 7H6" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const StoreSVG  = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9l1-6h16l1 6" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M5 21V9M19 9v12M5 21h14" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const OrdersSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/><rect x="9" y="3" width="6" height="4" rx="1" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M9 12h6M9 16h4" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
 
 // ════════════════════════════════════════════════════════════
 //  MAIN APP
@@ -1389,7 +1394,7 @@ export default function App() {
 
   useEffect(() => {
     if (appState !== "splash") return;
-    const timer = setTimeout(() => setAppState(localStorage.getItem("chowli_onboarded") ? "app" : "onboarding"), 1800);
+    const timer = setTimeout(() => setAppState(localStorage.getItem("chowli_onboarded") ? "app" : "onboarding"), 2500);
     return () => clearTimeout(timer);
   }, [appState]);
 
@@ -1628,14 +1633,39 @@ export default function App() {
 
   // ── Splash ───────────────────────────────────────────────
   if (appState === "splash") return (
-    <div style={{ position: "fixed", inset: 0, background: CORAL, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", maxWidth: 430, margin: "0 auto" }}>
+    <div style={{ position: "fixed", inset: 0, background: PRIMARY, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", maxWidth: 430, margin: "0 auto" }}>
       <style>{`
-        @keyframes splashPop { 0%{transform:scale(0.4) rotate(-10deg);opacity:0} 60%{transform:scale(1.18) rotate(3deg)} 80%{transform:scale(0.95) rotate(-1deg)} 100%{transform:scale(1) rotate(0deg);opacity:1} }
-        @keyframes splashSlide { 0%{opacity:0;transform:translateY(16px)} 100%{opacity:1;transform:translateY(0)} }
-        @keyframes splashSub { 0%{opacity:0} 100%{opacity:0.75} }
+        @keyframes chowliReveal {
+          from { width: 0; }
+          to   { width: 5.6ch; }
+        }
+        @keyframes splashSubFade {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
       `}</style>
-      <img src="/logo.png" alt="Chowli" style={{ width: 120, height: 120, borderRadius: 24, objectFit: "cover", marginBottom: 8, animation: "splashPop 0.7s cubic-bezier(.36,.07,.19,.97) both" }} />
-      <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "splashSub 0.6s 0.7s both" }}>Your local food market</div>
+      <div style={{ overflow: "hidden", whiteSpace: "nowrap", width: "5.6ch" }}>
+        <div style={{
+          fontSize: 62,
+          fontWeight: 800,
+          color: ACCENT,
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
+          letterSpacing: "-0.02em",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          width: 0,
+          animation: "chowliReveal 0.9s steps(6, end) 0.1s forwards",
+        }}>Chowli</div>
+      </div>
+      <div style={{
+        fontSize: 14,
+        fontWeight: 500,
+        color: "rgba(244,196,48,0.75)",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        marginTop: 14,
+        opacity: 0,
+        animation: "splashSubFade 0.5s ease 1.1s forwards",
+      }}>Your local food market</div>
     </div>
   );
 
@@ -1892,8 +1922,8 @@ export default function App() {
               <div style={{ fontSize: 14, color: "#888", lineHeight: 1.6, marginBottom: 24 }}>
                 Your cart has items from <strong>{cart.restaurantName}</strong>. You can only order from one restaurant at a time. Clear your cart and add from {pendingItem.restaurant.name}?
               </div>
-              <button onClick={confirmClearAndAdd} style={{ width: "100%", padding: 14, background: CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: "pointer", marginBottom: 10 }}>Clear & switch restaurant</button>
-              <button onClick={() => setPendingItem(null)} style={{ width: "100%", padding: 14, background: BG, color: DARK, border: "none", borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Keep current cart</button>
+              <button onClick={confirmClearAndAdd} style={{ width: "100%", padding: 14, background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 800, cursor: "pointer", marginBottom: 10 }}>Clear & switch restaurant</button>
+              <button onClick={() => setPendingItem(null)} style={{ width: "100%", padding: 14, background: BG_SOFT, color: DARK, border: "none", borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Keep current cart</button>
             </div>
           </div>
         )}
@@ -1902,7 +1932,7 @@ export default function App() {
         {tab === "home" && (
           <>
             {/* ── Chowli-style vibrant gradient header ── */}
-            <div style={{ background: `linear-gradient(135deg, ${CORAL} 0%, #FF8C42 60%, #FFAF60 100%)`, padding: "max(env(safe-area-inset-top), 52px) 20px 24px", position: "relative", overflow: "hidden" }}>
+            <div style={{ background: `linear-gradient(135deg, ${PRIMARY} 0%, ${PRIMARY_DARK} 60%, #5A1010 100%)`, padding: "max(env(safe-area-inset-top), 52px) 20px 24px", position: "relative", overflow: "hidden" }}>
               {/* Decorative blobs */}
               <div style={{ position: "absolute", top: -30, right: -30, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
               <div style={{ position: "absolute", bottom: -20, left: 40, width: 90, height: 90, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
@@ -1923,7 +1953,7 @@ export default function App() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <div className="open-badge" style={{ fontSize: 11, fontWeight: 700, color: CORAL, background: "#fff", padding: "4px 12px", borderRadius: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>{openCount} open</div>
+                  <div className="open-badge" style={{ fontSize: 11, fontWeight: 700, color: PRIMARY, background: "#fff", padding: "4px 12px", borderRadius: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>{openCount} open</div>
                   <button onClick={() => setTab("search")}
                     style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.22)", border: "1.5px solid rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
                     aria-label="Search">
@@ -1946,7 +1976,7 @@ export default function App() {
               {/* Category pills — dynamic from DB (Feature 5) */}
               <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", marginBottom: 2 }}>
                 {dynamicCats.map(c => (
-                  <button key={c} onClick={() => setActiveCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 20, border: "none", background: activeCat === c ? "#fff" : "rgba(255,255,255,0.18)", color: activeCat === c ? CORAL : "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "background 0.2s" }}>
+                  <button key={c} onClick={() => setActiveCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 20, border: "none", background: activeCat === c ? "#fff" : "rgba(255,255,255,0.18)", color: activeCat === c ? PRIMARY : "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "background 0.2s" }}>
                     <span style={{ fontSize: 13 }}>{getCatIcon(c)}</span>{c}
                   </button>
                 ))}
@@ -1956,7 +1986,7 @@ export default function App() {
             {storyGroups.length > 0 && (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 0" }}>
-                  <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Live Now</span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: DARK }}>Live Now</span>
                   <span style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0" }}>{storyGroups.length} active</span>
                 </div>
                 <div className="story-row">{storyGroups.map(g => <div key={g.restaurant.id} className="story-ring-wrap"><StoryRing group={g} onClick={() => setActiveStoryGroup(g)} /></div>)}</div>
@@ -1974,8 +2004,8 @@ export default function App() {
             ); })()}
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 12px" }}>
-              <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>Open Now</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: CORAL }}>{openNow.length} spots</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: DARK }}>Open Now</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: PRIMARY }}>{openNow.length} spots</span>
             </div>
             {restLoading
               ? <div className="hscroll">{[1,2,3].map(i => <HCardSkeleton key={i} />)}</div>
@@ -1988,8 +2018,8 @@ export default function App() {
             }
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 20px 12px" }}>
-              <span style={{ fontSize: 17, fontWeight: 800, color: DARK }}>{activeCat === "All" ? "All Restaurants" : activeCat}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: CORAL }}>{filtered.length} total</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: DARK }}>{activeCat === "All" ? "All Restaurants" : activeCat}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: PRIMARY }}>{filtered.length} total</span>
             </div>
             <div className="vlist">
               {restLoading
@@ -1999,7 +2029,7 @@ export default function App() {
                       <div style={{ fontSize: 36, marginBottom: 10 }}>🔍</div>
                       <div style={{ fontSize: 15, fontWeight: 700, color: DARK, marginBottom: 6 }}>Nothing found</div>
                       <div style={{ fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 14 }}>Check back later or browse all restaurants</div>
-                      <button onClick={() => setActiveCat("All")} style={{ fontSize: 12, fontWeight: 700, color: CORAL, background: "#FFF0ED", border: "none", borderRadius: 20, padding: "8px 18px", cursor: "pointer" }}>Browse All</button>
+                      <button onClick={() => setActiveCat("All")} style={{ fontSize: 12, fontWeight: 700, color: PRIMARY, background: BG_SOFT, border: "none", borderRadius: 20, padding: "8px 18px", cursor: "pointer" }}>Browse All</button>
                     </div>
                   : filtered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} />)
               }
@@ -2039,7 +2069,7 @@ export default function App() {
                   {searchMinRating > 0 && <span style={{ fontSize: 11, color: "#888", fontWeight: 600 }}>{searchMinRating}+</span>}
                 </div>
                 {(searchActiveCats.size > 0 || searchOpenOnly || searchMinRating > 0 || search) && (
-                  <button onClick={clearSearchFilters} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: CORAL, background: "#FFF0ED", border: "none", borderRadius: 20, padding: "6px 12px", cursor: "pointer" }}>
+                  <button onClick={clearSearchFilters} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: PRIMARY, background: BG_SOFT, border: "none", borderRadius: 20, padding: "6px 12px", cursor: "pointer" }}>
                     Clear all
                   </button>
                 )}
@@ -2051,7 +2081,7 @@ export default function App() {
                   const active = searchActiveCats.has(c);
                   return (
                     <button key={c} onClick={() => toggleSearchCat(c)}
-                      style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 20, border: `1.5px solid ${active ? CORAL : "#EBEBEB"}`, background: active ? "#FFF0ED" : "#fff", color: active ? CORAL : "#555", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
+                      style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 20, border: `1.5px solid ${active ? PRIMARY : "#EBEBEB"}`, background: active ? BG_SOFT : "#fff", color: active ? PRIMARY : "#555", fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
                       <span>{getCatIcon(c)}</span>{c}
                     </button>
                   );
@@ -2082,7 +2112,7 @@ export default function App() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: DARK, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                        <div style={{ fontSize: 11, color: "#888" }}>at {restaurant.name} · <span style={{ color: CORAL, fontWeight: 700 }}>₦{Number(item.price).toLocaleString()}</span></div>
+                        <div style={{ fontSize: 11, color: "#888" }}>at {restaurant.name} · <span style={{ color: PRIMARY, fontWeight: 700 }}>₦{Number(item.price).toLocaleString()}</span></div>
                       </div>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="#C0C0C0" strokeWidth="2" strokeLinecap="round"/></svg>
                     </div>
@@ -2096,7 +2126,7 @@ export default function App() {
                     <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 8 }}>No results found</div>
                     <div style={{ fontSize: 13, color: "#888", lineHeight: 1.6, marginBottom: 16 }}>No restaurants or dishes found. Try a different search.</div>
-                    <button onClick={clearSearchFilters} style={{ fontSize: 12, fontWeight: 700, color: CORAL, background: "#FFF0ED", border: "none", borderRadius: 20, padding: "8px 18px", cursor: "pointer" }}>Clear filters</button>
+                    <button onClick={clearSearchFilters} style={{ fontSize: 12, fontWeight: 700, color: PRIMARY, background: BG_SOFT, border: "none", borderRadius: 20, padding: "8px 18px", cursor: "pointer" }}>Clear filters</button>
                   </div>
                 : searchFiltered.map(r => <VCard key={r.id} r={r} onClick={() => goDetail(r.id)} />)
               }
@@ -2138,7 +2168,7 @@ export default function App() {
               <button onClick={() => setTab("home")} style={{ position: "absolute", top: "max(env(safe-area-inset-top), 48px)", left: 16, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.92)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, fontWeight: 700, zIndex: 2 }}>←</button>
               {(() => {
                 const sg = storyGroups.find(g => g.restaurant.id === selected.id);
-                const ringStyle = sg ? { outline: `3px solid ${CORAL}`, outlineOffset: 3, cursor: "pointer" } : { cursor: "default" };
+                const ringStyle = sg ? { outline: `3px solid ${PRIMARY}`, outlineOffset: 3, cursor: "pointer" } : { cursor: "default" };
                 return selected.logo_url
                   ? <img src={selected.logo_url} alt={selected.name} onClick={sg ? () => setActiveStoryGroup(sg) : undefined}
                       style={{ position: "relative", zIndex: 2, width: 100, height: 100, borderRadius: "50%", objectFit: "cover", border: "4px solid rgba(255,255,255,0.35)", boxShadow: "0 4px 20px rgba(0,0,0,0.25)", ...ringStyle }} />
@@ -2151,7 +2181,7 @@ export default function App() {
 
             <div style={{ background: "#fff", borderRadius: "28px 28px 0 0", marginTop: -28, padding: "24px 20px 0", position: "relative", zIndex: 2, minHeight: "calc(100vh - 212px)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ background: selected.badge ? "#FFF0ED" : BG, color: selected.badge ? CORAL : "#888", fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 20 }}>{selected.badge || (Array.isArray(selected.category) ? selected.category[0] : selected.category)}</span>
+                <span style={{ background: selected.badge ? BG_SOFT : BG, color: selected.badge ? PRIMARY : "#888", fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 20 }}>{selected.badge || (Array.isArray(selected.category) ? selected.category[0] : selected.category)}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 20, background: selected.is_open ? "#F0FDF4" : "#FEF2F2", color: selected.is_open ? "#16A34A" : "#DC2626" }}>
                   <span style={{ fontSize: 7 }}>●</span>{selected.is_open ? "Open Now" : "Closed"}
                 </div>
@@ -2170,24 +2200,24 @@ export default function App() {
 
               {/* Action buttons */}
               {isOwnRestaurant && (
-                <div style={{ background: "#FFF0ED", border: "1px solid #FFD0C0", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: CORAL, fontWeight: 700, marginBottom: 20 }}>
+                <div style={{ background: BG_SOFT, border: "1px solid #FFD0C0", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: PRIMARY, fontWeight: 700, marginBottom: 20 }}>
                   🏪 This is your restaurant — manage it from the Store tab
                 </div>
               )}
               <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
                 {!isOwnRestaurant && (
                   <button onClick={() => setShowReservation(selected)}
-                    style={{ flex: 1, padding: "12px", background: "#FFF0ED", color: CORAL, border: "1.5px solid #FFD0C0", borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+                    style={{ flex: 1, padding: "12px", background: BG_SOFT, color: PRIMARY, border: `1.5px solid ${BORDER}`, borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                     📅 Reserve a table
                   </button>
                 )}
                 <button onClick={() => user ? setActiveChat(selected) : setAuthMode("login")}
-                  style={{ flex: isOwnRestaurant ? 1 : undefined, padding: "12px 16px", background: "#EFF6FF", color: "#2563EB", border: "1.5px solid #BFDBFE", borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                  style={{ flex: isOwnRestaurant ? 1 : undefined, padding: "12px 16px", background: "#EFF6FF", color: "#2563EB", border: "1.5px solid #BFDBFE", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                   💬 Chat
                 </button>
                 {!isOwnRestaurant && cart.restaurantId === selected.id && cart.totalItems > 0 && (
                   <button onClick={() => setTab("cart")}
-                    style={{ padding: "12px 16px", background: CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                    style={{ padding: "12px 16px", background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                     🛒 {cart.totalItems}
                   </button>
                 )}
@@ -2196,7 +2226,7 @@ export default function App() {
               {/* Tabs */}
               <div style={{ display: "flex", borderBottom: "1.5px solid #F5F5F5", marginBottom: 20 }}>
                 {["menu", "updates", "info"].map(t => (
-                  <button key={t} onClick={() => setDetailTab(t)} style={{ flex: 1, textAlign: "center", padding: "12px 0", fontSize: 12, fontWeight: 700, color: detailTab === t ? CORAL : "#C0C0C0", border: "none", background: "transparent", borderBottom: `2px solid ${detailTab === t ? CORAL : "transparent"}`, marginBottom: -1.5, cursor: "pointer" }}>
+                  <button key={t} onClick={() => setDetailTab(t)} style={{ flex: 1, textAlign: "center", padding: "12px 0", fontSize: 12, fontWeight: 700, color: detailTab === t ? PRIMARY : "#C0C0C0", border: "none", background: "transparent", borderBottom: `2px solid ${detailTab === t ? PRIMARY : "transparent"}`, marginBottom: -1.5, cursor: "pointer" }}>
                     {t[0].toUpperCase() + t.slice(1)}
                   </button>
                 ))}
@@ -2229,18 +2259,18 @@ export default function App() {
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 14, fontWeight: 700, color: item.is_available ? DARK : "#D4CEC8", marginBottom: 3, lineHeight: 1.3 }}>{item.name}</div>
                                 {!item.is_available && <div style={{ fontSize: 10, color: "#D4CEC8", marginBottom: 4 }}>Not available today</div>}
-                                <div style={{ fontSize: 14, fontWeight: 800, color: item.is_available ? CORAL : "#EBEBEB", marginBottom: 8 }}>₦{Number(item.price).toLocaleString()}</div>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: item.is_available ? PRIMARY : "#EBEBEB", marginBottom: 8 }}>₦{Number(item.price).toLocaleString()}</div>
                                 {!isOwnRestaurant && item.is_available && selected.is_open && (
                                   qty === 0 ? (
                                     <button onClick={() => handleAddToCart(item, selected)}
-                                      style={{ display: "flex", alignItems: "center", gap: 5, background: CORAL, border: "none", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", borderRadius: 10, padding: "7px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                      style={{ display: "flex", alignItems: "center", gap: 5, background: PRIMARY, border: "none", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", borderRadius: 10, padding: "7px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                                       + Add to cart
                                     </button>
                                   ) : (
                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                       <button onClick={() => cart.removeItem(item.id)} style={{ width: 30, height: 30, borderRadius: 8, border: "1.5px solid #EBEBEB", background: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
                                       <span style={{ fontSize: 15, fontWeight: 800, color: DARK, minWidth: 18, textAlign: "center" }}>{qty}</span>
-                                      <button onClick={() => handleAddToCart(item, selected)} style={{ width: 30, height: 30, borderRadius: 8, background: CORAL, border: "none", color: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                                      <button onClick={() => handleAddToCart(item, selected)} style={{ width: 30, height: 30, borderRadius: 8, background: PRIMARY, border: "none", color: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                                     </div>
                                   )
                                 )}
@@ -2253,7 +2283,7 @@ export default function App() {
                   ))}
                   {/* Floating cart bar */}
                   {!isOwnRestaurant && cart.restaurantId === selected.id && cart.totalItems > 0 && (
-                    <div className="cart-bar" style={{ position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 40px)", maxWidth: 390, background: CORAL, borderRadius: 16, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", zIndex: 50, boxShadow: "0 4px 20px rgba(255,98,64,0.4)" }}
+                    <div className="cart-bar" style={{ position: "fixed", bottom: "calc(80px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)", width: "calc(100% - 40px)", maxWidth: 390, background: PRIMARY, borderRadius: 999, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", zIndex: 50, boxShadow: "0 4px 20px rgba(139,26,26,0.4)" }}
                       onClick={() => setTab("cart")}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 8, padding: "2px 8px", fontSize: 12, fontWeight: 800, color: "#fff" }}>{cart.totalItems}</div>
@@ -2277,8 +2307,8 @@ export default function App() {
                       <div style={{ padding: 14 }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}><span style={{ fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: pt.bg, color: pt.color }}>{pt.icon} {pt.label}</span><span style={{ fontSize: 10, color: "#B0B0B0" }}>{timeAgo(p.created_at)}</span></div>
                         <div style={{ fontSize: 14, color: "#2D2D2D", lineHeight: 1.6, marginBottom: 10 }}>{p.text}</div>
-                        <button onClick={() => user ? toggleLike(p.id) : setAuthMode("login")} style={{ display: "flex", alignItems: "center", gap: 6, background: liked ? "#FFF0ED" : "transparent", border: "none", borderRadius: 20, padding: "5px 10px", cursor: "pointer" }}>
-                          <span style={{ fontSize: 13 }}>{liked ? "❤️" : "🤍"}</span><span style={{ fontSize: 12, fontWeight: 700, color: liked ? CORAL : "#B0B0B0" }}>{p.like_count}</span>
+                        <button onClick={() => user ? toggleLike(p.id) : setAuthMode("login")} style={{ display: "flex", alignItems: "center", gap: 6, background: liked ? BG_SOFT : "transparent", border: "none", borderRadius: 20, padding: "5px 10px", cursor: "pointer" }}>
+                          <span style={{ fontSize: 13 }}>{liked ? "❤️" : "🤍"}</span><span style={{ fontSize: 12, fontWeight: 700, color: liked ? PRIMARY : "#B0B0B0" }}>{p.like_count}</span>
                         </button>
                       </div>
                     </div>
@@ -2318,11 +2348,11 @@ export default function App() {
                             </div>
                           );
                         })}
-                        {(() => { const info = getHoursInfo(selected); return info ? <div style={{ fontSize: 12, fontWeight: 700, color: CORAL, marginTop: 10 }}>🕐 {info}</div> : null; })()}
+                        {(() => { const info = getHoursInfo(selected); return info ? <div style={{ fontSize: 12, fontWeight: 700, color: PRIMARY, marginTop: 10 }}>🕐 {info}</div> : null; })()}
                       </div>
                     );
                   })()}
-                  <button onClick={() => setShowReservation(selected)} style={{ width: "100%", padding: "14px", background: CORAL, color: "#fff", border: "none", borderRadius: 16, fontSize: 14, fontWeight: 800, cursor: "pointer", marginTop: 8 }}>📅 Reserve a Table</button>
+                  <button onClick={() => setShowReservation(selected)} style={{ width: "100%", padding: "14px", background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 8 }}>📅 Reserve a Table</button>
                 </div>
               )}
             </div>
@@ -2335,7 +2365,7 @@ export default function App() {
             <div style={{ fontSize: 56, marginBottom: 16 }}>🏪</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: DARK, marginBottom: 8 }}>Restaurant owners</div>
             <div style={{ fontSize: 14, color: "#888", lineHeight: 1.7, marginBottom: 24 }}>Sign in to manage your store, menu, and post live updates to customers.</div>
-            <button onClick={() => setAuthMode("login")} style={{ background: CORAL, color: "#fff", border: "none", borderRadius: 16, padding: "14px 32px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>Sign In / Sign Up</button>
+            <button onClick={() => setAuthMode("login")} style={{ background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Sign In / Sign Up</button>
           </div>
         )}
 
@@ -2371,7 +2401,7 @@ export default function App() {
                     </div>
                   )}
                   <button onClick={() => setShowRegister(true)}
-                    style={{ background: CORAL, color: "#fff", border: "none", borderRadius: 16, padding: "14px 32px", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+                    style={{ background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
                     Register a Restaurant
                   </button>
                 </>
@@ -2382,7 +2412,7 @@ export default function App() {
         {tab === "store" && user && isOwner && ownerR && (
           <>
             {/* ── Compact store hero header ── */}
-            <div style={{ background: `linear-gradient(135deg, ${ownerR.bg_from || CORAL}, ${ownerR.bg_to || "#FF8C6B"})`, padding: "max(env(safe-area-inset-top), 52px) 20px 20px", position: "relative", overflow: "hidden" }}>
+            <div style={{ background: `linear-gradient(135deg, ${ownerR.bg_from || PRIMARY}, ${ownerR.bg_to || "#FF8C6B"})`, padding: "max(env(safe-area-inset-top), 52px) 20px 20px", position: "relative", overflow: "hidden" }}>
               {ownerR.banner_url && <img src={ownerR.banner_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }} />}
               {ownerR.banner_url && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.45))" }} />}
               <div style={{ position: "absolute", top: -20, right: -20, width: 110, height: 110, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
@@ -2428,7 +2458,7 @@ export default function App() {
               {restaurants.filter(r => r.owner_id === user.id).length > 1 && (
                 <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", marginTop: 14, position: "relative", zIndex: 1 }}>
                   {restaurants.filter(r => r.owner_id === user.id).map(r => (
-                    <button key={r.id} onClick={() => setOwnerRId(r.id)} style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer", border: "1.5px solid", borderColor: (ownerRId || ownerR.id) === r.id ? "#fff" : "rgba(255,255,255,0.3)", background: (ownerRId || ownerR.id) === r.id ? "#fff" : "rgba(255,255,255,0.15)", color: (ownerRId || ownerR.id) === r.id ? CORAL : "#fff", whiteSpace: "nowrap" }}>{r.icon} {r.name.split(" ")[0]}</button>
+                    <button key={r.id} onClick={() => setOwnerRId(r.id)} style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer", border: "1.5px solid", borderColor: (ownerRId || ownerR.id) === r.id ? "#fff" : "rgba(255,255,255,0.3)", background: (ownerRId || ownerR.id) === r.id ? "#fff" : "rgba(255,255,255,0.15)", color: (ownerRId || ownerR.id) === r.id ? PRIMARY : "#fff", whiteSpace: "nowrap" }}>{r.icon} {r.name.split(" ")[0]}</button>
                   ))}
                 </div>
               )}
@@ -2441,7 +2471,7 @@ export default function App() {
                 <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
                   {[{ n: all.length, l: "Items" }, { n: all.filter(i => i.is_available).length, l: "Avail" }, { n: incomingOrders.length, l: "Orders" }, { n: loyaltyMembersCount, l: "Loyal" }, { n: posts.filter(p => p.restaurant_id === ownerR.id).length, l: "Posts" }].map(s => (
                     <div key={s.l} style={{ flex: 1, background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "12px 4px", textAlign: "center" }}>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: CORAL }}>{s.n}</div>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: PRIMARY }}>{s.n}</div>
                       <div style={{ fontSize: 8, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: 2 }}>{s.l}</div>
                     </div>
                   ))}
@@ -2521,18 +2551,18 @@ export default function App() {
                           </div>
                         )}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontSize: 14, fontWeight: 800, color: CORAL }}>₦{Number(order.subtotal).toLocaleString()}</span>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: PRIMARY }}>₦{Number(order.subtotal).toLocaleString()}</span>
                           <div style={{ display: "flex", gap: 8 }}>
-                            {order.status === "pending" && <button onClick={() => updateStatus(order.id, "confirmed")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Confirm</button>}
-                            {order.status === "confirmed" && <button onClick={() => updateStatus(order.id, "preparing")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#FFF0ED", color: CORAL, cursor: "pointer" }}>Preparing</button>}
-                            {order.status === "preparing" && <button onClick={() => updateStatus(order.id, "ready")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Ready</button>}
-                            {order.status === "ready" && order.fulfillment !== "delivery" && <button onClick={() => updateStatus(order.id, "delivered")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Handed Over</button>}
+                            {order.status === "pending" && <button onClick={() => updateStatus(order.id, "confirmed")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Confirm</button>}
+                            {order.status === "confirmed" && <button onClick={() => updateStatus(order.id, "preparing")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: BG_SOFT, color: PRIMARY, cursor: "pointer" }}>Preparing</button>}
+                            {order.status === "preparing" && <button onClick={() => updateStatus(order.id, "ready")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Ready</button>}
+                            {order.status === "ready" && order.fulfillment !== "delivery" && <button onClick={() => updateStatus(order.id, "delivered")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Handed Over</button>}
                             {order.status === "ready" && order.fulfillment === "delivery" && (
                               deliveryPhotos[order.id]
-                                ? <button onClick={() => updateStatus(order.id, "delivered")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Delivered</button>
+                                ? <button onClick={() => updateStatus(order.id, "delivered")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Delivered</button>
                                 : null
                             )}
-                            {!["completed","delivered","cancelled"].includes(order.status) && <button onClick={() => updateStatus(order.id, "cancelled")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 10, border: "none", background: "#FEF2F2", color: "#DC2626", cursor: "pointer" }}>Cancel</button>}
+                            {!["completed","delivered","cancelled"].includes(order.status) && <button onClick={() => updateStatus(order.id, "cancelled")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#FEF2F2", color: "#DC2626", cursor: "pointer" }}>Cancel</button>}
                           </div>
                         </div>
                         {order.note && <div style={{ marginTop: 8, fontSize: 11, color: "#888", background: BG, borderRadius: 8, padding: "6px 10px" }}>Note: {order.note}</div>}
@@ -2577,7 +2607,7 @@ export default function App() {
                   <textarea value={postText} onChange={e => setPostText(e.target.value.slice(0, 200))} placeholder={postType === "new" ? "Tell customers about your new item..." : postType === "promo" ? "Describe your offer or discount..." : postType === "sold_out" ? "Let customers know what's sold out today..." : "Share any update with your customers..."} style={{ width: "100%", border: "none", background: BG, outline: "none", fontSize: 14, color: DARK, fontWeight: 500, resize: "none", padding: "14px 16px", lineHeight: 1.6, minHeight: 90 }} />
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderTop: "1px solid #F5F5F5" }}>
                     <span style={{ fontSize: 11, color: "#C0C0C0" }}>{postText.length}/200</span>
-                    <button disabled={!postText.trim() || saving} onClick={submitPost} style={{ background: CORAL, color: "#fff", fontSize: 13, fontWeight: 700, padding: "9px 22px", borderRadius: 14, border: "none", cursor: "pointer", opacity: (!postText.trim() || saving) ? 0.4 : 1 }}>{saving ? "Posting..." : "Post Update"}</button>
+                    <button disabled={!postText.trim() || saving} onClick={submitPost} style={{ background: PRIMARY, color: "#fff", fontSize: 13, fontWeight: 700, padding: "9px 22px", borderRadius: 999, border: "none", cursor: "pointer", opacity: (!postText.trim() || saving) ? 0.4 : 1 }}>{saving ? "Posting..." : "Post Update"}</button>
                   </div>
                 </div>
               )}
@@ -2589,7 +2619,7 @@ export default function App() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1 }}>Menu</div>
                 <button onClick={() => setShowAddItem(true)}
-                  style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700, color: "#fff", background: CORAL, border: "none", borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700, color: "#fff", background: PRIMARY, border: "none", borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                   + Add Item
                 </button>
               </div>
@@ -2655,7 +2685,7 @@ export default function App() {
                 <div style={{ fontSize: 56, marginBottom: 16 }}>🧾</div>
                 <div style={{ fontSize: 20, fontWeight: 800, color: "#1C1C1E", marginBottom: 8 }}>Sign in to see your orders</div>
                 <div style={{ fontSize: 14, color: "#888", lineHeight: 1.7, marginBottom: 24 }}>Your order history will appear here once you sign in.</div>
-                <button onClick={() => setAuthMode("login")} style={{ background: "#FF6240", color: "#fff", border: "none", borderRadius: 16, padding: "14px 32px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Sign In</button>
+                <button onClick={() => setAuthMode("login")} style={{ background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, padding: "14px 32px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Sign In</button>
               </div>
             )
         )}
@@ -2727,7 +2757,7 @@ function PromoCodesCard({ restaurantId }) {
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1 }}>Promo Codes</div>
-        <button onClick={() => { setShowForm(v => !v); setFormErr(""); }} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: CORAL, border: "none", borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <button onClick={() => { setShowForm(v => !v); setFormErr(""); }} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: PRIMARY, border: "none", borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           {showForm ? "Cancel" : "+ Create"}
         </button>
       </div>
@@ -2739,7 +2769,7 @@ function PromoCodesCard({ restaurantId }) {
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
             {[{ id: "percent", label: "% Off" }, { id: "fixed", label: "₦ Off" }].map(t => (
               <button key={t.id} onClick={() => setForm(f => ({ ...f, discountType: t.id }))}
-                style={{ flex: 1, padding: "8px", borderRadius: 10, border: `1.5px solid ${form.discountType === t.id ? CORAL : "#EBEBEB"}`, background: form.discountType === t.id ? "#FFF0ED" : "#fff", color: form.discountType === t.id ? CORAL : "#888", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                style={{ flex: 1, padding: "8px", borderRadius: 10, border: `1.5px solid ${form.discountType === t.id ? PRIMARY : "#EBEBEB"}`, background: form.discountType === t.id ? BG_SOFT : "#fff", color: form.discountType === t.id ? PRIMARY : "#888", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                 {t.label}
               </button>
             ))}
@@ -2753,7 +2783,7 @@ function PromoCodesCard({ restaurantId }) {
           <div style={{ fontSize: 11, fontWeight: 600, color: "#888", marginBottom: 4, marginTop: -4 }}>Expiry date (optional)</div>
           <input type="date" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} style={{ ...inputStyle, marginBottom: 12, color: form.expiresAt ? DARK : "#B0B0B0" }} />
           {formErr && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 10 }}>{formErr}</div>}
-          <button onClick={handleCreate} disabled={creating} style={{ width: "100%", padding: "12px", background: CORAL, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer", opacity: creating ? 0.6 : 1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          <button onClick={handleCreate} disabled={creating} style={{ width: "100%", padding: "12px", background: PRIMARY, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer", opacity: creating ? 0.6 : 1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             {creating ? "Creating..." : "Create Code"}
           </button>
         </div>

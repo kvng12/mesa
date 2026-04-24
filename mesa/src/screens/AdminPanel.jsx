@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useAdmin } from "../hooks/useAdmin";
 import AdminFraudDashboard from "../components/AdminFraudDashboard";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 const BG    = "#F5F5F5";
 
@@ -16,7 +16,7 @@ const CATEGORY_COLORS = {
 function StatCard({ n, label, color }) {
   return (
     <div style={{ flex: 1, background: "#fff", borderRadius: 16, border: "1px solid #F0EDE8", padding: "16px 12px", textAlign: "center" }}>
-      <div style={{ fontSize: 26, fontWeight: 800, color: color || CORAL }}>{n ?? "—"}</div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: color || PRIMARY }}>{n ?? "—"}</div>
       <div style={{ fontSize: 9, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: 2 }}>{label}</div>
     </div>
   );
@@ -85,7 +85,7 @@ export default function AdminPanel() {
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           {["pending","approved","rejected"].map(s => (
             <button key={s} onClick={() => setFilter(s)}
-              style={{ flex: 1, padding: "8px 4px", borderRadius: 12, border: "1.5px solid", borderColor: filter === s ? CORAL : "#EBEBEB", background: filter === s ? "#FFF0ED" : "#fff", color: filter === s ? CORAL : "#888", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", textTransform: "capitalize" }}>
+              style={{ flex: 1, padding: "8px 4px", borderRadius: 999, border: "1.5px solid", borderColor: filter === s ? PRIMARY : "#EBEBEB", background: filter === s ? "rgba(139,26,26,0.06)" : "#fff", color: filter === s ? PRIMARY : "#888", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", textTransform: "capitalize" }}>
               {s} {applications.filter(a => a.status === s).length > 0 && `(${applications.filter(a => a.status === s).length})`}
             </button>
           ))}
@@ -257,7 +257,7 @@ export default function AdminPanel() {
             setBackfillResult(result);
           }}
           disabled={backfilling}
-          style={{ width: "100%", padding: 12, background: backfilling ? "#F9F9F9" : "#FFF0ED", color: CORAL, border: `1.5px solid ${CORAL}`, borderRadius: 14, fontSize: 12, fontWeight: 700, cursor: backfilling ? "not-allowed" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", marginTop: 8, opacity: backfilling ? 0.6 : 1 }}>
+          style={{ width: "100%", padding: 12, background: backfilling ? "#F9F9F9" : "rgba(139,26,26,0.06)", color: PRIMARY, border: `1.5px solid ${PRIMARY}`, borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: backfilling ? "not-allowed" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", marginTop: 8, opacity: backfilling ? 0.6 : 1 }}>
           {backfilling ? "Running backfill..." : "🔧 Backfill: Create missing restaurant rows"}
         </button>
         {backfillResult && (

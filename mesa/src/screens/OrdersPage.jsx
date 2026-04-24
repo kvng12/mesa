@@ -7,7 +7,7 @@ import { useOrders } from "../hooks/useOrders";
 import DeliveryConfirmation from "../components/DeliveryConfirmation";
 import DisputeModal from "../components/DisputeModal";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 const BG    = "#F5F5F5";
 
@@ -71,10 +71,10 @@ function StatusProgress({ status, fulfillment }) {
               width: isNow ? 10 : 8,
               height: isNow ? 10 : 8,
               borderRadius: "50%",
-              background: done ? (isNow ? CORAL : "#16A34A") : "#E0E0E0",
+              background: done ? (isNow ? PRIMARY : "#16A34A") : "#E0E0E0",
               flexShrink: 0,
               transition: "all 0.3s",
-              boxShadow: isNow ? `0 0 0 3px #FFF0ED` : "none",
+              boxShadow: isNow ? `0 0 0 3px rgba(139,26,26,0.12)` : "none",
             }} />
             {i < steps.length - 1 && (
               <div style={{ flex: 1, height: 2, background: STATUS[steps[i + 1]]?.step <= currentStep ? "#16A34A" : "#E0E0E0", transition: "background 0.4s" }} />
@@ -150,7 +150,7 @@ function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispu
           {items.map((item) => (
             <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: CORAL, borderRadius: 6, padding: "1px 6px", minWidth: 20, textAlign: "center" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: PRIMARY, borderRadius: 6, padding: "1px 6px", minWidth: 20, textAlign: "center" }}>
                   {item.quantity}
                 </span>
                 <span style={{ fontSize: 13, color: DARK, fontWeight: 500 }}>{item.name}</span>
@@ -175,7 +175,7 @@ function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispu
               {PAYMENT[order.payment_method] || order.payment_method}
             </span>
           </div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: CORAL }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: PRIMARY }}>
             ₦{Number(order.subtotal).toLocaleString()}
           </div>
         </div>
@@ -229,9 +229,9 @@ function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispu
             onClick={() => onReview(order)}
             style={{
               width: "100%", marginTop: 12, padding: "11px",
-              background: "#FFF0ED", color: CORAL,
-              border: "1.5px solid #FFD0C0", borderRadius: 12,
-              fontSize: 12, fontWeight: 800, cursor: "pointer",
+              background: "rgba(139,26,26,0.06)", color: PRIMARY,
+              border: `1.5px solid ${PRIMARY}`, borderRadius: 999,
+              fontSize: 12, fontWeight: 700, cursor: "pointer",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
@@ -250,8 +250,8 @@ function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispu
             style={{
               width: "100%", marginTop: 10, padding: "11px",
               background: "#F7F5F2", color: DARK,
-              border: "1.5px solid #EBEBEB", borderRadius: 12,
-              fontSize: 12, fontWeight: 800, cursor: "pointer",
+              border: "1.5px solid #EBEBEB", borderRadius: 999,
+              fontSize: 12, fontWeight: 700, cursor: "pointer",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
             }}
@@ -276,9 +276,9 @@ function EmptyState({ onBrowse }) {
       <button
         onClick={onBrowse}
         style={{
-          background: CORAL, color: "#fff", border: "none",
-          borderRadius: 16, padding: "14px 32px",
-          fontSize: 15, fontWeight: 800, cursor: "pointer",
+          background: PRIMARY, color: "#fff", border: "none",
+          borderRadius: 999, padding: "14px 32px",
+          fontSize: 15, fontWeight: 700, cursor: "pointer",
           fontFamily: "'Plus Jakarta Sans', sans-serif",
         }}
       >
@@ -389,7 +389,7 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
           <div style={{ fontSize: 13, color: "#DC2626", fontWeight: 600, marginBottom: 10 }}>
             Couldn't load your orders
           </div>
-          <button onClick={refetch} style={{ fontSize: 12, fontWeight: 700, color: CORAL, background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          <button onClick={refetch} style={{ fontSize: 12, fontWeight: 700, color: PRIMARY, background: "transparent", border: "none", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             Try again
           </button>
         </div>

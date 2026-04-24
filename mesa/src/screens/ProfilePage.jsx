@@ -4,14 +4,14 @@ import { useProfile }       from "../hooks/useProfile";
 import { useRegistration }  from "../hooks/useRegistration";
 import InstallAppCard       from "../components/InstallAppCard";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 const BG    = "#F5F5F5";
 
 const ROLE_BADGE = {
   customer: { label: "Customer",        bg: "#EFF6FF", color: "#2563EB" },
   owner:    { label: "Restaurant Owner", bg: "#F0FDF4", color: "#16A34A" },
-  admin:    { label: "Admin",            bg: "#FFF0ED", color: CORAL    },
+  admin:    { label: "Admin",            bg: "rgba(139,26,26,0.06)", color: PRIMARY    },
 };
 
 const RES_STATUS = {
@@ -69,7 +69,7 @@ export default function ProfilePage({ user, onClose, onSignOut, onRegister }) {
 
         {/* Avatar + info */}
         <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: 20, marginBottom: 14, display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg, ${CORAL}, #FF8C6B)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
+          <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(135deg, ${PRIMARY}, #6B1414)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
             {profile?.full_name?.[0]?.toUpperCase() || "U"}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -77,7 +77,7 @@ export default function ProfilePage({ user, onClose, onSignOut, onRegister }) {
             <div style={{ fontSize: 12, color: "#888", marginBottom: 6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email}</div>
             <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: rb.bg, color: rb.color }}>{rb.label}</span>
           </div>
-          <button onClick={startEdit} style={{ fontSize: 12, fontWeight: 700, color: CORAL, background: "#FFF0ED", border: "none", borderRadius: 10, padding: "6px 14px", cursor: "pointer", flexShrink: 0 }}>Edit</button>
+          <button onClick={startEdit} style={{ fontSize: 12, fontWeight: 700, color: PRIMARY, background: "rgba(139,26,26,0.06)", border: "none", borderRadius: 999, padding: "6px 16px", cursor: "pointer", flexShrink: 0 }}>Edit</button>
         </div>
 
         {/* Edit form */}
@@ -96,10 +96,10 @@ export default function ProfilePage({ user, onClose, onSignOut, onRegister }) {
             ))}
             {error && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 10 }}>{error}</div>}
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={saveEdit} disabled={saving} style={{ flex: 1, padding: "12px", background: CORAL, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer", opacity: saving ? 0.6 : 1 }}>
+              <button onClick={saveEdit} disabled={saving} style={{ flex: 1, padding: "12px", background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: saving ? 0.6 : 1 }}>
                 {saving ? "Saving..." : "Save Changes"}
               </button>
-              <button onClick={() => setEditing(false)} style={{ padding: "12px 16px", background: BG, color: "#888", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => setEditing(false)} style={{ padding: "12px 16px", background: BG, color: "#888", border: "none", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
             </div>
             {saved && <div style={{ fontSize: 12, color: "#16A34A", fontWeight: 700, marginTop: 8, textAlign: "center" }}>✓ Profile updated</div>}
           </div>
@@ -108,7 +108,7 @@ export default function ProfilePage({ user, onClose, onSignOut, onRegister }) {
         {/* Restaurant registration CTA — only for customers */}
         {role === "customer" && appLoaded && (
           !application ? (
-            <div style={{ background: `linear-gradient(135deg, ${CORAL}, #FF8C6B)`, borderRadius: 20, padding: 20, marginBottom: 14, cursor: "pointer" }} onClick={onRegister}>
+            <div style={{ background: `linear-gradient(135deg, ${PRIMARY}, #6B1414)`, borderRadius: 20, padding: 20, marginBottom: 14, cursor: "pointer" }} onClick={onRegister}>
               <div style={{ fontSize: 22, marginBottom: 8 }}>🏪</div>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", marginBottom: 4 }}>Own a restaurant?</div>
               <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", lineHeight: 1.6 }}>Register your restaurant on Chowli and reach more customers. Tap to apply.</div>
@@ -172,7 +172,7 @@ export default function ProfilePage({ user, onClose, onSignOut, onRegister }) {
 
         {/* Sign out */}
         <button onClick={onSignOut}
-          style={{ width: "100%", padding: 14, background: "#fff", color: "#DC2626", border: "1.5px solid #FECACA", borderRadius: 16, fontSize: 14, fontWeight: 800, cursor: "pointer", marginTop: 8 }}>
+          style={{ width: "100%", padding: 14, background: "#fff", color: "#DC2626", border: "1.5px solid #FECACA", borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: "pointer", marginTop: 8 }}>
           Sign Out
         </button>
 

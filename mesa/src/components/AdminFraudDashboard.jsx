@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 const BG    = "#F5F5F5";
 
@@ -183,7 +183,7 @@ export default function AdminFraudDashboard() {
       <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", scrollbarWidth: "none" }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ flexShrink: 0, padding: "7px 11px", borderRadius: 12, border: `1.5px solid ${tab === t.id ? CORAL : "#EBEBEB"}`, background: tab === t.id ? "#FFF0ED" : "#fff", color: tab === t.id ? CORAL : "#888", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            style={{ flexShrink: 0, padding: "7px 11px", borderRadius: 12, border: `1.5px solid ${tab === t.id ? PRIMARY : "#EBEBEB"}`, background: tab === t.id ? "rgba(139,26,26,0.06)" : "#fff", color: tab === t.id ? PRIMARY : "#888", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             {t.label}
           </button>
         ))}
@@ -306,7 +306,7 @@ export default function AdminFraudDashboard() {
       {!loading && tab === "escrow" && (
         <div>
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            <StatBox n={`₦${Number(escrow.held).toLocaleString()}`} label="Currently Held" color={CORAL} />
+            <StatBox n={`₦${Number(escrow.held).toLocaleString()}`} label="Currently Held" color={PRIMARY} />
             <StatBox n={`₦${Number(escrow.releasedWeek).toLocaleString()}`} label="Released This Week" color="#16A34A" />
           </div>
           {escrow.pending.length === 0 ? (
@@ -317,7 +317,7 @@ export default function AdminFraudDashboard() {
               {escrow.pending.map((e, i) => (
                 <div key={i} style={{ background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "12px 14px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: DARK }}>{e.restaurants?.name || "Unknown"}</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: CORAL }}>₦{Number(e.amount).toLocaleString()}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: PRIMARY }}>₦{Number(e.amount).toLocaleString()}</div>
                 </div>
               ))}
             </>
@@ -333,7 +333,7 @@ export default function AdminFraudDashboard() {
             <StatBox
               n={`₦${payouts.filter(p => p.status === "pending").reduce((s, p) => s + Number(p.amount), 0).toLocaleString()}`}
               label="Pending Total"
-              color={CORAL}
+              color={PRIMARY}
             />
             <StatBox
               n={payouts.filter(p => p.status === "pending").length}
@@ -369,7 +369,7 @@ export default function AdminFraudDashboard() {
                       <div style={{ fontSize: 11, color: "#888" }}>{dtStart} – {dtEnd}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: paid ? "#16A34A" : CORAL }}>₦{Number(p.amount).toLocaleString()}</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: paid ? "#16A34A" : PRIMARY }}>₦{Number(p.amount).toLocaleString()}</div>
                       <Tag bg={paid ? "#F0FDF4" : "#FFFBEB"} color={paid ? "#16A34A" : "#D97706"}>
                         {paid ? "✓ Paid" : "Pending"}
                       </Tag>

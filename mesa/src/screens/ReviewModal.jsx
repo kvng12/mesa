@@ -1,7 +1,7 @@
 // src/screens/ReviewModal.jsx
 import { useState } from "react";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 const BG    = "#F5F5F5";
 
@@ -69,7 +69,7 @@ export default function ReviewModal({ order, onClose, onSubmit }) {
             </div>
 
             {/* Star label */}
-            <div style={{ textAlign: "center", fontSize: 13, fontWeight: 700, color: rating ? CORAL : "#C8C0B8", marginBottom: 20, minHeight: 20 }}>
+            <div style={{ textAlign: "center", fontSize: 13, fontWeight: 700, color: rating ? PRIMARY : "#C8C0B8", marginBottom: 20, minHeight: 20 }}>
               {STAR_LABELS[hovered || rating]}
             </div>
 
@@ -86,7 +86,7 @@ export default function ReviewModal({ order, onClose, onSubmit }) {
             {error && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 12 }}>{error}</div>}
 
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={onClose} style={{ flex: "0 0 auto", padding: "14px 18px", background: BG, color: "#888", border: "none", borderRadius: 14, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Skip</button>
+              <button onClick={onClose} style={{ flex: "0 0 auto", padding: "14px 18px", background: BG, color: "#888", border: "none", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Skip</button>
               <button onClick={submit} disabled={submitting} style={{ ...btnStyle, flex: 1, opacity: submitting ? 0.6 : 1 }}>
                 {submitting ? "Submitting..." : "Submit Review"}
               </button>
@@ -99,7 +99,7 @@ export default function ReviewModal({ order, onClose, onSubmit }) {
 }
 
 const btnStyle = {
-  padding: "14px", background: CORAL, color: "#fff", border: "none",
-  borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: "pointer",
+  padding: "14px", background: PRIMARY, color: "#fff", border: "none",
+  borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: "pointer",
   fontFamily: "'Plus Jakarta Sans', sans-serif",
 };

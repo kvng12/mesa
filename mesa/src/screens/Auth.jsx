@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 
 function Field({ label, type = "text", value, onChange, placeholder, right }) {
@@ -10,7 +10,7 @@ function Field({ label, type = "text", value, onChange, placeholder, right }) {
   return (
     <div style={{ marginBottom: 16 }}>
       {label && <div style={S.label}>{label}</div>}
-      <div style={{ ...S.fieldWrap, borderColor: focused ? CORAL : "#EBEBEB" }}>
+      <div style={{ ...S.fieldWrap, borderColor: focused ? PRIMARY : "#EBEBEB" }}>
         <input type={type} value={value} onChange={onChange} placeholder={placeholder}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={S.input} />
         {right}
@@ -141,7 +141,7 @@ export function SignUpScreen({ onLogin, onBack, signUp }) {
       <div style={{ display: "flex", gap: 8, padding: "0 24px", marginBottom: 20 }}>
         {["Email", "Phone"].map(t => (
           <button key={t} type="button" onClick={() => setUsePhone(t === "Phone")}
-            style={{ flex: 1, padding: "10px", borderRadius: 12, border: `2px solid ${(usePhone ? t === "Phone" : t === "Email") ? CORAL : "#EBEBEB"}`, background: (usePhone ? t === "Phone" : t === "Email") ? "#FFF0ED" : "#fff", color: (usePhone ? t === "Phone" : t === "Email") ? CORAL : "#888", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            style={{ flex: 1, padding: "10px", borderRadius: 999, border: `2px solid ${(usePhone ? t === "Phone" : t === "Email") ? PRIMARY : "#EBEBEB"}`, background: (usePhone ? t === "Phone" : t === "Email") ? "rgba(139,26,26,0.06)" : "#fff", color: (usePhone ? t === "Phone" : t === "Email") ? PRIMARY : "#888", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             {t}
           </button>
         ))}
@@ -237,16 +237,16 @@ const S = {
   topBar:    { padding: "52px 24px 0" },
   backBtn:   { width: 40, height: 40, borderRadius: 12, background: "#F5F5F5", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
   heroBlock: { padding: "24px 24px 28px", textAlign: "center" },
-  logoCircle:{ width: 64, height: 64, borderRadius: 20, background: "#FFF0ED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px" },
-  pageTitle: { fontSize: 26, fontWeight: 800, color: DARK, marginBottom: 6, fontFamily: "'Plus Jakarta Sans', sans-serif" },
-  pageSub:   { fontSize: 13, color: "#888", fontFamily: "'Plus Jakarta Sans', sans-serif" },
+  logoCircle:{ width: 64, height: 64, borderRadius: 20, background: "rgba(139,26,26,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px" },
+  pageTitle: { fontSize: 30, fontWeight: 800, color: DARK, marginBottom: 6, fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: "-0.02em" },
+  pageSub:   { fontSize: 14, color: "#888", fontFamily: "'Plus Jakarta Sans', sans-serif" },
   label:     { fontSize: 13, fontWeight: 700, color: DARK, marginBottom: 8 },
   fieldWrap: { display: "flex", alignItems: "center", border: "1.5px solid #EBEBEB", borderRadius: 14, background: "#F9F9F9", padding: "0 16px", height: 52, transition: "border-color 0.2s" },
   input:     { flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 14, color: DARK, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 500 },
   eyeBtn:    { background: "transparent", border: "none", cursor: "pointer", fontSize: 16, padding: "0 0 0 8px" },
-  errBox:    { background: "#FFF0ED", color: CORAL, fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 16 },
-  coralBtn:  { width: "100%", padding: "16px", background: CORAL, color: "#fff", border: "none", borderRadius: 16, fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", marginBottom: 4 },
-  link:      { color: CORAL, fontWeight: 700, cursor: "pointer" },
+  errBox:    { background: "rgba(139,26,26,0.06)", color: PRIMARY, fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 16 },
+  coralBtn:  { width: "100%", padding: "16px", background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", marginBottom: 4 },
+  link:      { color: PRIMARY, fontWeight: 700, cursor: "pointer" },
   switchRow: { textAlign: "center", fontSize: 13, color: "#888", marginTop: 16 },
   socialBtn: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", border: "1.5px solid #EBEBEB", borderRadius: 14, background: "#fff", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" },
 };

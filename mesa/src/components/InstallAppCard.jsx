@@ -11,7 +11,7 @@
 
 import { useState, useEffect } from "react";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 
 function isStandalone() {
@@ -34,7 +34,7 @@ const Step = ({ icon, text, num }) => (
   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
     <div style={{
       width: 24, height: 24, borderRadius: "50%",
-      background: CORAL, color: "#fff",
+      background: PRIMARY, color: "#fff",
       fontSize: 11, fontWeight: 800,
       display: "flex", alignItems: "center", justifyContent: "center",
       flexShrink: 0,
@@ -113,7 +113,7 @@ export default function InstallAppCard() {
       background: "linear-gradient(135deg, #FFF8F6 0%, #ffffff 100%)",
       borderRadius: 20,
       border: "1px solid #FFD5CC",
-      borderLeft: `4px solid ${CORAL}`,
+      borderLeft: `4px solid ${PRIMARY}`,
       padding: "16px 16px 16px 18px",
       marginBottom: 14,
       position: "relative",
@@ -134,7 +134,7 @@ export default function InstallAppCard() {
         {/* App icon */}
         <div style={{
           width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-          background: `linear-gradient(135deg, ${CORAL}, #FF8C6B)`,
+          background: `linear-gradient(135deg, ${PRIMARY}, #6B1414)`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 26, boxShadow: "0 2px 8px rgba(255,98,64,0.3)",
         }}>
@@ -161,7 +161,7 @@ export default function InstallAppCard() {
           disabled={installing || !deferredPrompt}
           style={{
             width: "100%", padding: "12px", borderRadius: 14, border: "none",
-            background: installing ? "#F5F5F5" : CORAL,
+            background: installing ? "#F5F5F5" : PRIMARY,
             color: installing ? "#B0B0B0" : "#fff",
             fontSize: 13, fontWeight: 800, cursor: installing ? "not-allowed" : "pointer",
             fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -184,8 +184,8 @@ export default function InstallAppCard() {
           <button
             onClick={handleDismiss}
             style={{
-              width: "100%", padding: "11px", borderRadius: 14, border: `1.5px solid ${CORAL}`,
-              background: "transparent", color: CORAL,
+              width: "100%", padding: "11px", borderRadius: 14, border: `1.5px solid ${PRIMARY}`,
+              background: "transparent", color: PRIMARY,
               fontSize: 12, fontWeight: 800, cursor: "pointer",
               fontFamily: "'Plus Jakarta Sans', sans-serif", marginTop: 4,
             }}

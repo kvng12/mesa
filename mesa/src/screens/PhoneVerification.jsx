@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
-const CORAL        = "#FF6240";
+const PRIMARY        = "#8B1A1A";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -76,7 +76,7 @@ function OtpInput({ value, onChange, disabled }) {
           style={{
             width: 44,
             height: 52,
-            border: value[i] ? `2px solid ${CORAL}` : "1.5px solid #E0E0E0",
+            border: value[i] ? `2px solid ${PRIMARY}` : "1.5px solid #E0E0E0",
             borderRadius: 12,
             textAlign: "center",
             fontSize: 22,
@@ -213,7 +213,7 @@ export default function PhoneVerification({ user, onVerified }) {
         width: 80,
         height: 80,
         borderRadius: 24,
-        background: "#FFF0ED",
+        background: "rgba(139,26,26,0.06)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -274,12 +274,12 @@ export default function PhoneVerification({ user, onVerified }) {
             style={{
               width: "100%",
               padding: "16px",
-              background: (!normalizedPhone || sending) ? "#ccc" : CORAL,
+              background: (!normalizedPhone || sending) ? "#ccc" : PRIMARY,
               color: "#fff",
               border: "none",
-              borderRadius: 16,
+              borderRadius: 999,
               fontSize: 15,
-              fontWeight: 800,
+              fontWeight: 700,
               cursor: (!normalizedPhone || sending) ? "default" : "pointer",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
@@ -295,7 +295,7 @@ export default function PhoneVerification({ user, onVerified }) {
           <div style={{ fontSize: 13, color: "#888", lineHeight: 1.6, textAlign: "center", marginBottom: 4 }}>
             We sent a 6-digit code to
           </div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: CORAL, marginBottom: 4, textAlign: "center" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: PRIMARY, marginBottom: 4, textAlign: "center" }}>
             {normalizedPhone}
           </div>
           <button
@@ -325,12 +325,12 @@ export default function PhoneVerification({ user, onVerified }) {
                 style={{
                   width: "100%",
                   padding: "16px",
-                  background: (otp.length !== 6 || verifying) ? "#ccc" : CORAL,
+                  background: (otp.length !== 6 || verifying) ? "#ccc" : PRIMARY,
                   color: "#fff",
                   border: "none",
-                  borderRadius: 16,
+                  borderRadius: 999,
                   fontSize: 15,
-                  fontWeight: 800,
+                  fontWeight: 700,
                   cursor: (otp.length !== 6 || verifying) ? "default" : "pointer",
                   fontFamily: "'Plus Jakarta Sans', sans-serif",
                   marginBottom: 12,

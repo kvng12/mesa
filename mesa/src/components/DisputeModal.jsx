@@ -4,7 +4,7 @@
 import { useState, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 const BG    = "#F5F5F5";
 
@@ -91,7 +91,7 @@ export default function DisputeModal({ order, user, onClose, onSubmitted }) {
             <div style={{ fontSize: 13, color: "#888", lineHeight: 1.7, marginBottom: 28 }}>
               We'll review your case and resolve it within 24 hours. You'll be notified of the outcome.
             </div>
-            <button onClick={onClose} style={{ width: "100%", padding: "14px", background: CORAL, color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+            <button onClick={onClose} style={{ width: "100%", padding: "14px", background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
               Done
             </button>
           </div>
@@ -110,7 +110,7 @@ export default function DisputeModal({ order, user, onClose, onSubmitted }) {
                 <button
                   key={r.value}
                   onClick={() => setReason(r.value)}
-                  style={{ display: "block", width: "100%", textAlign: "left", padding: "11px 14px", marginBottom: 6, borderRadius: 12, border: `1.5px solid ${reason === r.value ? CORAL : "#EBEBEB"}`, background: reason === r.value ? "#FFF0ED" : BG, color: reason === r.value ? CORAL : DARK, fontSize: 13, fontWeight: reason === r.value ? 700 : 500, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  style={{ display: "block", width: "100%", textAlign: "left", padding: "11px 14px", marginBottom: 6, borderRadius: 12, border: `1.5px solid ${reason === r.value ? PRIMARY : "#EBEBEB"}`, background: reason === r.value ? "rgba(139,26,26,0.06)" : BG, color: reason === r.value ? PRIMARY : DARK, fontSize: 13, fontWeight: reason === r.value ? 700 : 500, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
                 >
                   {r.label}
                 </button>
@@ -157,7 +157,7 @@ export default function DisputeModal({ order, user, onClose, onSubmitted }) {
             <button
               onClick={handleSubmit}
               disabled={submitting || uploading}
-              style={{ width: "100%", padding: "14px", background: "#DC2626", color: "#fff", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 800, cursor: "pointer", opacity: (submitting || uploading) ? 0.7 : 1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              style={{ width: "100%", padding: "14px", background: "#DC2626", color: "#fff", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: (submitting || uploading) ? 0.7 : 1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
               {uploading ? "Uploading photo..." : submitting ? "Submitting..." : "Submit Dispute"}
             </button>

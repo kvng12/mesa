@@ -16,7 +16,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 const BG    = "#F5F5F5";
 
@@ -146,7 +146,7 @@ export default function BankDetailsForm({ value = {}, onChange, disabled = false
         <div
           onClick={() => !disabled && setShowBankList(v => !v)}
           style={{
-            width: "100%", border: `1.5px solid ${bankCode ? CORAL : "#EBEBEB"}`,
+            width: "100%", border: `1.5px solid ${bankCode ? PRIMARY : "#EBEBEB"}`,
             borderRadius: 12, background: BG, padding: "12px 14px", cursor: "pointer",
             fontSize: 14, color: bankName ? DARK : "#B0B0B0",
             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -184,7 +184,7 @@ export default function BankDetailsForm({ value = {}, onChange, disabled = false
                 onClick={() => selectBank(b)}
                 style={{
                   padding: "11px 14px", fontSize: 13, cursor: "pointer", color: DARK,
-                  background: b.code === bankCode ? "#FFF0ED" : "#fff",
+                  background: b.code === bankCode ? "rgba(139,26,26,0.06)" : "#fff",
                   fontWeight: b.code === bankCode ? 700 : 400,
                   borderBottom: "1px solid #F9F9F9",
                   transition: "background 0.1s",

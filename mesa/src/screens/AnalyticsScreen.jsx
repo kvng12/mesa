@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useAnalytics } from "../hooks/useAnalytics";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 const BG    = "#F5F5F5";
 
@@ -14,7 +14,7 @@ function SkeletonBox({ h = 80 }) {
   return <div style={{ height: h, background: "#F0EDE8", borderRadius: 16, marginBottom: 12, animation: "pulse 1.5s ease-in-out infinite" }} />;
 }
 
-function StatCard({ label, value, sub, color = CORAL, icon }) {
+function StatCard({ label, value, sub, color = PRIMARY, icon }) {
   return (
     <div style={{ flex: 1, background: "#fff", borderRadius: 16, border: "1px solid #F0EDE8", padding: "14px 12px", textAlign: "center", minWidth: 0 }}>
       {icon && <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>}
@@ -37,7 +37,7 @@ function MiniBarChart({ data }) {
         const day = new Date(d.date).toLocaleDateString("en-NG", { weekday: "short" });
         return (
           <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-            <div style={{ width: "100%", height: `${Math.max(pct, 4)}%`, background: pct > 60 ? CORAL : pct > 30 ? "#FF8C6B" : "#FFD0C0", borderRadius: "4px 4px 0 0", transition: "height 0.4s", minHeight: 4 }} />
+            <div style={{ width: "100%", height: `${Math.max(pct, 4)}%`, background: pct > 60 ? PRIMARY : pct > 30 ? "#FF8C6B" : "#FFD0C0", borderRadius: "4px 4px 0 0", transition: "height 0.4s", minHeight: 4 }} />
             <div style={{ fontSize: 8, color: "#C0C0C0", fontWeight: 600 }}>{day}</div>
           </div>
         );
@@ -60,7 +60,7 @@ export default function AnalyticsScreen({ restaurantId, restaurantName, onClose 
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
 
       {/* Header */}
-      <div style={{ background: `linear-gradient(135deg, ${CORAL}, #FF8C42)`, padding: "max(env(safe-area-inset-top), 52px) 20px 20px" }}>
+      <div style={{ background: `linear-gradient(135deg, ${PRIMARY}, #FF8C42)`, padding: "max(env(safe-area-inset-top), 52px) 20px 20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
           <div>
@@ -73,7 +73,7 @@ export default function AnalyticsScreen({ restaurantId, restaurantName, onClose 
         <div style={{ display: "flex", gap: 8 }}>
           {periods.map(p => (
             <button key={p.id} onClick={() => setPeriod(p.id)}
-              style={{ flex: 1, padding: "8px", borderRadius: 20, border: "none", background: period === p.id ? "#fff" : "rgba(255,255,255,0.2)", color: period === p.id ? CORAL : "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              style={{ flex: 1, padding: "8px", borderRadius: 20, border: "none", background: period === p.id ? "#fff" : "rgba(255,255,255,0.2)", color: period === p.id ? PRIMARY : "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
               {p.label}
             </button>
           ))}
@@ -100,7 +100,7 @@ export default function AnalyticsScreen({ restaurantId, restaurantName, onClose 
               <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>Today</div>
               <div style={{ display: "flex", gap: 10 }}>
                 <StatCard icon="🧾" label="Orders" value={data.todayOrders} color={DARK} />
-                <StatCard icon="💰" label="Revenue" value={`₦${fmt(data.todayRevenue)}`} color={CORAL} />
+                <StatCard icon="💰" label="Revenue" value={`₦${fmt(data.todayRevenue)}`} color={PRIMARY} />
               </div>
             </div>
 
@@ -110,7 +110,7 @@ export default function AnalyticsScreen({ restaurantId, restaurantName, onClose 
                 {period === "7d" ? "Last 7 days" : period === "30d" ? "Last 30 days" : "All time"}
               </div>
               <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                <StatCard label="Revenue" value={`₦${fmt(data.totalRevenue)}`} color={CORAL} />
+                <StatCard label="Revenue" value={`₦${fmt(data.totalRevenue)}`} color={PRIMARY} />
                 <StatCard label="Orders" value={data.totalOrders} color={DARK} />
                 <StatCard label="Completed" value={`${data.completionRate}%`} color="#16A34A" />
               </div>
@@ -137,16 +137,16 @@ export default function AnalyticsScreen({ restaurantId, restaurantName, onClose 
                     <div key={item.name} style={{ marginBottom: 12 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 22, height: 22, borderRadius: 8, background: i === 0 ? CORAL : i === 1 ? "#FF8C6B" : "#FFD0C0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff" }}>{i + 1}</div>
+                          <div style={{ width: 22, height: 22, borderRadius: 8, background: i === 0 ? PRIMARY : i === 1 ? "#FF8C6B" : "#FFD0C0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff" }}>{i + 1}</div>
                           <div style={{ fontSize: 13, fontWeight: 700, color: DARK, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
                         </div>
                         <div style={{ textAlign: "right", flexShrink: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 800, color: CORAL }}>₦{fmt(item.revenue)}</div>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: PRIMARY }}>₦{fmt(item.revenue)}</div>
                           <div style={{ fontSize: 10, color: "#B0B0B0" }}>{item.quantity} sold</div>
                         </div>
                       </div>
                       <div style={{ height: 5, background: "#F0EDE8", borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${pct}%`, background: i === 0 ? CORAL : "#FFD0C0", borderRadius: 3, transition: "width 0.5s" }} />
+                        <div style={{ height: "100%", width: `${pct}%`, background: i === 0 ? PRIMARY : "#FFD0C0", borderRadius: 3, transition: "width 0.5s" }} />
                       </div>
                     </div>
                   );

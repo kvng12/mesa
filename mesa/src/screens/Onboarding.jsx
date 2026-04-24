@@ -5,7 +5,7 @@ import { useState } from "react";
 
 const SLIDES = [
   {
-    bg: "#FF6240",
+    bg: "#8B1A1A", // PRIMARY
     emoji: "🍽️",
     headline: "Discover\nLocal Food",
     sub: "Find the best restaurants in Sokoto and Kebbi State — all in one place.",
@@ -53,7 +53,7 @@ export default function Onboarding({ onDone }) {
 
         {/* Button */}
         <button
-          style={{ ...S.btn, background: last ? "#FF6240" : "#fff", color: last ? "#fff" : "#FF6240" }}
+          style={{ ...S.btn, background: last ? "#8B1A1A" : "#fff", color: last ? "#fff" : "#8B1A1A" }}
           onClick={() => last ? onDone() : setStep(step + 1)}
         >
           {last ? "Get Started" : "Next"}
@@ -72,5 +72,5 @@ const S = {
   sub: { fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.7, marginBottom: 28, fontFamily: "'Plus Jakarta Sans', sans-serif" },
   dots: { display: "flex", gap: 6, alignItems: "center", marginBottom: 28 },
   dot: { height: 8, borderRadius: 4, transition: "all 0.3s" },
-  btn: { width: "100%", padding: "16px", borderRadius: 16, border: "none", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", transition: "opacity 0.2s" },
+  btn: { width: "100%", padding: "16px", borderRadius: 999, border: "none", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", transition: "opacity 0.2s" },
 };

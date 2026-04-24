@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const CORAL = "#FF6240";
+const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
 
 function timeAgo(ts) {
@@ -77,7 +77,7 @@ function CommentSheet({ post, user, onClose, fetchComments, addComment, onLogin 
             <div key={c.id} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
               <div style={{
                 width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-                background: `linear-gradient(135deg, ${CORAL}, #FF8C6B)`,
+                background: `linear-gradient(135deg, ${PRIMARY}, #FF8C6B)`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 13, fontWeight: 800, color: "#fff",
               }}>
@@ -108,7 +108,7 @@ function CommentSheet({ post, user, onClose, fetchComments, addComment, onLogin 
           <button
             onClick={handleSend}
             disabled={!text.trim() || sending}
-            style={{ width: 38, height: 38, borderRadius: "50%", background: text.trim() ? CORAL : "#E0E0E0", border: "none", cursor: text.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}
+            style={{ width: 38, height: 38, borderRadius: "50%", background: text.trim() ? PRIMARY : "#E0E0E0", border: "none", cursor: text.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background 0.2s" }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M22 2L11 13" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -138,7 +138,7 @@ function HeartBurst({ x, y, onDone }) {
 
 // ── GET gradient for text posts ───────────────────────────────
 const GRADIENTS = [
-  "linear-gradient(135deg, #FF6240, #FF8C6B)",
+  "linear-gradient(135deg, #8B1A1A, #6B1414)",
   "linear-gradient(135deg, #7C3AED, #A78BFA)",
   "linear-gradient(135deg, #0EA5E9, #38BDF8)",
   "linear-gradient(135deg, #16A34A, #4ADE80)",
@@ -218,7 +218,7 @@ function FeedItem({ post, isActive, liked, onLike, onComment, onRestaurant, onOr
         // Text-only post — gradient background
         <div style={{
           width: "100%", height: "100%",
-          background: r ? `linear-gradient(155deg, ${r.bg_from || CORAL}, ${r.bg_to || "#FF8C6B"})` : GRADIENTS[gradIdx],
+          background: r ? `linear-gradient(155deg, ${r.bg_from || PRIMARY}, ${r.bg_to || "#FF8C6B"})` : GRADIENTS[gradIdx],
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           <div style={{
@@ -311,7 +311,7 @@ function FeedItem({ post, isActive, liked, onLike, onComment, onRestaurant, onOr
           <div onClick={onRestaurant} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer" }}>
             <div style={{
               width: 38, height: 38, borderRadius: "50%",
-              background: `linear-gradient(135deg, ${r.bg_from || CORAL}, ${r.bg_to || "#FF8C6B"})`,
+              background: `linear-gradient(135deg, ${r.bg_from || PRIMARY}, ${r.bg_to || "#FF8C6B"})`,
               border: "2px solid rgba(255,255,255,0.6)",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 18, flexShrink: 0, overflow: "hidden",
@@ -349,7 +349,7 @@ function FeedItem({ post, isActive, liked, onLike, onComment, onRestaurant, onOr
             position: "absolute",
             right: 12,
             bottom: "calc(80px + env(safe-area-inset-bottom))",
-            background: CORAL,
+            background: PRIMARY,
             color: "#fff", border: "none",
             borderRadius: 20, padding: "10px 16px",
             fontSize: 12, fontWeight: 800,
