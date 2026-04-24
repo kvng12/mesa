@@ -2685,7 +2685,9 @@ export default function App() {
                             {order.status === "pending" && <button onClick={() => updateStatus(order.id, "confirmed")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Confirm</button>}
                             {order.status === "confirmed" && <button onClick={() => updateStatus(order.id, "preparing")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: BG_SOFT, color: PRIMARY, cursor: "pointer" }}>Preparing</button>}
                             {order.status === "preparing" && <button onClick={() => updateStatus(order.id, "ready")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Ready</button>}
-                            {order.status === "ready" && order.fulfillment !== "delivery" && <button onClick={() => updateStatus(order.id, "delivered")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Handed Over</button>}
+                            {order.status === "ready" && order.fulfillment !== "delivery" && (
+                              <PickupOtpInput orderId={order.id} onSuccess={() => fetchIncoming()} />
+                            )}
                             {order.status === "ready" && order.fulfillment === "delivery" && (
                               deliveryPhotos[order.id]
                                 ? <button onClick={() => updateStatus(order.id, "delivered")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Mark Delivered</button>
@@ -2834,6 +2836,83 @@ export default function App() {
         {tab !== "cart" && <BottomNav tab={tab} setTab={handleTabChange} isOwner={isOwner} />}
       </div>
     </>
+  );
+}
+
+// ── Pickup OTP entry — owner dashboard ───────────────────────
+const PICKUP_BACKEND_URL    = import.meta.env.VITE_BACKEND_URL;
+const PICKUP_BACKEND_SECRET = import.meta.env.VITE_BACKEND_SECRET;
+
+function PickupOtpInput({ orderId, onSuccess }) {
+  const [otp, setOtp]           = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError]       = useState("");
+  const [shake, setShake]       = useState(false);
+  const [toast, setToast]       = useState(false);
+
+  async function handleConfirm() {
+    if (otp.length !== 4) { setError("Enter the 4-digit code"); return; }
+    setSubmitting(true); setError("");
+    try {
+      const res = await fetch(`${PICKUP_BACKEND_URL}/orders/${orderId}/verify-pickup-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": PICKUP_BACKEND_SECRET },
+        body: JSON.stringify({ otp }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error === "OTP already used" ? "OTP already used" : "Incorrect code — try again");
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+      } else {
+        setToast(true);
+        setTimeout(() => { setToast(false); onSuccess(); }, 1400);
+      }
+    } catch {
+      setError("Network error — try again");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (toast) {
+    return (
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: "#16A34A", background: "#F0FDF4", padding: "5px 12px", borderRadius: 999 }}>
+        ✓ Pickup confirmed
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <input
+          type="number"
+          inputMode="numeric"
+          maxLength={4}
+          placeholder="Enter code"
+          value={otp}
+          onChange={e => { setOtp(e.target.value.slice(0, 4)); setError(""); }}
+          style={{
+            width: 90, padding: "5px 10px", borderRadius: 8, fontSize: 14, fontWeight: 700,
+            border: `1.5px solid ${error ? "#DC2626" : "#EBEBEB"}`,
+            outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif",
+            textAlign: "center", letterSpacing: "0.15em",
+            animation: shake ? "shake 0.4s ease" : "none",
+          }}
+          onKeyDown={e => e.key === "Enter" && handleConfirm()}
+        />
+        <button
+          onClick={handleConfirm}
+          disabled={submitting}
+          style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: PRIMARY, color: "#fff", cursor: "pointer", opacity: submitting ? 0.7 : 1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        >
+          {submitting ? "…" : "Confirm Pickup"}
+        </button>
+      </div>
+      {error && <div style={{ fontSize: 11, color: "#DC2626", fontWeight: 600, marginTop: 4 }}>{error}</div>}
+      <style>{`@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }`}</style>
+    </div>
   );
 }
 

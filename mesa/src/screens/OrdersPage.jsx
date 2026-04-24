@@ -142,6 +142,15 @@ function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispu
         {/* Progress bar (not shown for cancelled) */}
         {order.status !== "cancelled" && <StatusProgress status={order.status} fulfillment={order.fulfillment} />}
 
+        {/* Pickup OTP — shown to customer when order is ready for collection */}
+        {order.status === "ready" && order.fulfillment === "pickup" && order.pickup_otp && (
+          <div style={{ margin: "14px 0 4px", borderRadius: 16, border: `2px solid ${PRIMARY}`, background: "#F4C430", padding: "14px 16px", textAlign: "center" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: PRIMARY, marginBottom: 6, letterSpacing: "0.05em", textTransform: "uppercase" }}>Your pickup code</div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: PRIMARY, letterSpacing: "0.2em", fontFamily: "monospace" }}>{order.pickup_otp}</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: PRIMARY, marginTop: 6, opacity: 0.8 }}>Show or read this code to the restaurant</div>
+          </div>
+        )}
+
         {/* Divider */}
         <div style={{ height: 1, background: "#F5F5F5", margin: "12px 0" }} />
 
