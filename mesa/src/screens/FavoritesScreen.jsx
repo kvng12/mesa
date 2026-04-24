@@ -24,7 +24,7 @@ export default function FavoritesScreen({ user, favorites, toggleFavorite, resta
       .select("menu_item_id, menu_items(id, name, price, is_available, image_url, category_id, restaurant_id)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!data) { setLoading(false); return; }
         const resolved = data
           .map(row => {
@@ -34,6 +34,22 @@ export default function FavoritesScreen({ user, favorites, toggleFavorite, resta
             return restaurant ? { item: mi, restaurant } : null;
           })
           .filter(Boolean);
+
+        // Fetch ratings for these items and merge
+        const itemIds = resolved.map(r => r.item.id);
+        if (itemIds.length) {
+          const { data: ratingRows } = await supabase
+            .from("menu_item_ratings")
+            .select("menu_item_id, avg_rating, review_count")
+            .in("menu_item_id", itemIds);
+          const lookup = {};
+          (ratingRows || []).forEach(r => { lookup[r.menu_item_id] = r; });
+          resolved.forEach(r => {
+            r.item.avg_rating   = lookup[r.item.id]?.avg_rating   ?? null;
+            r.item.review_count = lookup[r.item.id]?.review_count ?? 0;
+          });
+        }
+
         setItems(resolved);
         setLoading(false);
       });

@@ -1305,25 +1305,28 @@ function HCardSkeleton() {
   );
 }
 
-function BottomNav({ tab, setTab, cartCount }) {
+function BottomNav({ tab, setTab, isOwner }) {
   const items = [
-    { id: "home",   label: "Home",   SVG: HomeSVG   },
-    { id: "feed",   label: "Feed",   SVG: FeedSVG   },
-    { id: "cart",   label: "Cart",   SVG: CartSVG,  badge: cartCount },
-    { id: "store",     label: "Store",     SVG: StoreSVG     },
+    { id: "home",      label: "Home",      SVG: HomeSVG      },
+    { id: "feed",      label: "Feed",      SVG: FeedSVG      },
     { id: "favorites", label: "Favorites", SVG: FavoritesSVG },
     { id: "orders",    label: "Orders",    SVG: OrdersSVG    },
+    ...(isOwner ? [{ id: "store", label: "Store", SVG: StoreSVG }] : []),
   ];
   return (
     <nav style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: "#fff", borderTop: "1px solid #F0EDE8", display: "flex", paddingTop: 10, paddingBottom: "calc(14px + env(safe-area-inset-bottom))", zIndex: 100 }}>
-      {items.map(({ id, label, SVG, badge }) => {
+      {items.map(({ id, label, SVG }) => {
         const active = tab === id || (tab === "detail" && id === "home");
         return (
-          <button key={id} onClick={() => setTab(id)} className="nav-btn" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, border: "none", background: "transparent", cursor: "pointer", padding: "2px 0", fontFamily: "'Plus Jakarta Sans', sans-serif", position: "relative" }}>
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className="nav-btn"
+            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, border: "none", background: "transparent", cursor: "pointer", padding: "2px 0", fontFamily: "'Plus Jakarta Sans', sans-serif", position: "relative" }}
+          >
             <SVG active={active} />
-            {badge > 0 && <div style={{ position: "absolute", top: -2, right: "18%", background: PRIMARY, color: "#fff", fontSize: 9, fontWeight: 800, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>{badge > 9 ? "9+" : badge}</div>}
-            <span style={{ fontSize: 10, fontWeight: 600, color: active ? PRIMARY : "#B0B0B0" }}>{label}</span>
-            {active && <div className="tab-dot" style={{ width: 4, height: 4, borderRadius: "50%", background: PRIMARY }} />}
+            <span style={{ fontSize: 10, fontWeight: 600, color: active ? PRIMARY : TEXT_MUTED }}>{label}</span>
+            {active && <div className="tab-dot" style={{ width: 4, height: 4, borderRadius: "50%", background: ACCENT }} />}
           </button>
         );
       })}
@@ -1331,13 +1334,58 @@ function BottomNav({ tab, setTab, cartCount }) {
   );
 }
 
-const HomeSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 21V12h6v9" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
-const SearchSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M21 21l-3.5-3.5" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
-const FeedSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M18 8h1a4 4 0 0 1 0 8h-1" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M6 1v3M10 1v3M14 1v3" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
-const CartSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="21" r="1.5" fill={active ? PRIMARY : "#C0C0C0"}/><circle cx="19" cy="21" r="1.5" fill={active ? PRIMARY : "#C0C0C0"}/><path d="M2 3h2l2.68 10.39a2 2 0 0 0 1.94 1.61h9.72a2 2 0 0 0 1.94-1.51L22 7H6" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
-const StoreSVG  = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9l1-6h16l1 6" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M5 21V9M19 9v12M5 21h14" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
-const OrdersSVG    = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/><rect x="9" y="3" width="6" height="4" rx="1" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2"/><path d="M9 12h6M9 16h4" stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round"/></svg>;
-const FavoritesSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? PRIMARY : "none"} stroke={active ? PRIMARY : "#C0C0C0"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
+const HomeSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 21V12h6v9" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const SearchSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2"/><path d="M21 21l-3.5-3.5" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round"/></svg>;
+const FeedSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M18 8h1a4 4 0 0 1 0 8h-1" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2"/><path d="M6 1v3M10 1v3M14 1v3" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round"/></svg>;
+const CartSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="21" r="1.5" fill={active ? PRIMARY : TEXT_MUTED}/><circle cx="19" cy="21" r="1.5" fill={active ? PRIMARY : TEXT_MUTED}/><path d="M2 3h2l2.68 10.39a2 2 0 0 0 1.94 1.61h9.72a2 2 0 0 0 1.94-1.51L22 7H6" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const StoreSVG  = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9l1-6h16l1 6" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 9a2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2"/><path d="M5 21V9M19 9v12M5 21h14" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const OrdersSVG    = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round"/><rect x="9" y="3" width="6" height="4" rx="1" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2"/><path d="M9 12h6M9 16h4" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round"/></svg>;
+const FavoritesSVG = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? PRIMARY : "none"} stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
+const ProfileSVG   = ({ active }) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? PRIMARY : TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>;
+
+// Reusable cart icon button for all header areas
+function HeaderCartBtn({ count, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="View cart"
+      style={{ position: "relative", width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.22)", border: "1.5px solid rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <circle cx="9" cy="21" r="1.5" fill="#fff"/>
+        <circle cx="19" cy="21" r="1.5" fill="#fff"/>
+        <path d="M2 3h2l2.68 10.39a2 2 0 0 0 1.94 1.61h9.72a2 2 0 0 0 1.94-1.51L22 7H6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      {count > 0 && (
+        <div style={{ position: "absolute", top: -2, right: -2, background: PRIMARY, color: "#fff", fontSize: 9, fontWeight: 800, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid rgba(139,26,26,0.9)" }}>
+          {count > 9 ? "9+" : count}
+        </div>
+      )}
+    </button>
+  );
+}
+
+// Cart button for screens with a light/white header background
+function HeaderCartBtnLight({ count, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="View cart"
+      style={{ position: "relative", width: 38, height: 38, borderRadius: "50%", background: BG_SOFT, border: "1px solid #EBEBEB", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <circle cx="9" cy="21" r="1.5" fill={PRIMARY}/>
+        <circle cx="19" cy="21" r="1.5" fill={PRIMARY}/>
+        <path d="M2 3h2l2.68 10.39a2 2 0 0 0 1.94 1.61h9.72a2 2 0 0 0 1.94-1.51L22 7H6" stroke={PRIMARY} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      {count > 0 && (
+        <div style={{ position: "absolute", top: -2, right: -2, background: PRIMARY, color: "#fff", fontSize: 9, fontWeight: 800, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>
+          {count > 9 ? "9+" : count}
+        </div>
+      )}
+    </button>
+  );
+}
 
 // ════════════════════════════════════════════════════════════
 //  MAIN APP
@@ -1438,9 +1486,26 @@ export default function App() {
       .in("category_id", cats.map(c => c.id))
       .order("sort_order", { ascending: true });
 
+    // Fetch per-item ratings from the view and merge onto items
+    const itemIds = (items || []).map(i => i.id);
+    let ratingsLookup = {};
+    if (itemIds.length) {
+      const { data: ratingRows } = await supabase
+        .from("menu_item_ratings")
+        .select("menu_item_id, avg_rating, review_count")
+        .in("menu_item_id", itemIds);
+      (ratingRows || []).forEach(r => { ratingsLookup[r.menu_item_id] = r; });
+    }
+
+    const mergedItems = (items || []).map(i => ({
+      ...i,
+      avg_rating:   ratingsLookup[i.id]?.avg_rating   ?? null,
+      review_count: ratingsLookup[i.id]?.review_count ?? 0,
+    }));
+
     return cats.map(cat => ({
       ...cat,
-      menu_items: (items || []).filter(i => i.category_id === cat.id),
+      menu_items: mergedItems.filter(i => i.category_id === cat.id),
     }));
   }
 
@@ -1935,6 +2000,24 @@ export default function App() {
           </div>
         )}
 
+        {/* ── Persistent top-right cart icon for screens without their own header ── */}
+        {!["home", "detail", "search", "cart"].includes(tab) && cart.totalItems > 0 && (
+          <button
+            onClick={() => setTab("cart")}
+            aria-label="View cart"
+            style={{ position: "fixed", top: "max(env(safe-area-inset-top), 12px)", right: 16, zIndex: 95, width: 40, height: 40, borderRadius: "50%", background: PRIMARY, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 10px rgba(139,26,26,0.35)" }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="9" cy="21" r="1.5" fill="#fff"/>
+              <circle cx="19" cy="21" r="1.5" fill="#fff"/>
+              <path d="M2 3h2l2.68 10.39a2 2 0 0 0 1.94 1.61h9.72a2 2 0 0 0 1.94-1.51L22 7H6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <div style={{ position: "absolute", top: -3, right: -3, background: ACCENT, color: PRIMARY, fontSize: 9, fontWeight: 800, width: 16, height: 16, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>
+              {cart.totalItems > 9 ? "9+" : cart.totalItems}
+            </div>
+          </button>
+        )}
+
         {/* ── Menu item detail sheet ── */}
         {selectedMenuItem && (
           <MenuItemSheet
@@ -1983,6 +2066,7 @@ export default function App() {
                       <path d="M21 21l-3.5-3.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
                     </svg>
                   </button>
+                  <HeaderCartBtn count={cart.totalItems} onClick={() => setTab("cart")} />
                 </div>
               </div>
 
@@ -2071,6 +2155,7 @@ export default function App() {
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search restaurants or dishes..." autoFocus style={{ flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 14, color: DARK, fontWeight: 500 }} />
                   {search && <span onClick={() => setSearch("")} style={{ cursor: "pointer", color: "#C0C0C0", fontSize: 14, fontWeight: 700 }}>✕</span>}
                 </div>
+                <HeaderCartBtnLight count={cart.totalItems} onClick={() => setTab("cart")} />
               </div>
 
               {/* Filters row: Open Now toggle + Min Rating */}
@@ -2187,6 +2272,9 @@ export default function App() {
               {/* Gradient overlay when banner is present so text stays readable */}
               {selected.banner_url && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(0,0,0,0.4))" }} />}
               <button onClick={() => setTab("home")} style={{ position: "absolute", top: "max(env(safe-area-inset-top), 48px)", left: 16, width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.92)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 16, fontWeight: 700, zIndex: 2 }}>←</button>
+              <div style={{ position: "absolute", top: "max(env(safe-area-inset-top), 48px)", right: 16, zIndex: 2 }}>
+                <HeaderCartBtn count={cart.totalItems} onClick={() => setTab("cart")} />
+              </div>
               {(() => {
                 const sg = storyGroups.find(g => g.restaurant.id === selected.id);
                 const ringStyle = sg ? { outline: `3px solid ${PRIMARY}`, outlineOffset: 3, cursor: "pointer" } : { cursor: "default" };
@@ -2294,7 +2382,12 @@ export default function App() {
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 14, fontWeight: 700, color: item.is_available ? DARK : "#D4CEC8", marginBottom: 3, lineHeight: 1.3 }}>{item.name}</div>
                                 {!item.is_available && <div style={{ fontSize: 10, color: "#D4CEC8", marginBottom: 4 }}>Not available today</div>}
-                                <div style={{ fontSize: 14, fontWeight: 800, color: item.is_available ? PRIMARY : "#EBEBEB", marginBottom: 8 }}>₦{Number(item.price).toLocaleString()}</div>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: item.is_available ? PRIMARY : "#EBEBEB", marginBottom: item.review_count > 0 ? 4 : 8 }}>₦{Number(item.price).toLocaleString()}</div>
+                                {item.review_count > 0 && (
+                                  <div style={{ fontSize: 12, fontWeight: 600, color: TEXT_MUTED, marginBottom: 8 }}>
+                                    ⭐ {Number(item.avg_rating).toFixed(1)} ({item.review_count})
+                                  </div>
+                                )}
                                 {!isOwnRestaurant && item.is_available && selected.is_open && (
                                   qty === 0 ? (
                                     /* "+" quick-add — stops propagation so it doesn't open the sheet */
@@ -2738,7 +2831,7 @@ export default function App() {
             )
         )}
 
-        {tab !== "cart" && <BottomNav tab={tab} setTab={handleTabChange} cartCount={cart.totalItems} />}
+        {tab !== "cart" && <BottomNav tab={tab} setTab={handleTabChange} isOwner={isOwner} />}
       </div>
     </>
   );

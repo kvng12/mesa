@@ -161,7 +161,12 @@ export default function MenuItemSheet({ item, restaurant, allItems, cart, onClos
             </div>
           )}
 
-          {/* PHASE 3: item description goes here */}
+          {/* Rating badge */}
+          {item.review_count > 0 && (
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#666666", marginBottom: 8, marginTop: 2 }}>
+              ⭐ {Number(item.avg_rating).toFixed(1)} ({item.review_count} review{item.review_count !== 1 ? "s" : ""})
+            </div>
+          )}
 
           {/* Quantity stepper */}
           {item.is_available && restaurant?.is_open && (
