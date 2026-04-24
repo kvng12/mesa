@@ -31,6 +31,7 @@ import DeliveryPhotoUpload from "./components/DeliveryPhotoUpload";
 import BankDetailsForm from "./components/BankDetailsForm";
 import EmailVerification from "./screens/EmailVerification";
 // import PhoneVerification from "./screens/PhoneVerification"; // disabled — re-enable when cash/phone-OTP re-launches
+import MenuItemSheet from "./components/MenuItemSheet";
 
 const PRIMARY      = "#8B1A1A";
 const PRIMARY_DARK = "#6B1414";
@@ -1380,6 +1381,7 @@ export default function App() {
   // Confirm "clear cart?" when switching restaurant
   const [pendingItem, setPendingItem] = useState(null); // { menuItem, restaurant }
   const [showAddItem, setShowAddItem]   = useState(false);
+  const [selectedMenuItem, setSelectedMenuItem] = useState(null); // menu item object; null = sheet closed
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [activeChat, setActiveChat]     = useState(null); // restaurant object for customer chat
   const [showOwnerChats, setShowOwnerChats] = useState(false);
@@ -1928,6 +1930,18 @@ export default function App() {
           </div>
         )}
 
+        {/* ── Menu item detail sheet ── */}
+        {selectedMenuItem && (
+          <MenuItemSheet
+            item={selectedMenuItem}
+            restaurant={selected}
+            allItems={detailMenu.flatMap(c => c.menu_items || [])}
+            cart={cart}
+            onClose={() => setSelectedMenuItem(null)}
+            onAddToCart={handleAddToCart}
+          />
+        )}
+
         {/* ══════════ HOME ══════════ */}
         {tab === "home" && (
           <>
@@ -2245,7 +2259,10 @@ export default function App() {
                         const qty = cart.getQuantity(item.id);
                         return (
                           <div key={item.id} style={{ borderBottom: "1px solid #F5F5F5", paddingBottom: 14, marginBottom: 2 }}>
-                            <div style={{ display: "flex", alignItems: "flex-start", gap: 12, paddingTop: 14 }}>
+                            <div
+                              style={{ display: "flex", alignItems: "flex-start", gap: 12, paddingTop: 14, cursor: item.is_available ? "pointer" : "default" }}
+                              onClick={() => item.is_available && !isOwnRestaurant && setSelectedMenuItem(item)}
+                            >
                               {/* Food image */}
                               {item.image_url ? (
                                 <img src={item.image_url} alt={item.name}
@@ -2262,12 +2279,13 @@ export default function App() {
                                 <div style={{ fontSize: 14, fontWeight: 800, color: item.is_available ? PRIMARY : "#EBEBEB", marginBottom: 8 }}>₦{Number(item.price).toLocaleString()}</div>
                                 {!isOwnRestaurant && item.is_available && selected.is_open && (
                                   qty === 0 ? (
-                                    <button onClick={() => handleAddToCart(item, selected)}
+                                    /* "+" quick-add — stops propagation so it doesn't open the sheet */
+                                    <button onClick={e => { e.stopPropagation(); handleAddToCart(item, selected); }}
                                       style={{ display: "flex", alignItems: "center", gap: 5, background: PRIMARY, border: "none", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", borderRadius: 10, padding: "7px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                                       + Add to cart
                                     </button>
                                   ) : (
-                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }} onClick={e => e.stopPropagation()}>
                                       <button onClick={() => cart.removeItem(item.id)} style={{ width: 30, height: 30, borderRadius: 8, border: "1.5px solid #EBEBEB", background: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
                                       <span style={{ fontSize: 15, fontWeight: 800, color: DARK, minWidth: 18, textAlign: "center" }}>{qty}</span>
                                       <button onClick={() => handleAddToCart(item, selected)} style={{ width: 30, height: 30, borderRadius: 8, background: PRIMARY, border: "none", color: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
