@@ -56,6 +56,8 @@ export function useOrders(userId) {
         confirmed_at,
         auto_release_at,
         disputed,
+        pickup_otp,
+        pickup_otp_verified,
         restaurant_id,
         restaurants ( id, name, icon, bg_from, bg_to ),
         order_items ( id, menu_item_id, name, price, quantity, line_total )
@@ -99,7 +101,7 @@ export function useOrders(userId) {
           setOrders((prev) =>
             prev.map((o) =>
               o.id === payload.new.id
-                ? { ...o, status: payload.new.status, payment_status: payload.new.payment_status, confirmed_at: payload.new.confirmed_at, auto_release_at: payload.new.auto_release_at, disputed: payload.new.disputed }
+                ? { ...o, status: payload.new.status, payment_status: payload.new.payment_status, confirmed_at: payload.new.confirmed_at, auto_release_at: payload.new.auto_release_at, disputed: payload.new.disputed, pickup_otp: payload.new.pickup_otp, pickup_otp_verified: payload.new.pickup_otp_verified }
                 : o
             )
           );
