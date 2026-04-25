@@ -32,6 +32,7 @@ import BankDetailsForm from "./components/BankDetailsForm";
 import EmailVerification from "./screens/EmailVerification";
 // import PhoneVerification from "./screens/PhoneVerification"; // disabled — re-enable when cash/phone-OTP re-launches
 import MenuItemSheet from "./components/MenuItemSheet";
+import chowliLogo from "./assets/logo chowli.jpeg";
 import FavoritesScreen from "./screens/FavoritesScreen";
 import { useFavorites } from "./hooks/useFavorites";
 
@@ -1707,28 +1708,25 @@ export default function App() {
   if (appState === "splash") return (
     <div style={{ position: "fixed", inset: 0, background: PRIMARY, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", maxWidth: 430, margin: "0 auto" }}>
       <style>{`
-        @keyframes chowliReveal {
-          from { width: 0; }
-          to   { width: 5.6ch; }
+        @keyframes splashLogoIn {
+          from { opacity: 0; transform: scale(0.85); }
+          to   { opacity: 1; transform: scale(1); }
         }
         @keyframes splashSubFade {
           from { opacity: 0; }
           to   { opacity: 1; }
         }
       `}</style>
-      <div style={{ overflow: "hidden", whiteSpace: "nowrap", width: "5.6ch" }}>
-        <div style={{
-          fontSize: 62,
-          fontWeight: 800,
-          color: ACCENT,
-          fontFamily: "'Plus Jakarta Sans', sans-serif",
-          letterSpacing: "-0.02em",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          width: 0,
-          animation: "chowliReveal 0.9s steps(6, end) 0.1s forwards",
-        }}>Chowli</div>
-      </div>
+      <img
+        src={chowliLogo}
+        alt="Chowli"
+        style={{
+          width: 220,
+          objectFit: "contain",
+          mixBlendMode: "screen",
+          animation: "splashLogoIn 0.6s ease forwards",
+        }}
+      />
       <div style={{
         fontSize: 14,
         fontWeight: 500,
@@ -1736,7 +1734,7 @@ export default function App() {
         fontFamily: "'Plus Jakarta Sans', sans-serif",
         marginTop: 14,
         opacity: 0,
-        animation: "splashSubFade 0.5s ease 1.1s forwards",
+        animation: "splashSubFade 0.5s ease 0.7s forwards",
       }}>Your local food market</div>
     </div>
   );
