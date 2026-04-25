@@ -2039,12 +2039,12 @@ export default function App() {
 
               {/* Row 1: logo + greeting | profile + search + cart */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                {/* Left: logo + greeting */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {/* Left: logo stacked above greeting */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
                   <img
                     src={chowliLogo}
                     alt="Chowli"
-                    style={{ height: 32, width: "auto", objectFit: "contain", mixBlendMode: "multiply", filter: "contrast(1.2) brightness(0.85)", flexShrink: 0 }}
+                    style={{ height: 28, width: "auto", objectFit: "contain", mixBlendMode: "multiply", filter: "contrast(1.2) brightness(0.85)" }}
                   />
                   {user ? (
                     <div>
