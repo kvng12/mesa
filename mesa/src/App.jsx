@@ -1522,6 +1522,8 @@ export default function App() {
   const [selectedMenuItem, setSelectedMenuItem] = useState(null); // menu item object; null = sheet closed
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [storeTab, setStoreTab]           = useState("orders"); // "orders" | "menu" | "analytics" | "settings"
+  const [confirmingOrderId, setConfirmingOrderId] = useState(null); // orderId showing prep picker
+  const [selectedPrepMins, setSelectedPrepMins]   = useState(20);   // default 20 min
   const [activeChat, setActiveChat]     = useState(null); // restaurant object for customer chat
   const [showOwnerChats, setShowOwnerChats] = useState(false);
   const [ownerChatTarget, setOwnerChatTarget] = useState(null); // conv for owner reply
@@ -2778,10 +2780,52 @@ export default function App() {
                             </button>
                           </div>
                         )}
+                        {/* Countdown timer (confirmed/preparing + ready_at set) */}
+                        {["confirmed","preparing"].includes(order.status) && order.ready_at && (
+                          <div style={{ marginBottom: 10 }}>
+                            <PrepCountdown readyAt={order.ready_at} />
+                          </div>
+                        )}
+
+                        {/* Prep time picker (shown for ASAP pending orders) */}
+                        {order.status === "pending" && confirmingOrderId === order.id && !order.scheduled_time && (
+                          <div style={{ marginBottom: 10, background: BG_SOFT, borderRadius: 14, padding: "12px 14px" }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, marginBottom: 8 }}>Estimated prep time</div>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                              {[10, 15, 20, 25, 30, 45, 60].map(m => (
+                                <button key={m} onClick={() => setSelectedPrepMins(m)}
+                                  style={{ padding: "5px 12px", borderRadius: 20, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", background: selectedPrepMins === m ? PRIMARY : "#E8E4DF", color: selectedPrepMins === m ? "#fff" : DARK }}>
+                                  {m}m
+                                </button>
+                              ))}
+                            </div>
+                            <input type="number" min={1} max={180} placeholder="Custom"
+                              onChange={e => { const v = parseInt(e.target.value); if (v >= 1 && v <= 180) setSelectedPrepMins(v); }}
+                              style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 10, padding: "8px 12px", fontSize: 13, color: DARK, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", marginBottom: 10, boxSizing: "border-box" }} />
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button onClick={async () => {
+                                const readyAt = new Date(Date.now() + selectedPrepMins * 60000).toISOString();
+                                setConfirmingOrderId(null); // dismiss picker immediately, before await
+                                await updateStatus(order.id, "confirmed", { prep_time_minutes: selectedPrepMins, ready_at: readyAt });
+                              }} style={{ flex: 1, padding: "9px", background: PRIMARY, color: "#fff", border: "none", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                Confirm Order
+                              </button>
+                              <button onClick={() => setConfirmingOrderId(null)}
+                                style={{ padding: "9px 14px", background: "transparent", color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <span style={{ fontSize: 14, fontWeight: 800, color: PRIMARY }}>₦{Number(order.subtotal).toLocaleString()}</span>
                           <div style={{ display: "flex", gap: 8 }}>
-                            {order.status === "pending" && <button onClick={() => updateStatus(order.id, "confirmed")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Confirm</button>}
+                            {order.status === "pending" && confirmingOrderId !== order.id && (
+                              order.scheduled_time
+                                ? <button onClick={() => updateStatus(order.id, "confirmed", { ready_at: order.scheduled_time })} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Confirm</button>
+                                : <button onClick={() => { setSelectedPrepMins(20); setConfirmingOrderId(order.id); }} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Confirm</button>
+                            )}
                             {order.status === "confirmed" && <button onClick={() => updateStatus(order.id, "preparing")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: BG_SOFT, color: PRIMARY, cursor: "pointer" }}>Preparing</button>}
                             {order.status === "preparing" && <button onClick={() => updateStatus(order.id, "ready")} style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 999, border: "none", background: "#F0FDF4", color: "#16A34A", cursor: "pointer" }}>Ready</button>}
                             {order.status === "ready" && order.fulfillment !== "delivery" && (
@@ -2967,6 +3011,45 @@ export default function App() {
         {tab !== "cart" && <BottomNav tab={tab} setTab={handleTabChange} isOwner={isOwner} />}
       </div>
     </>
+  );
+}
+
+// ── Owner-side prep countdown timer ──────────────────────────
+function PrepCountdown({ readyAt }) {
+  const [remaining, setRemaining] = useState(() => Math.max(0, new Date(readyAt) - Date.now()));
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const r = Math.max(0, new Date(readyAt) - Date.now());
+      setRemaining(r);
+      if (r === 0) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [readyAt]);
+
+  const totalSec = Math.floor(remaining / 1000);
+  const isUrgent = remaining < 2 * 60 * 1000;
+
+  function fmt(ms) {
+    const s = Math.floor(ms / 1000);
+    if (s <= 0) return null; // done
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  }
+
+  const display = fmt(remaining);
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: TEXT_MUTED, marginBottom: 2 }}>Est. ready in</div>
+      {display
+        ? <div style={{ fontSize: 28, fontWeight: 800, color: isUrgent ? PRIMARY : DARK, fontVariantNumeric: "tabular-nums" }}>{display}</div>
+        : <div style={{ fontSize: 20, fontWeight: 700, color: PRIMARY }}>⏰ Time's up!</div>
+      }
+    </div>
   );
 }
 

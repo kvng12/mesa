@@ -2,14 +2,77 @@
 // Customer order history with realtime status updates.
 // Structured to be future-ready for tracking, reorder, and payment history.
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useOrders } from "../hooks/useOrders";
 import DeliveryConfirmation from "../components/DeliveryConfirmation";
 import DisputeModal from "../components/DisputeModal";
 
-const PRIMARY = "#8B1A1A";
-const DARK  = "#1C1C1E";
-const BG    = "#F5F5F5";
+const PRIMARY   = "#8B1A1A";
+const DARK      = "#1C1C1E";
+const BG        = "#F5F5F5";
+const BG_SOFT   = "#F7F5F2";
+const TEXT_MUTED = "#666666";
+
+const BACKEND_URL    = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_SECRET = import.meta.env.VITE_BACKEND_SECRET;
+
+// ── Customer prep countdown ───────────────────────────────────
+function PrepCountdownCard({ order }) {
+  const [remaining, setRemaining] = useState(() => Math.max(0, new Date(order.ready_at) - Date.now()));
+  const notificationSentRef = useRef(false);
+
+  useEffect(() => {
+    notificationSentRef.current = false; // reset when order changes
+  }, [order.id]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const r = Math.max(0, new Date(order.ready_at) - Date.now());
+      setRemaining(r);
+      if (r === 0) {
+        clearInterval(id);
+        if (!notificationSentRef.current && BACKEND_URL) {
+          notificationSentRef.current = true;
+          fetch(`${BACKEND_URL}/notify/order-ready`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
+            body: JSON.stringify({ orderId: order.id }),
+          }).catch(() => {});
+        }
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [order.ready_at, order.id]);
+
+  function fmt(ms) {
+    const s = Math.floor(ms / 1000);
+    if (s <= 0) return null;
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  }
+
+  const readyByTime = new Date(order.ready_at).toLocaleTimeString("en-NG", { hour: "numeric", minute: "2-digit", hour12: true });
+  const display = fmt(remaining);
+
+  return (
+    <div style={{ background: BG_SOFT, borderRadius: 12, padding: 12, margin: "10px 0 4px" }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: DARK, marginBottom: 6 }}>
+        Ready by {readyByTime}
+      </div>
+      {display ? (
+        <>
+          <div style={{ fontSize: 24, fontWeight: 800, color: PRIMARY, fontVariantNumeric: "tabular-nums" }}>{display}</div>
+          <div style={{ fontSize: 11, fontWeight: 400, color: TEXT_MUTED, marginTop: 2 }}>estimated wait</div>
+        </>
+      ) : (
+        <div style={{ fontSize: 13, fontWeight: 600, color: PRIMARY }}>Your order is almost ready! 🍽️</div>
+      )}
+    </div>
+  );
+}
 
 // ── Status config ─────────────────────────────────────────────
 // Future: add icon, step number, estimated time per status
@@ -141,6 +204,11 @@ function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispu
 
         {/* Progress bar (not shown for cancelled) */}
         {order.status !== "cancelled" && <StatusProgress status={order.status} fulfillment={order.fulfillment} />}
+
+        {/* Prep countdown — confirmed or preparing orders with a ready_at time */}
+        {["confirmed","preparing"].includes(order.status) && order.ready_at && (
+          <PrepCountdownCard order={order} />
+        )}
 
         {/* Pickup OTP — shown to customer when order is ready for collection */}
         {order.status === "ready" && order.fulfillment === "pickup" && order.pickup_otp && (

@@ -243,17 +243,17 @@ export function useIncomingOrders(restaurantId) {
     setLoading(false);
   }
 
-  async function updateStatus(orderId, status) {
+  async function updateStatus(orderId, status, extra = {}) {
     if (BACKEND_URL) {
       // Route through backend so the "ready" transition can generate a pickup OTP
       await fetch(`${BACKEND_URL}/orders/${orderId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...extra }),
       });
     } else {
       // Dev fallback: direct Supabase update (no OTP generation)
-      await supabase.from("orders").update({ status }).eq("id", orderId);
+      await supabase.from("orders").update({ status, ...extra }).eq("id", orderId);
     }
     // Award loyalty points when order is marked complete or delivered
     if (status === "completed" || status === "delivered") {
