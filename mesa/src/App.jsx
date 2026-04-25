@@ -1238,6 +1238,39 @@ function PostMediaCard({ ownerR, uploadPostMedia, createPost }) {
 
 
 // ── Owner Location Card ──────────────────────────────────────
+function DeliveryToggleCard({ ownerR }) {
+  const [enabled, setEnabled] = useState(ownerR?.accepts_delivery !== false);
+
+  useEffect(() => { setEnabled(ownerR?.accepts_delivery !== false); }, [ownerR?.id, ownerR?.accepts_delivery]);
+
+  async function toggle() {
+    const next = !enabled;
+    setEnabled(next); // optimistic
+    await supabase.from("restaurants").update({ accepts_delivery: next }).eq("id", ownerR.id);
+  }
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: "16px 18px", marginBottom: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 14 }}>Delivery</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 0" }}>
+        <div style={{ width: 40, height: 40, borderRadius: 12, background: enabled ? "#FEF9EC" : "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, transition: "background 0.2s", flexShrink: 0 }}>
+          🛵
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: enabled ? DARK : "#C0C0C0", marginBottom: 2, transition: "color 0.2s" }}>Delivery</div>
+          <div style={{ fontSize: 11, color: "#B0B0B0" }}>Accept delivery orders</div>
+        </div>
+        <div
+          onClick={toggle}
+          style={{ width: 48, height: 26, borderRadius: 13, flexShrink: 0, background: enabled ? "#16A34A" : "#E0E0E0", position: "relative", cursor: "pointer", transition: "background 0.25s" }}
+        >
+          <div style={{ position: "absolute", top: 3, left: enabled ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.25s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RestaurantDescriptionCard({ ownerR }) {
   const [desc,   setDesc]   = useState(ownerR?.description ?? "");
   const [saving, setSaving] = useState(false);
@@ -1488,6 +1521,7 @@ export default function App() {
   const [showAddItem, setShowAddItem]   = useState(false);
   const [selectedMenuItem, setSelectedMenuItem] = useState(null); // menu item object; null = sheet closed
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [storeTab, setStoreTab]           = useState("orders"); // "orders" | "menu" | "analytics" | "settings"
   const [activeChat, setActiveChat]     = useState(null); // restaurant object for customer chat
   const [showOwnerChats, setShowOwnerChats] = useState(false);
   const [ownerChatTarget, setOwnerChatTarget] = useState(null); // conv for owner reply
@@ -2672,45 +2706,28 @@ export default function App() {
               )}
             </div>
 
+            {/* ── Internal store tab bar ── */}
+            <div style={{ display: "flex", background: "#fff", borderBottom: `1px solid ${BORDER}` }}>
+              {["orders", "menu", "analytics", "settings"].map(t => (
+                <button key={t} onClick={() => setStoreTab(t)} style={{ flex: 1, textAlign: "center", padding: "10px 0", fontSize: 14, fontWeight: 600, color: storeTab === t ? PRIMARY : TEXT_MUTED, border: "none", background: "transparent", borderBottom: `2px solid ${storeTab === t ? PRIMARY : "transparent"}`, marginBottom: -1, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  {t[0].toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
+
             <div style={{ padding: "16px 20px" }}>
 
-              {/* Stats */}
-              {(() => { const all = ownerMenu.flatMap(c => c.menu_items || []); return (
-                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                  {[{ n: all.length, l: "Items" }, { n: all.filter(i => i.is_available).length, l: "Avail" }, { n: incomingOrders.length, l: "Orders" }, { n: loyaltyMembersCount, l: "Loyal" }, { n: posts.filter(p => p.restaurant_id === ownerR.id).length, l: "Posts" }].map(s => (
-                    <div key={s.l} style={{ flex: 1, background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "12px 4px", textAlign: "center" }}>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: PRIMARY }}>{s.n}</div>
-                      <div style={{ fontSize: 8, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: 2 }}>{s.l}</div>
-                    </div>
-                  ))}
-                </div>
-              ); })()}
-
-              {/* ── Payment method settings ── */}
-              <PaymentSettingsCard ownerR={ownerR} togglePaymentMethod={togglePaymentMethod} />
-
-              {/* ── Payout account ── */}
-              <PayoutAccountCard ownerR={ownerR} />
-
-              {/* ── Restaurant location ── */}
-              <LocationCard ownerR={ownerR} />
-
-              {/* ── Restaurant description ── */}
-              <RestaurantDescriptionCard ownerR={ownerR} />
-
-              {/* ── Incoming orders ── */}
-              <>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Incoming Orders</div>
-                {incomingOrders.length === 0 && (
-                  <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "20px 16px", textAlign: "center", marginBottom: 14 }}>
-                    <div style={{ fontSize: 28, marginBottom: 6 }}>🎉</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 2 }}>No new orders</div>
-                    <div style={{ fontSize: 12, color: "#888" }}>You're all caught up!</div>
-                  </div>
-                )}
-              </>
-              {incomingOrders.length > 0 && (
+              {/* ══ TAB 1: ORDERS ══ */}
+              {storeTab === "orders" && (
                 <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 4, paddingLeft: 0 }}>Active Orders</div>
+                  {incomingOrders.length === 0 && (
+                    <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "20px 16px", textAlign: "center", marginBottom: 14 }}>
+                      <div style={{ fontSize: 28, marginBottom: 6 }}>🎉</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 2 }}>No new orders</div>
+                      <div style={{ fontSize: 12, color: "#888" }}>You're all caught up!</div>
+                    </div>
+                  )}
                   {incomingOrders.map(order => {
                     const sc = ORDER_STATUS[order.status] || ORDER_STATUS.pending;
                     return (
@@ -2782,109 +2799,141 @@ export default function App() {
                       </div>
                     );
                   })}
-                  <div style={{ height: 1, background: "#F0EDE8", margin: "4px 0 16px" }} />
+                  {incomingOrders.length > 0 && <div style={{ height: 1, background: "#F0EDE8", margin: "4px 0 16px" }} />}
+
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 16 }}>Reservations</div>
+                  <ReservationManagement restaurantId={ownerR.id} />
                 </>
               )}
 
-              {/* ── Incoming reservations ── */}
-              <ReservationManagement restaurantId={ownerR.id} />
-
-              {/* ── Opening hours ── */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Store Hours</div>
-              <OpeningHoursCard ownerR={ownerR} updateOpeningHours={updateOpeningHours} />
-
-              {/* Feed media post */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Feed Post</div>
-              <PostMediaCard ownerR={ownerR} uploadPostMedia={uploadPostMedia} createPost={createPost} />
-
-              {/* Stories */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Live Story</div>
-              <StoryUploadCard restaurantId={ownerR.id} restaurant={ownerR} />
-
-              {/* Post composer */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Text Update</div>
-              {!composing ? (
-                <div onClick={() => setComposing(true)} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1.5px dashed #EBEBEB", borderRadius: 16, padding: "14px 16px", cursor: "pointer", marginBottom: 14 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${ownerR.bg_from}, ${ownerR.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>{ownerR.icon}</div>
-                  <span style={{ fontSize: 13, color: "#C0C0C0", fontWeight: 500 }}>Share a new item, promo, or update...</span>
-                </div>
-              ) : (
-                <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", overflow: "hidden", marginBottom: 14 }}>
-                  <div style={{ padding: "16px 16px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: DARK }}>New Post</div>
-                    <button onClick={() => { setComposing(false); setPostText(""); }} style={{ fontSize: 20, cursor: "pointer", color: "#C0C0C0", background: "transparent", border: "none" }}>×</button>
+              {/* ══ TAB 2: MENU ══ */}
+              {storeTab === "menu" && (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1 }}>Your Menu</div>
+                    <button onClick={() => setShowAddItem(true)}
+                      style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700, color: "#fff", background: PRIMARY, border: "none", borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                      + Add Item
+                    </button>
                   </div>
-                  <div style={{ display: "flex", gap: 8, padding: "12px 16px", overflowX: "auto", scrollbarWidth: "none" }}>
-                    {POST_TYPES.map(pt => <button key={pt.id} onClick={() => setPostType(pt.id)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, padding: "6px 12px", borderRadius: 20, cursor: "pointer", border: `1.5px solid ${postType === pt.id ? pt.color : "#EBEBEB"}`, background: postType === pt.id ? pt.bg : "transparent", color: postType === pt.id ? pt.color : "#888" }}>{pt.icon} {pt.label}</button>)}
-                  </div>
-                  <textarea value={postText} onChange={e => setPostText(e.target.value.slice(0, 200))} placeholder={postType === "new" ? "Tell customers about your new item..." : postType === "promo" ? "Describe your offer or discount..." : postType === "sold_out" ? "Let customers know what's sold out today..." : "Share any update with your customers..."} style={{ width: "100%", border: "none", background: BG, outline: "none", fontSize: 14, color: DARK, fontWeight: 500, resize: "none", padding: "14px 16px", lineHeight: 1.6, minHeight: 90 }} />
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderTop: "1px solid #F5F5F5" }}>
-                    <span style={{ fontSize: 11, color: "#C0C0C0" }}>{postText.length}/200</span>
-                    <button disabled={!postText.trim() || saving} onClick={submitPost} style={{ background: PRIMARY, color: "#fff", fontSize: 13, fontWeight: 700, padding: "9px 22px", borderRadius: 999, border: "none", cursor: "pointer", opacity: (!postText.trim() || saving) ? 0.4 : 1 }}>{saving ? "Posting..." : "Post Update"}</button>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Promo Codes ── */}
-              <PromoCodesCard restaurantId={ownerR.id} />
-
-              <div style={{ height: 1, background: "#F0EDE8", margin: "4px 0 16px" }} />
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: 1 }}>Menu</div>
-                <button onClick={() => setShowAddItem(true)}
-                  style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 700, color: "#fff", background: PRIMARY, border: "none", borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                  + Add Item
-                </button>
-              </div>
-              {ownerMenuLoading && <div style={{ textAlign: "center", padding: "16px 0", color: "#B0B0B0", fontSize: 13 }}>Loading menu...</div>}
-              {!ownerMenuLoading && ownerMenu.flatMap(c => c.menu_items || []).length === 0 && (
-                <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "24px 16px", textAlign: "center", marginBottom: 14 }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>🍽️</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 4 }}>No menu items yet</div>
-                  <div style={{ fontSize: 12, color: "#888" }}>Tap + Add Item to get started</div>
-                </div>
-              )}
-              {ownerMenu.map(cat => (
-                <div key={cat.id} style={{ marginBottom: 18 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F0EDE8", marginBottom: 8 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#888", padding: "8px 0" }}>{cat.name}</div>
-                    <button onClick={async () => {
-                      if (!window.confirm(`Delete "${cat.name}" and all its items?`)) return;
-                      await supabase.from("menu_categories").delete().eq("id", cat.id);
-                      refetchOwnerMenu();
-                    }} style={{ fontSize: 11, fontWeight: 700, color: "#DC2626", background: "#FEF2F2", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Delete</button>
-                  </div>
-                  {(cat.menu_items || []).map(item => (
-                    <DashMenuItem
-                      key={item.id}
-                      item={item}
-                      restaurantId={ownerR.id}
-                      onToggle={async () => {
-                        // 1. Optimistic update — flip immediately in local state
-                        setOwnerMenu(prev => prev.map(c => ({
-                          ...c,
-                          menu_items: (c.menu_items || []).map(i =>
-                            i.id === item.id ? { ...i, is_available: !i.is_available } : i
-                          ),
-                        })));
-                        // 2. Persist to DB
-                        await toggleItem(item.id, item.is_available);
-                        // 3. Sync to confirm actual DB state
-                        refetchOwnerMenu();
-                      }}
-                      onDelete={async () => {
-                        if (!window.confirm("Delete " + item.name + "?")) return;
-                        await supabase.from("menu_items").delete().eq("id", item.id);
-                        refetchOwnerMenu();
-                      }}
-                      onImageUploaded={async (file) => {
-                        const { url, error } = await uploadFoodImage(file, ownerR.id, item.id);
-                        if (!error && url) await updateItemImage(item.id, url);
-                      }}
-                    />
+                  {ownerMenuLoading && <div style={{ textAlign: "center", padding: "16px 0", color: "#B0B0B0", fontSize: 13 }}>Loading menu...</div>}
+                  {!ownerMenuLoading && ownerMenu.flatMap(c => c.menu_items || []).length === 0 && (
+                    <div style={{ background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "24px 16px", textAlign: "center", marginBottom: 14 }}>
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>🍽️</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: DARK, marginBottom: 4 }}>No menu items yet</div>
+                      <div style={{ fontSize: 12, color: "#888" }}>Tap + Add Item to get started</div>
+                    </div>
+                  )}
+                  {ownerMenu.map(cat => (
+                    <div key={cat.id} style={{ marginBottom: 18 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F0EDE8", marginBottom: 8 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#888", padding: "8px 0" }}>{cat.name}</div>
+                        <button onClick={async () => {
+                          if (!window.confirm(`Delete "${cat.name}" and all its items?`)) return;
+                          await supabase.from("menu_categories").delete().eq("id", cat.id);
+                          refetchOwnerMenu();
+                        }} style={{ fontSize: 11, fontWeight: 700, color: "#DC2626", background: "#FEF2F2", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Delete</button>
+                      </div>
+                      {(cat.menu_items || []).map(item => (
+                        <DashMenuItem
+                          key={item.id}
+                          item={item}
+                          restaurantId={ownerR.id}
+                          onToggle={async () => {
+                            setOwnerMenu(prev => prev.map(c => ({
+                              ...c,
+                              menu_items: (c.menu_items || []).map(i =>
+                                i.id === item.id ? { ...i, is_available: !i.is_available } : i
+                              ),
+                            })));
+                            await toggleItem(item.id, item.is_available);
+                            refetchOwnerMenu();
+                          }}
+                          onDelete={async () => {
+                            if (!window.confirm("Delete " + item.name + "?")) return;
+                            await supabase.from("menu_items").delete().eq("id", item.id);
+                            refetchOwnerMenu();
+                          }}
+                          onImageUploaded={async (file) => {
+                            const { url, error } = await uploadFoodImage(file, ownerR.id, item.id);
+                            if (!error && url) await updateItemImage(item.id, url);
+                          }}
+                        />
+                      ))}
+                    </div>
                   ))}
-                </div>
-              ))}
+
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 16 }}>Restaurant Info</div>
+                  <RestaurantDescriptionCard ownerR={ownerR} />
+                </>
+              )}
+
+              {/* ══ TAB 3: ANALYTICS ══ */}
+              {storeTab === "analytics" && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Overview</div>
+                  {(() => { const all = ownerMenu.flatMap(c => c.menu_items || []); return (
+                    <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                      {[{ n: all.length, l: "Items" }, { n: all.filter(i => i.is_available).length, l: "Avail" }, { n: incomingOrders.length, l: "Orders" }, { n: loyaltyMembersCount, l: "Loyal" }, { n: posts.filter(p => p.restaurant_id === ownerR.id).length, l: "Posts" }].map(s => (
+                        <div key={s.l} style={{ flex: 1, background: "#fff", borderRadius: 14, border: "1px solid #F0EDE8", padding: "12px 4px", textAlign: "center" }}>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: PRIMARY }}>{s.n}</div>
+                          <div style={{ fontSize: 8, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.6px", marginTop: 2 }}>{s.l}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ); })()}
+                  <AnalyticsScreen
+                    restaurantId={ownerR.id}
+                    restaurantName={ownerR.name}
+                    onClose={() => setStoreTab("orders")}
+                  />
+                </>
+              )}
+
+              {/* ══ TAB 4: SETTINGS ══ */}
+              {storeTab === "settings" && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Payment</div>
+                  <PaymentSettingsCard ownerR={ownerR} togglePaymentMethod={togglePaymentMethod} />
+                  <DeliveryToggleCard ownerR={ownerR} />
+
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 16 }}>Payouts</div>
+                  <PayoutAccountCard ownerR={ownerR} />
+
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 16 }}>Location & Hours</div>
+                  <LocationCard ownerR={ownerR} />
+                  <OpeningHoursCard ownerR={ownerR} updateOpeningHours={updateOpeningHours} />
+
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 16 }}>Content</div>
+                  <PostMediaCard ownerR={ownerR} uploadPostMedia={uploadPostMedia} createPost={createPost} />
+                  <StoryUploadCard restaurantId={ownerR.id} restaurant={ownerR} />
+                  {!composing ? (
+                    <div onClick={() => setComposing(true)} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1.5px dashed #EBEBEB", borderRadius: 16, padding: "14px 16px", cursor: "pointer", marginBottom: 14 }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${ownerR.bg_from}, ${ownerR.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>{ownerR.icon}</div>
+                      <span style={{ fontSize: 13, color: "#C0C0C0", fontWeight: 500 }}>Share a new item, promo, or update...</span>
+                    </div>
+                  ) : (
+                    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", overflow: "hidden", marginBottom: 14 }}>
+                      <div style={{ padding: "16px 16px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: DARK }}>New Post</div>
+                        <button onClick={() => { setComposing(false); setPostText(""); }} style={{ fontSize: 20, cursor: "pointer", color: "#C0C0C0", background: "transparent", border: "none" }}>×</button>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, padding: "12px 16px", overflowX: "auto", scrollbarWidth: "none" }}>
+                        {POST_TYPES.map(pt => <button key={pt.id} onClick={() => setPostType(pt.id)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, padding: "6px 12px", borderRadius: 20, cursor: "pointer", border: `1.5px solid ${postType === pt.id ? pt.color : "#EBEBEB"}`, background: postType === pt.id ? pt.bg : "transparent", color: postType === pt.id ? pt.color : "#888" }}>{pt.icon} {pt.label}</button>)}
+                      </div>
+                      <textarea value={postText} onChange={e => setPostText(e.target.value.slice(0, 200))} placeholder={postType === "new" ? "Tell customers about your new item..." : postType === "promo" ? "Describe your offer or discount..." : postType === "sold_out" ? "Let customers know what's sold out today..." : "Share any update with your customers..."} style={{ width: "100%", border: "none", background: BG, outline: "none", fontSize: 14, color: DARK, fontWeight: 500, resize: "none", padding: "14px 16px", lineHeight: 1.6, minHeight: 90 }} />
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderTop: "1px solid #F5F5F5" }}>
+                        <span style={{ fontSize: 11, color: "#C0C0C0" }}>{postText.length}/200</span>
+                        <button disabled={!postText.trim() || saving} onClick={submitPost} style={{ background: PRIMARY, color: "#fff", fontSize: 13, fontWeight: 700, padding: "9px 22px", borderRadius: 999, border: "none", cursor: "pointer", opacity: (!postText.trim() || saving) ? 0.4 : 1 }}>{saving ? "Posting..." : "Post Update"}</button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 16 }}>Promotions</div>
+                  <PromoCodesCard restaurantId={ownerR.id} />
+                </>
+              )}
+
             </div>
           </>
         )}
