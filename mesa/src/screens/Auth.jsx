@@ -1,6 +1,7 @@
 // src/screens/Auth.jsx
 
 import { useState } from "react";
+import { TermsScreen } from "./TermsScreen";
 
 const PRIMARY = "#8B1A1A";
 const DARK  = "#1C1C1E";
@@ -101,14 +102,19 @@ export function SignUpScreen({ onLogin, onBack, signUp }) {
   const [usePhone, setUsePhone] = useState(false);
   const [err, setErr]           = useState("");
   const [loading, setLoad]      = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
-  async function submit(e) {
+  function submit(e) {
     e.preventDefault();
     if (!name.trim()) { setErr("Please enter your full name"); return; }
     if (!email.trim()) { setErr("Please enter your email"); return; }
     if (pw.length < 6) { setErr("Password must be at least 6 characters"); return; }
+    setErr("");
+    setShowTerms(true); // validated — show T&C before creating account
+  }
 
-    setErr(""); setLoad(true);
+  async function proceedWithRegistration() {
+    setLoad(true);
     const { data, error } = await signUp({ email, password: pw, fullName: name });
     setLoad(false);
 
@@ -120,12 +126,19 @@ export function SignUpScreen({ onLogin, onBack, signUp }) {
     // If Supabase email confirm is ON  → session is null, redirect to login with a note
     // If Supabase email confirm is OFF → session exists, onBack() closes auth and user is in
     if (data?.session) {
-      // Logged in immediately — close auth screen, app picks up session via useAuth listener
       onBack();
     } else {
-      // Email confirmation required — go to login page with a helpful message
       onLogin("check-email");
     }
+  }
+
+  if (showTerms) {
+    return (
+      <TermsScreen
+        onAccept={() => { setShowTerms(false); proceedWithRegistration(); }}
+        onDecline={() => setShowTerms(false)}
+      />
+    );
   }
 
   return (
