@@ -2034,52 +2034,61 @@ export default function App() {
         {tab === "home" && (
           <>
             {/* ── Chowli-style vibrant gradient header ── */}
-            <div style={{ background: `linear-gradient(135deg, ${PRIMARY} 0%, ${PRIMARY_DARK} 60%, #5A1010 100%)`, padding: "max(env(safe-area-inset-top), 52px) 20px 24px", position: "relative", overflow: "hidden" }}>
-              {/* Decorative blobs */}
-              <div style={{ position: "absolute", top: -30, right: -30, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }} />
-              <div style={{ position: "absolute", bottom: -20, left: 40, width: 90, height: 90, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
+            {/* ── Compact sticky top bar ── */}
+            <div style={{ position: "sticky", top: 0, zIndex: 100, background: BG, borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)", paddingBottom: 8, paddingLeft: 16, paddingRight: 16 }}>
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div onClick={() => user ? setShowProfile(true) : setAuthMode("login")}
-                    style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(255,255,255,0.22)", border: "2.5px solid rgba(255,255,255,0.5)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: "#fff", cursor: "pointer", backdropFilter: "blur(4px)" }}>
+              {/* Row 1: logo + greeting | profile + search + cart */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                {/* Left: logo + greeting */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <img
+                    src={chowliLogo}
+                    alt="Chowli"
+                    style={{ height: 32, width: "auto", objectFit: "contain", mixBlendMode: "multiply", filter: "contrast(1.2) brightness(0.85)", flexShrink: 0 }}
+                  />
+                  {user ? (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 500, color: TEXT_MUTED, lineHeight: 1.2 }}>{greet()}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: DARK, lineHeight: 1.2 }}>
+                        {profile?.full_name?.split(" ")[0] || "there"} 👋
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 15, fontWeight: 700, color: DARK }}>Welcome 👋</div>
+                  )}
+                </div>
+                {/* Right: profile + search + cart */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div
+                    onClick={() => user ? setShowProfile(true) : setAuthMode("login")}
+                    style={{ width: 40, height: 40, borderRadius: "50%", background: PRIMARY, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#fff", cursor: "pointer", flexShrink: 0 }}
+                  >
                     {user ? (profile?.full_name?.[0]?.toUpperCase() || "U") : "👤"}
                   </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontWeight: 500 }}>{greet()},</div>
-                    <div style={{ fontSize: 17, fontWeight: 800, color: "#fff" }}>
-                      <span className="name-bounce" key={user?.id || "guest"}>
-                        {user ? `${profile?.full_name?.split(" ")[0] || "there"}! 👋` : "Guest 👋"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <div className="open-badge" style={{ fontSize: 11, fontWeight: 700, color: PRIMARY, background: "#fff", padding: "4px 12px", borderRadius: 20, boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>{openCount} open</div>
-                  <button onClick={() => setTab("search")}
-                    style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(255,255,255,0.22)", border: "1.5px solid rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                    aria-label="Search">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <circle cx="11" cy="11" r="7" stroke="#fff" strokeWidth="2.2"/>
-                      <path d="M21 21l-3.5-3.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
+                  <button
+                    onClick={() => setTab("search")}
+                    aria-label="Search"
+                    style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <circle cx="11" cy="11" r="7" stroke={PRIMARY} strokeWidth="2.2"/>
+                      <path d="M21 21l-3.5-3.5" stroke={PRIMARY} strokeWidth="2.2" strokeLinecap="round"/>
                     </svg>
                   </button>
-                  <HeaderCartBtn count={cart.totalItems} onClick={() => setTab("cart")} />
+                  <HeaderCartBtnLight count={cart.totalItems} onClick={() => setTab("cart")} />
                 </div>
               </div>
 
               {/* Location row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6 }}>
                 <span style={{ fontSize: 14 }}>📍</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
-                  {userLocation?.state || "Nigeria"}
-                </span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: DARK }}>{userLocation?.state || "Nigeria"}</span>
               </div>
 
-              {/* Category pills — dynamic from DB (Feature 5) */}
-              <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", marginBottom: 2 }}>
+              {/* Row 2: category chips */}
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", marginTop: 10 }}>
                 {dynamicCats.map(c => (
-                  <button key={c} onClick={() => setActiveCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 20, border: "none", background: activeCat === c ? "#fff" : "rgba(255,255,255,0.18)", color: activeCat === c ? PRIMARY : "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "background 0.2s" }}>
+                  <button key={c} onClick={() => setActiveCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 20, border: "none", background: activeCat === c ? PRIMARY : BG_SOFT, color: activeCat === c ? "#fff" : TEXT_MUTED, fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "background 0.2s", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                     <span style={{ fontSize: 13 }}>{getCatIcon(c)}</span>{c}
                   </button>
                 ))}
