@@ -2107,11 +2107,30 @@ export default function App() {
 
 
             {(() => { const f = restaurants.find(r => r.is_open && r.badge); if (!f) return null; return (
-              <div onClick={() => goDetail(f.id)} style={{ margin: "18px 20px 0", borderRadius: 20, background: `linear-gradient(135deg, ${f.bg_from}, ${f.bg_to})`, padding: "20px", position: "relative", overflow: "hidden", cursor: "pointer" }}>
-                <div style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", fontSize: 64, opacity: 0.3 }}>{f.icon}</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Featured</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 10, maxWidth: "70%" }}>{f.name}</div>
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: "rgba(255,255,255,0.2)", padding: "4px 10px", borderRadius: 20 }}>{f.badge}</span>
+              <div onClick={() => goDetail(f.id)} style={{ margin: "12px 16px 0", borderRadius: 20, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.12)", cursor: "pointer", background: "#fff" }}>
+                {/* Image section */}
+                <div style={{ height: 120, position: "relative", overflow: "hidden", background: `linear-gradient(135deg, ${f.bg_from}, ${f.bg_to})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {f.logo_url
+                    ? <img src={f.logo_url} alt={f.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    : <span style={{ fontSize: 60, opacity: 0.6 }}>{f.icon}</span>
+                  }
+                  {/* Badge pill */}
+                  {f.badge && (
+                    <div style={{ position: "absolute", top: 14, left: 14, background: PRIMARY, color: "#fff", fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 20, letterSpacing: 0.3 }}>
+                      {f.badge}
+                    </div>
+                  )}
+                </div>
+                {/* Content section */}
+                <div style={{ padding: "12px 16px 14px", background: "#fff" }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: DARK, lineHeight: 1.2, marginBottom: 2 }}>{f.name}</div>
+                  <div style={{ fontSize: 12, fontWeight: 400, color: TEXT_MUTED, lineHeight: 1.5, marginBottom: 8 }}>
+                    {f.description || "Fresh flavours, made with care. Tap to explore the menu."}
+                  </div>
+                  <div style={{ display: "inline-block", background: PRIMARY, color: "#fff", fontSize: 13, fontWeight: 700, padding: "9px 0", width: "100%", textAlign: "center", borderRadius: 20 }}>
+                    Order Now
+                  </div>
+                </div>
               </div>
             ); })()}
 
