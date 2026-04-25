@@ -412,6 +412,7 @@ const DEFAULT_MENU_CATS = [
 // ── Add Menu Item Modal ──
 function AddMenuItemModal({ ownerR, onClose, onAdded }) {
   const [name, setName]             = useState("");
+  const [desc, setDesc]             = useState("");
   const [price, setPrice]           = useState("");
   const [catMode, setCatMode]       = useState("existing");
   const [selCatId, setSelCatId]     = useState("");
@@ -509,6 +510,7 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
         restaurant_id:    ownerR.id,
         category_id:      categoryId,
         name:             name.trim(),
+        description:      desc.trim() || null,
         price:            Number(price),
         is_available:     true,
         sort_order:       0,
@@ -600,6 +602,20 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
           <div style={{ fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.6px" }}>Item Name *</div>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Jollof Rice + Chicken"
             style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 12, background: BG, outline: "none", fontSize: 14, color: DARK, padding: "12px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }} />
+        </div>
+
+        {/* ── Item description ── */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: DARK, marginBottom: 4 }}>Item Description</div>
+          <textarea
+            value={desc}
+            onChange={e => setDesc(e.target.value)}
+            rows={2}
+            maxLength={200}
+            placeholder="e.g. Served with rice and fried plantain..."
+            style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 12, background: BG, outline: "none", fontSize: 14, color: DARK, padding: "12px 14px", fontFamily: "'Plus Jakarta Sans', sans-serif", resize: "none", boxSizing: "border-box", marginBottom: 4 }}
+          />
+          <div style={{ textAlign: "right", fontSize: 11, color: TEXT_MUTED }}>{desc.length} / 200</div>
         </div>
 
         {/* ── Price ── */}
@@ -1222,6 +1238,41 @@ function PostMediaCard({ ownerR, uploadPostMedia, createPost }) {
 
 
 // ── Owner Location Card ──────────────────────────────────────
+function RestaurantDescriptionCard({ ownerR }) {
+  const [desc,   setDesc]   = useState(ownerR?.description ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+
+  useEffect(() => { setDesc(ownerR?.description ?? ""); }, [ownerR?.id]);
+
+  async function save() {
+    setSaving(true); setSaved(false);
+    await supabase.from("restaurants").update({ description: desc.trim() || null }).eq("id", ownerR.id);
+    setSaving(false); setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: "16px 18px", marginBottom: 14 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: DARK, marginBottom: 4 }}>Restaurant Description</div>
+      <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 10 }}>Tell customers what makes your restaurant special</div>
+      <textarea
+        value={desc}
+        onChange={e => setDesc(e.target.value)}
+        rows={3}
+        maxLength={300}
+        placeholder="e.g. Fresh homemade Nigerian meals made daily..."
+        style={{ width: "100%", border: "1.5px solid #EBEBEB", borderRadius: 12, padding: "11px 14px", fontSize: 13, color: DARK, outline: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", boxSizing: "border-box", resize: "none", marginBottom: 4 }}
+      />
+      <div style={{ textAlign: "right", fontSize: 11, color: TEXT_MUTED, marginBottom: 10 }}>{desc.length} / 300</div>
+      <button onClick={save} disabled={saving}
+        style={{ width: "100%", padding: "11px", background: saved ? "#16A34A" : PRIMARY, color: "#fff", border: "none", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, fontFamily: "'Plus Jakarta Sans', sans-serif", transition: "background 0.2s" }}>
+        {saving ? "Saving..." : saved ? "✓ Saved" : "Save Description"}
+      </button>
+    </div>
+  );
+}
+
 function LocationCard({ ownerR }) {
   const [state,  setState]  = useState(ownerR?.state ?? "");
   const [saving, setSaving] = useState(false);
@@ -1483,7 +1534,7 @@ export default function App() {
 
     const { data: items } = await supabase
       .from("menu_items")
-      .select("id, name, price, is_available, sort_order, image_url, category_id")
+      .select("id, name, description, price, is_available, sort_order, image_url, category_id")
       .in("category_id", cats.map(c => c.id))
       .order("sort_order", { ascending: true });
 
@@ -2326,7 +2377,9 @@ export default function App() {
                 {selected.verified && <span style={{ fontSize: 11, fontWeight: 700, color: "#16A34A", background: "#F0FDF4", padding: "3px 10px", borderRadius: 12, border: "1px solid #BBF7D0", flexShrink: 0 }}>✓ Verified</span>}
                 {!selected.verified && selected.created_at && (Date.now() - new Date(selected.created_at) < 30 * 24 * 3600000) && <span style={{ fontSize: 11, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", padding: "3px 10px", borderRadius: 12, flexShrink: 0 }}>New</span>}
               </div>
-              <div style={{ fontSize: 13, color: "#888", lineHeight: 1.6, marginBottom: 10 }}>{selected.description}</div>
+              {selected.description?.trim() && (
+                <div style={{ fontSize: 14, fontWeight: 400, color: TEXT_MUTED, lineHeight: 1.5, padding: "0 16px", marginBottom: 12 }}>{selected.description}</div>
+              )}
               <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>📍 {selected.address}</div>
               {(() => { const info = getHoursInfo(selected); return info ? <div style={{ fontSize: 12, fontWeight: 600, color: "#888", marginBottom: 10 }}>🕐 {info}</div> : <div style={{ marginBottom: 0 }} />; })()}
 
@@ -2641,6 +2694,9 @@ export default function App() {
 
               {/* ── Restaurant location ── */}
               <LocationCard ownerR={ownerR} />
+
+              {/* ── Restaurant description ── */}
+              <RestaurantDescriptionCard ownerR={ownerR} />
 
               {/* ── Incoming orders ── */}
               <>

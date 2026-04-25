@@ -168,6 +168,13 @@ export default function MenuItemSheet({ item, restaurant, allItems, cart, onClos
             </div>
           )}
 
+          {/* Item description */}
+          {item.description?.trim() && (
+            <div style={{ fontSize: 14, fontWeight: 400, color: TEXT_MUTED, lineHeight: 1.5, marginBottom: 12 }}>
+              {item.description}
+            </div>
+          )}
+
           {/* Quantity stepper */}
           {item.is_available && restaurant?.is_open && (
             <div style={{ display: "flex", alignItems: "center", gap: 0, marginTop: 16, marginBottom: 4 }}>
