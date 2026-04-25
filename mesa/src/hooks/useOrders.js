@@ -78,7 +78,7 @@ export function useOrders(userId) {
     console.log("[useOrders] raw DB response for userId:", userId);
     (data || []).forEach(o => {
       console.log(
-        `  id=${o.id.slice(0,8)} status=${o.status} confirmed_at=${o.confirmed_at} disputed=${o.disputed} auto_release_at=${o.auto_release_at}`
+        `  id=${o.id.slice(0,8)} status=${o.status} ready_at=${o.ready_at} prep_time_minutes=${o.prep_time_minutes} confirmed_at=${o.confirmed_at} disputed=${o.disputed} auto_release_at=${o.auto_release_at}`
       );
     });
 

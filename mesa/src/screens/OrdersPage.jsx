@@ -483,7 +483,10 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
           <div style={{ fontSize: 12, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>
             Active · {activeOrders.length}
           </div>
-          {activeOrders.map(order => <OrderCard key={order.id} order={order} user={user} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} onDispute={setDisputeOrder} onConfirmed={refetch} />)}
+          {activeOrders.map(order => {
+            console.log('[ready_at debug]', order.id?.slice(0,8), 'ready_at:', order.ready_at, 'status:', order.status);
+            return <OrderCard key={order.id} order={order} user={user} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} onDispute={setDisputeOrder} onConfirmed={refetch} />;
+          })}
         </div>
       )}
 
