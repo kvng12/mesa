@@ -11,11 +11,12 @@ export function useReservations(userId) {
 
   async function fetchReservations() {
     if (!userId) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("reservations")
       .select(`*, restaurants(name, icon, address)`)
       .eq("customer_id", userId)
       .order("reserved_at", { ascending: true });
+    if (error) return;
     setReservations(data || []);
   }
 

@@ -18,18 +18,9 @@ const isConfigured = Object.values(firebaseConfig).every(v => v && v.length > 0)
 
 export function usePushNotifications(userId) {
   useEffect(() => {
-    if (!userId || !isConfigured || !BACKEND_URL) {
-      console.log("[Push] Skipping — missing config or userId");
-      return;
-    }
-    if (!("Notification" in window)) {
-      console.log("[Push] Notifications not supported");
-      return;
-    }
-    if (!("serviceWorker" in navigator)) {
-      console.log("[Push] Service workers not supported");
-      return;
-    }
+    if (!userId || !isConfigured || !BACKEND_URL) return;
+    if (!("Notification" in window)) return;
+    if (!("serviceWorker" in navigator)) return;
 
     setupPushNotifications(userId);
   }, [userId]);
@@ -37,28 +28,20 @@ export function usePushNotifications(userId) {
 
 async function setupPushNotifications(userId) {
   try {
-    console.log("[Push] Starting setup for user:", userId);
-
     // Step 1 — Request permission
     let permission = Notification.permission;
     if (permission === "default") {
       permission = await Notification.requestPermission();
     }
-    console.log("[Push] Permission:", permission);
-    if (permission !== "granted") {
-      console.log("[Push] Permission denied — stopping");
-      return;
-    }
+    if (permission !== "granted") return;
 
     // Step 2 — Import Firebase dynamically
     const { initializeApp, getApps } = await import("firebase/app");
     const { getMessaging, getToken, onMessage } = await import("firebase/messaging");
-    console.log("[Push] Firebase imported");
 
     // Step 3 — Initialize Firebase
     const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
-    console.log("[Push] Firebase initialized");
 
     // Step 4 — Register service worker explicitly
     let swReg;
@@ -67,7 +50,6 @@ async function setupPushNotifications(userId) {
         scope: "/",
       });
       await navigator.serviceWorker.ready;
-      console.log("[Push] Service worker registered:", swReg.scope);
     } catch (swErr) {
       console.error("[Push] Service worker failed:", swErr.message);
       return;
@@ -80,7 +62,6 @@ async function setupPushNotifications(userId) {
         vapidKey: VAPID_KEY,
         serviceWorkerRegistration: swReg,
       });
-      console.log("[Push] FCM token obtained:", token ? token.slice(0, 20) + "..." : "null");
     } catch (tokenErr) {
       console.error("[Push] Token error:", tokenErr.message);
       return;
@@ -98,8 +79,7 @@ async function setupPushNotifications(userId) {
         headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
         body: JSON.stringify({ userId, token }),
       });
-      const result = await resp.json();
-      console.log("[Push] Token saved to backend:", result);
+      await resp.json();
     } catch (saveErr) {
       console.error("[Push] Failed to save token:", saveErr.message);
       return;
@@ -107,7 +87,6 @@ async function setupPushNotifications(userId) {
 
     // Step 7 — Handle foreground messages
     onMessage(messaging, (payload) => {
-      console.log("[Push] Foreground message:", payload);
       const { title, body } = payload.notification || {};
       if (title) {
         new Notification(title, {
@@ -116,8 +95,6 @@ async function setupPushNotifications(userId) {
         });
       }
     });
-
-    console.log("[Push] Setup complete ✓");
   } catch (err) {
     console.error("[Push] Setup failed:", err.message);
   }

@@ -69,18 +69,10 @@ export function useOrders(userId) {
       .limit(50);
 
     if (err) {
-      console.error("[useOrders] fetch error:", err);
       setError(err.message);
       setLoading(false);
       return;
     }
-
-    console.log("[useOrders] raw DB response for userId:", userId);
-    (data || []).forEach(o => {
-      console.log(
-        `  id=${o.id.slice(0,8)} status=${o.status} ready_at=${o.ready_at} prep_time_minutes=${o.prep_time_minutes} confirmed_at=${o.confirmed_at} disputed=${o.disputed} auto_release_at=${o.auto_release_at}`
-      );
-    });
 
     setOrders(data || []);
     setLoading(false);
@@ -122,15 +114,12 @@ export function useOrders(userId) {
         }
       )
       .subscribe((status) => {
-        console.log("[useOrders] realtime status:", status);
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
           // Guard: if we're already tearing down, don't recurse.
           // removeChannel() can synchronously fire this callback with CLOSED,
           // causing infinite recursion if we don't bail out here.
           if (retryingRef.current) return;
           retryingRef.current = true;
-
-          console.warn("[useOrders] channel", status, "— retrying in 5s");
 
           // Null the ref BEFORE calling removeChannel so any re-entrant
           // CLOSED callbacks see null and skip the removeChannel call.

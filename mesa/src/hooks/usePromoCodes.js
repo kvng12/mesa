@@ -10,11 +10,12 @@ export function usePromoCodes(restaurantId) {
   async function fetchCodes() {
     if (!restaurantId) return;
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("promo_codes")
       .select("*")
       .eq("restaurant_id", restaurantId)
       .order("created_at", { ascending: false });
+    if (error) { setLoading(false); return; }
     setCodes(data || []);
     setLoading(false);
   }

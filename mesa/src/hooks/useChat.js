@@ -191,11 +191,7 @@ export function useOwnerChats(restaurantId) {
         { event: "INSERT", schema: "public", table: "messages" },
         () => fetchConversations()
       )
-      .subscribe((status) => {
-        if (status === "CHANNEL_ERROR") {
-          console.warn("Owner chats channel error — check realtime publication");
-        }
-      });
+      .subscribe();
 
     return () => {
       subscribedRef.current = false;
@@ -218,7 +214,6 @@ export function useOwnerChats(restaurantId) {
       .order("last_message_at", { ascending: false, nullsFirst: false });
 
     if (error) {
-      console.warn("fetchConversations error:", error.message);
       setLoading(false);
       return;
     }

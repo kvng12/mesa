@@ -18,10 +18,9 @@ export default function StoryViewer({ group, onClose, onViewed }) {
   const r     = group.restaurant;
   const total = group.stories.length;
 
-  // Mark current story as viewed + log URL for debugging
+  // Mark current story as viewed
   useEffect(() => {
     if (!story) return;
-    console.log("[StoryViewer] story image_url:", story.image_url, "| id:", story.id);
     if (onViewed) onViewed(story.id);
   }, [story?.id]);
 
@@ -115,10 +114,7 @@ export default function StoryViewer({ group, onClose, onViewed }) {
           src={story.image_url}
           alt=""
           style={S.image}
-          onError={() => {
-            console.error("[StoryViewer] image failed to load:", story.image_url);
-            setImgError(true);
-          }}
+          onError={() => setImgError(true)}
         />
       )}
 

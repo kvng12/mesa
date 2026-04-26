@@ -98,6 +98,8 @@ export default function BankDetailsForm({ value = {}, onChange, disabled = false
     }
     return () => clearTimeout(verifyTimerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Intentional: adding `onChange` or `value` to deps causes an infinite loop —
+  // the effect calls onChange which updates value which would re-trigger the effect.
   }, [accountNumber, bankCode]);
 
   const verifyAccount = async (accNum, bCode) => {

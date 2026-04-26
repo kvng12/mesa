@@ -12,7 +12,6 @@ export function useAuth() {
       if (error) {
         // Invalid or expired refresh token — wipe the local session so the user
         // sees the login screen instead of getting stuck in a broken state
-        console.warn("[useAuth] getSession error — clearing session:", error.message);
         supabase.auth.signOut();
         setLoading(false);
         return;
@@ -27,7 +26,6 @@ export function useAuth() {
       async (event, session) => {
         if (event === "TOKEN_REFRESHED" && !session) {
           // Refresh failed — clear state so user lands on login
-          console.warn("[useAuth] TOKEN_REFRESHED with no session — signing out");
           await supabase.auth.signOut();
           setUser(null);
           setProfile(null);
@@ -49,7 +47,6 @@ export function useAuth() {
       .select("*")
       .eq("id", userId)
       .single();
-    console.log("[useAuth] fetchProfile →", { id: userId, role: data?.role, full_name: data?.full_name });
     setProfile(data);
     setLoading(false);
   }

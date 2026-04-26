@@ -278,14 +278,6 @@ function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispu
             !order.confirmed_at &&
             !!user &&
             !order.disputed;
-          console.log(
-            `[OrderCard] id=${order.id.slice(0,8)}`,
-            `status="${order.status}"`,
-            `confirmed_at=${order.confirmed_at}`,
-            `user=${!!user}`,
-            `disputed=${order.disputed}`,
-            `→ showDeliveryConfirmation=${show}`
-          );
           return show ? (
             <DeliveryConfirmation
               order={order}
@@ -394,19 +386,6 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
   const { orders, loading, error, refetch } = useOrders(user?.id);
   const [disputeOrder, setDisputeOrder] = useState(null);
 
-  // ── DEBUG ─────────────────────────────────────────────────────
-  console.log("[OrdersPage] user?.id:", user?.id);
-  console.log("[OrdersPage] orders total:", orders.length, "loading:", loading, "error:", error);
-  if (orders.length > 0) {
-    console.log("[OrdersPage] order fields snapshot:");
-    orders.forEach(o => {
-      console.log(
-        `  id=${o.id.slice(0,8)} status=${o.status} confirmed_at=${o.confirmed_at} disputed=${o.disputed} auto_release_at=${o.auto_release_at}`
-      );
-    });
-  }
-  // ─────────────────────────────────────────────────────────────
-
   // A delivered order that hasn't been confirmed yet still needs customer action —
   // keep it in "active" so the DeliveryConfirmation prompt is prominent.
   const needsConfirmation = (o) =>
@@ -418,17 +397,6 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
   const pastOrders = orders.filter(o =>
     ["completed", "cancelled", "delivered"].includes(o.status) && !needsConfirmation(o)
   );
-
-  // ── DEBUG ─────────────────────────────────────────────────────
-  console.log("[OrdersPage] needsConfirmation per order:");
-  orders.forEach(o => {
-    console.log(
-      `  id=${o.id.slice(0,8)} needsConfirmation=${needsConfirmation(o)} → bucket=${needsConfirmation(o) ? "ACTIVE" : (["completed","cancelled","delivered"].includes(o.status) ? "PAST" : "ACTIVE")}`
-    );
-  });
-  console.log("[OrdersPage] activeOrders:", activeOrders.map(o => o.id.slice(0,8)));
-  console.log("[OrdersPage] pastOrders:", pastOrders.map(o => o.id.slice(0,8)));
-  // ─────────────────────────────────────────────────────────────
 
   return (
     <div style={{ background: BG, minHeight: "100vh", paddingBottom: "calc(90px + env(safe-area-inset-bottom))" }}>
@@ -483,10 +451,9 @@ export default function OrdersPage({ user, onBrowse, onReview, reviewedOrderIds 
           <div style={{ fontSize: 12, fontWeight: 700, color: "#B0B0B0", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 12 }}>
             Active · {activeOrders.length}
           </div>
-          {activeOrders.map(order => {
-            console.log('[ready_at debug]', order.id?.slice(0,8), 'ready_at:', order.ready_at, 'status:', order.status);
-            return <OrderCard key={order.id} order={order} user={user} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} onDispute={setDisputeOrder} onConfirmed={refetch} />;
-          })}
+          {activeOrders.map(order => (
+            <OrderCard key={order.id} order={order} user={user} onReview={onReview} reviewedOrderIds={reviewedOrderIds} onReorder={onReorder} onDispute={setDisputeOrder} onConfirmed={refetch} />
+          ))}
         </div>
       )}
 

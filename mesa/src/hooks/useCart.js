@@ -143,42 +143,31 @@ export function useCart() {
       }
 
       // Notify restaurant owner for cash orders (online orders are notified via Paystack webhook)
-      if (paymentMethod === "cash") {
-        console.log("[WhatsApp] VITE_BACKEND_URL:", import.meta.env.VITE_BACKEND_URL);
-        if (!BACKEND_URL) {
-          console.warn("[notify] VITE_BACKEND_URL is not set — skipping notifications");
-        } else {
-          // FCM push notification
-          const notifyPayload = { orderId: order.id, restaurantId };
-          console.log("[notify/new-order] calling", `${BACKEND_URL}/notify/new-order`, notifyPayload);
-          fetch(`${BACKEND_URL}/notify/new-order`, {
+      if (paymentMethod === "cash" && BACKEND_URL) {
+        // FCM push notification
+        fetch(`${BACKEND_URL}/notify/new-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
+          body: JSON.stringify({ orderId: order.id, restaurantId }),
+        })
+          .catch(err => console.error("[notify/new-order] fetch failed:", err.message));
+
+        // WhatsApp notification to restaurant owner
+        fetch(`${BACKEND_URL}/notify/whatsapp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
+          body: JSON.stringify({ orderId: order.id, restaurantId }),
+        })
+          .catch(err => console.error("[notify/whatsapp] fetch failed:", err.message));
+
+        // WhatsApp YES/NO confirmation to customer (fraud check)
+        if (userId) {
+          fetch(`${BACKEND_URL}/notify/whatsapp-customer`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
-            body: JSON.stringify(notifyPayload),
+            body: JSON.stringify({ orderId: order.id, customerId: userId }),
           })
-            .then(r => r.json().then(body => console.log("[notify/new-order] response:", r.status, body)))
-            .catch(err => console.error("[notify/new-order] fetch failed:", err.message));
-
-          // WhatsApp notification to restaurant owner
-          console.log("[WhatsApp] calling...");
-          fetch(`${BACKEND_URL}/notify/whatsapp`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
-            body: JSON.stringify({ orderId: order.id, restaurantId }),
-          })
-            .then(r => r.json().then(result => console.log("[WhatsApp] response:", r.status, result)))
-            .catch(err => console.error("[notify/whatsapp] fetch failed:", err.message));
-
-          // WhatsApp YES/NO confirmation to customer (fraud check)
-          if (userId) {
-            fetch(`${BACKEND_URL}/notify/whatsapp-customer`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "x-api-key": BACKEND_SECRET },
-              body: JSON.stringify({ orderId: order.id, customerId: userId }),
-            })
-              .then(r => r.json().then(result => console.log("[WhatsApp-customer] response:", r.status, result)))
-              .catch(err => console.error("[notify/whatsapp-customer] fetch failed:", err.message));
-          }
+            .catch(err => console.error("[notify/whatsapp-customer] fetch failed:", err.message));
         }
       }
 
@@ -200,28 +189,6 @@ export function useCart() {
     addItem, removeItem, clearCart, getQuantity,
     isDifferentRestaurant, placeOrder,
   };
-}
-
-
-// ── Customer's order history ─────────────────────────────────
-export function useOrders(userId) {
-  const [orders, setOrders]   = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  async function fetchOrders() {
-    if (!userId) return;
-    setLoading(true);
-    const { data } = await supabase
-      .from("orders")
-      .select(`*, restaurants(name, icon), order_items(*)`)
-      .eq("customer_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    setOrders(data || []);
-    setLoading(false);
-  }
-
-  return { orders, loading, fetchOrders };
 }
 
 

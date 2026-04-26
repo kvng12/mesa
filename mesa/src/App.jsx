@@ -1,6 +1,6 @@
 // src/App.jsx — Chowli Food Marketplace
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth }                            from "./hooks/useAuth";
 import { useRestaurants, useOwnerRestaurant } from "./hooks/useRestaurants";
 import { useFeed }                            from "./hooks/useFeed";
@@ -30,7 +30,7 @@ import { usePushNotifications } from "./hooks/usePushNotifications";
 import DeliveryPhotoUpload from "./components/DeliveryPhotoUpload";
 import BankDetailsForm from "./components/BankDetailsForm";
 import EmailVerification from "./screens/EmailVerification";
-// import PhoneVerification from "./screens/PhoneVerification"; // disabled — re-enable when cash/phone-OTP re-launches
+// re-enable PhoneVerification import when cash/phone-OTP re-launches
 import MenuItemSheet from "./components/MenuItemSheet";
 import chowliLogo from "./assets/logo_chowli.png";
 import FavoritesScreen from "./screens/FavoritesScreen";
@@ -475,7 +475,6 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
       if (catMode === "new") {
         const catName = customCat.trim() || newCatName.trim();
         if (!catName) { setErr("Category name is required"); setSaving(false); return; }
-        console.log("[AddMenuItemModal] creating category:", { restaurant_id: ownerR.id, name: catName });
         const { data: newCat, error: catErr } = await supabase
           .from("menu_categories")
           .insert({ restaurant_id: ownerR.id, name: catName, sort_order: cats.length })
@@ -516,8 +515,6 @@ function AddMenuItemModal({ ownerR, onClose, onAdded }) {
         sort_order:       0,
         ...(imageUrl ? { image_url: imageUrl } : {}),
       };
-      console.log("[AddMenuItemModal] ownerR:", { id: ownerR?.id, name: ownerR?.name, owner_id: ownerR?.owner_id });
-      console.log("[AddMenuItemModal] inserting menu_item:", insertPayload);
       const { error: itemErr } = await supabase
         .from("menu_items")
         .insert(insertPayload);
@@ -1502,6 +1499,7 @@ export default function App() {
   const [ownerRId, setOwnerRId]       = useState(null);
   const [activeCat, setActiveCat]     = useState("All");
   const [search, setSearch]           = useState("");
+  const searchTimerRef                = useRef(null);
   const [activeStoryGroup, setActiveStoryGroup] = useState(null);
   const [showReservation, setShowReservation]   = useState(null); // restaurant object
 
@@ -1560,21 +1558,23 @@ export default function App() {
   // ── Shared helper: fetch categories + items without FK embed ambiguity ──
   // Queries categories and items as two separate requests, then zips them.
   async function fetchMenuForRestaurant(restaurantId) {
-    const { data: cats } = await supabase
-      .from("menu_categories")
-      .select("id, name, sort_order")
-      .eq("restaurant_id", restaurantId)
-      .order("sort_order", { ascending: true });
+    // Categories and items run in parallel (items filtered by restaurant_id directly)
+    const [{ data: cats }, { data: items }] = await Promise.all([
+      supabase
+        .from("menu_categories")
+        .select("id, name, sort_order")
+        .eq("restaurant_id", restaurantId)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("menu_items")
+        .select("id, name, description, price, is_available, sort_order, image_url, category_id")
+        .eq("restaurant_id", restaurantId)
+        .order("sort_order", { ascending: true }),
+    ]);
 
     if (!cats?.length) return [];
 
-    const { data: items } = await supabase
-      .from("menu_items")
-      .select("id, name, description, price, is_available, sort_order, image_url, category_id")
-      .in("category_id", cats.map(c => c.id))
-      .order("sort_order", { ascending: true });
-
-    // Fetch per-item ratings from the view and merge onto items
+    // Ratings require item IDs from the previous fetch, so run after
     const itemIds = (items || []).map(i => i.id);
     let ratingsLookup = {};
     if (itemIds.length) {
@@ -1602,8 +1602,6 @@ export default function App() {
     if (!selectedId) { setDetailMenu([]); return; }
     setDetailMenuLoading(true);
     fetchMenuForRestaurant(selectedId).then(menu => {
-      console.log("[detailMenu] fetched for", selectedId, "→", menu.length, "cats,",
-        menu.reduce((n, c) => n + c.menu_items.length, 0), "items");
       setDetailMenu(menu);
       setDetailMenuLoading(false);
     });
@@ -1634,23 +1632,26 @@ export default function App() {
   // ── Search: query menu items when search text changes ───────
   useEffect(() => {
     if (tab !== "search" || !search.trim()) { setSearchMenuItems([]); return; }
-    const s = search.toLowerCase();
-    supabase
-      .from("menu_items")
-      .select("id, name, price, restaurant_id, is_available, image_url")
-      .ilike("name", `%${s}%`)
-      .eq("is_available", true)
-      .limit(20)
-      .then(({ data }) => {
-        if (!data) return;
-        const withRest = data
-          .map(item => {
-            const restaurant = restaurants.find(r => r.id === item.restaurant_id);
-            return restaurant ? { item, restaurant } : null;
-          })
-          .filter(Boolean);
-        setSearchMenuItems(withRest);
-      });
+    clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      const s = search.toLowerCase();
+      supabase
+        .from("menu_items")
+        .select("id, name, price, restaurant_id, is_available, image_url")
+        .ilike("name", `%${s}%`)
+        .eq("is_available", true)
+        .limit(20)
+        .then(({ data }) => {
+          if (!data) return;
+          const withRest = data
+            .map(item => {
+              const restaurant = restaurants.find(r => r.id === item.restaurant_id);
+              return restaurant ? { item, restaurant } : null;
+            })
+            .filter(Boolean);
+          setSearchMenuItems(withRest);
+        });
+    }, 350);
   }, [search, tab]);
 
   const selected  = restaurants.find(r => r.id === selectedId);
@@ -1687,9 +1688,9 @@ export default function App() {
   }, [ownerR?.id]);
 
   // Dynamic categories from actual restaurant data (Feature 5)
-  const dynamicCats = ["All", ...new Set(
+  const dynamicCats = useMemo(() => ["All", ...new Set(
     restaurants.flatMap(r => Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []))
-  )].filter(Boolean);
+  )].filter(Boolean), [restaurants]);
 
   // Home screen filter — single category + text search
   const filtered = restaurants.filter(r => {
@@ -1874,11 +1875,7 @@ export default function App() {
     />
   );
 
-  // ── Phone verification gate — DISABLED for online-only launch ──
-  // Re-enable this block (and the PhoneVerification import above) when cash orders return.
-  // if (user && user.email_confirmed_at && profile && !profile.phone_verified) return (
-  //   <PhoneVerification user={user} onVerified={async () => { await refreshProfile(); }} />
-  // );
+  // re-enable PhoneVerification gate here when cash/phone-OTP re-launches
 
   return (
     <>

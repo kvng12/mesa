@@ -6,6 +6,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 
+const LOYALTY_SPEND_THRESHOLD      = 1000; // ₦ spent per earning interval
+const LOYALTY_POINTS_PER_THRESHOLD = 10;   // points earned per interval
+const LOYALTY_REDEEM_POINTS        = 100;  // points required to redeem
+const LOYALTY_REDEEM_VALUE         = 500;  // ₦ discount granted on redemption
+
 // ── Customer: fetch points balance at a specific restaurant ──
 export function useLoyaltyPoints(customerId, restaurantId) {
   const [points, setPoints]   = useState(0);
@@ -32,7 +37,7 @@ export function useLoyaltyPoints(customerId, restaurantId) {
 // ── Award points after an order is completed/delivered ───────
 // Call this from useIncomingOrders.updateStatus on completion.
 export async function awardLoyaltyPoints(customerId, restaurantId, subtotal) {
-  const earned = Math.floor(subtotal / 1000) * 10;
+  const earned = Math.floor(subtotal / LOYALTY_SPEND_THRESHOLD) * LOYALTY_POINTS_PER_THRESHOLD;
   if (earned <= 0 || !customerId || !restaurantId) return;
 
   const { data: existing } = await supabase
@@ -70,12 +75,12 @@ export async function redeemLoyaltyPoints(customerId, restaurantId) {
     .eq("restaurant_id", restaurantId)
     .maybeSingle();
 
-  if (!existing || existing.points < 100) return { error: "Not enough points" };
+  if (!existing || existing.points < LOYALTY_REDEEM_POINTS) return { error: "Not enough points" };
 
   const { error } = await supabase
     .from("loyalty_points")
     .update({
-      points:     existing.points - 100,
+      points:     existing.points - LOYALTY_REDEEM_POINTS,
       updated_at: new Date().toISOString(),
     })
     .eq("id", existing.id);

@@ -11,10 +11,11 @@ export function useReviews(userId) {
   }, [userId]);
 
   async function fetchUserReviews() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("reviews")
       .select("order_id")
       .eq("customer_id", userId);
+    if (error) return;
     setReviewedOrderIds(new Set((data || []).map(r => r.order_id)));
   }
 

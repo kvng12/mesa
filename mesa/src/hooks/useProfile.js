@@ -15,11 +15,12 @@ export function useProfile(userId) {
   }, [userId]);
 
   async function fetchProfile() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .single();
+    if (error) return;
     setProfile(data || null);
   }
 
