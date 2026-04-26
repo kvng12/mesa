@@ -2,6 +2,35 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 
+// ── Generate a URL-safe slug unique within the restaurants table ──
+async function generateUniqueSlug(name) {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .trim();
+
+  const { data } = await supabase
+    .from("restaurants")
+    .select("slug")
+    .eq("slug", base)
+    .maybeSingle();
+  if (!data) return base;
+
+  let i = 2;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const candidate = `${base}-${i}`;
+    const { data: d } = await supabase
+      .from("restaurants")
+      .select("slug")
+      .eq("slug", candidate)
+      .maybeSingle();
+    if (!d) return candidate;
+    i++;
+  }
+}
+
 export function useAdmin() {
   const [applications, setApplications] = useState([]);
   const [restaurantsMap, setRestaurantsMap] = useState({}); // keyed by owner_id
@@ -108,9 +137,11 @@ export function useAdmin() {
       .eq("owner_id", app.applicant_id)
       .maybeSingle();
 
+    let restaurantId = existing?.id ?? null;
+
     if (!existing) {
       // 3. Create the restaurant row from application data
-      const { error: insertErr } = await supabase
+      const { data: newRestaurant, error: insertErr } = await supabase
         .from("restaurants")
         .insert({
           name:             app.name,
@@ -131,12 +162,15 @@ export function useAdmin() {
           account_name:     app.account_name     || null,
           account_verified: app.account_verified || false,
           bank_updated_at:  app.account_verified ? new Date().toISOString() : null,
-        });
+        })
+        .select("id")
+        .single();
 
       if (insertErr) {
         setActionLoading(null);
         return { error: insertErr };
       }
+      restaurantId = newRestaurant.id;
     }
 
     // 4. Mark application as approved
@@ -155,6 +189,15 @@ export function useAdmin() {
       .from("profiles")
       .update({ role: "owner" })
       .eq("id", app.applicant_id);
+
+    // 6. Generate and save a unique URL slug for the restaurant
+    if (restaurantId && app.name) {
+      const slug = await generateUniqueSlug(app.name);
+      await supabase
+        .from("restaurants")
+        .update({ slug })
+        .eq("id", restaurantId);
+    }
 
     setActionLoading(null);
     fetchApplications();

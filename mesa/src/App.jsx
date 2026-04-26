@@ -1500,6 +1500,14 @@ export default function App() {
   const [activeCat, setActiveCat]     = useState("All");
   const [search, setSearch]           = useState("");
   const searchTimerRef                = useRef(null);
+  // Capture slug from URL at first render (before any effects run)
+  const pendingSlugRef = useRef(
+    (() => {
+      const m = window.location.pathname.match(/^\/r\/(.+)$/);
+      return m ? m[1] : null;
+    })()
+  );
+  if (pendingSlugRef.current) window.history.replaceState(null, "", "/");
   const [activeStoryGroup, setActiveStoryGroup] = useState(null);
   const [showReservation, setShowReservation]   = useState(null); // restaurant object
 
@@ -1526,6 +1534,8 @@ export default function App() {
   const [showOwnerChats, setShowOwnerChats] = useState(false);
   const [ownerChatTarget, setOwnerChatTarget] = useState(null); // conv for owner reply
   const [userLocation, setUserLocation]     = useState(null);  // { state } from reverse-geocode — display only
+  const [slugToast, setSlugToast]           = useState(null);  // "Restaurant not found" deep-link toast
+  const [linkCopied, setLinkCopied]         = useState(false); // copy-link button feedback
 
   // ── Search page extra filter state ──────────────────────────
   const [searchOpenOnly,   setSearchOpenOnly]   = useState(false);
@@ -1739,6 +1749,35 @@ export default function App() {
   }
 
   function goDetail(id) { setSelectedId(id); setDetailTab("menu"); setTab("detail"); }
+
+  // ── Deep link: resolve pending slug once restaurants have loaded ──
+  useEffect(() => {
+    if (!pendingSlugRef.current) return;
+    if (!restaurants || restaurants.length === 0) return;
+
+    const slug = pendingSlugRef.current;
+    pendingSlugRef.current = null; // clear so this only fires once
+
+    const local = restaurants.find(r => r.slug === slug);
+    if (local) {
+      goDetail(local.id);
+    } else {
+      // Not in local list (e.g. suspended/unlisted) — try DB lookup
+      supabase
+        .from("restaurants")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.id) {
+            goDetail(data.id);
+          } else {
+            setSlugToast("Restaurant not found");
+            setTimeout(() => setSlugToast(null), 2500);
+          }
+        });
+    }
+  }, [restaurants]);
 
   function handleAddToCart(menuItem, restaurant) {
     if (!user) { setAuthMode("login"); return; }
@@ -2112,6 +2151,13 @@ export default function App() {
             favorites={user ? favorites : null}
             toggleFavorite={user ? toggleFavorite : null}
           />
+        )}
+
+        {/* ── Deep link "not found" toast ── */}
+        {slugToast && (
+          <div style={{ position: "fixed", top: "max(env(safe-area-inset-top), 16px)", left: "50%", transform: "translateX(-50%)", background: "#1C1C1E", color: "#fff", fontSize: 13, fontWeight: 600, padding: "10px 20px", borderRadius: 999, zIndex: 500, pointerEvents: "none", whiteSpace: "nowrap" }}>
+            {slugToast}
+          </div>
         )}
 
         {/* ══════════ HOME ══════════ */}
@@ -2969,6 +3015,31 @@ export default function App() {
                       </div>
                     </div>
                   )}
+
+                  <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 16 }}>Sharing</div>
+                  <div style={{ background: "#fff", border: "1px solid #F0EDE8", borderRadius: 20, padding: 16, marginBottom: 14 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: DARK, marginBottom: 4 }}>Your Restaurant Link</div>
+                    <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 10 }}>Share this link with customers to open your menu directly</div>
+                    {ownerR?.slug ? (
+                      <>
+                        <div style={{ background: BG_SOFT, borderRadius: 8, padding: "10px 12px", fontSize: 13, fontWeight: 500, color: DARK, userSelect: "text", wordBreak: "break-all" }}>
+                          mesa-bice.vercel.app/r/{ownerR.slug}
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(`https://mesa-bice.vercel.app/r/${ownerR.slug}`);
+                            setLinkCopied(true);
+                            setTimeout(() => setLinkCopied(false), 2000);
+                          }}
+                          style={{ width: "100%", marginTop: 8, padding: 11, background: PRIMARY, color: "#fff", border: "none", borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                        >
+                          {linkCopied ? "Copied ✓" : "Copy Link"}
+                        </button>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 12, color: TEXT_MUTED }}>Link not yet available — contact support</div>
+                    )}
+                  </div>
 
                   <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 16 }}>Promotions</div>
                   <PromoCodesCard restaurantId={ownerR.id} />
