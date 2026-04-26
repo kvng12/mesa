@@ -32,7 +32,7 @@ import BankDetailsForm from "./components/BankDetailsForm";
 import EmailVerification from "./screens/EmailVerification";
 // import PhoneVerification from "./screens/PhoneVerification"; // disabled — re-enable when cash/phone-OTP re-launches
 import MenuItemSheet from "./components/MenuItemSheet";
-import chowliLogo from "./assets/logo chowli.jpeg";
+import chowliLogo from "./assets/logo_chowli.png";
 import FavoritesScreen from "./screens/FavoritesScreen";
 import { useFavorites } from "./hooks/useFavorites";
 
@@ -2122,7 +2122,7 @@ export default function App() {
           <>
             {/* ── Chowli-style vibrant gradient header ── */}
             {/* ── Compact sticky top bar ── */}
-            <div style={{ position: "sticky", top: 0, zIndex: 100, background: BG, borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)", paddingBottom: 8, paddingLeft: 16, paddingRight: 16 }}>
+            <div style={{ position: "sticky", top: 0, zIndex: 100, background: BG, borderBottom: `1px solid ${BORDER}`, paddingTop: "env(safe-area-inset-top)", paddingBottom: 8, paddingLeft: 20, paddingRight: 20 }}>
 
               {/* Row 1: logo + greeting | profile + search + cart */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -2131,7 +2131,7 @@ export default function App() {
                   <img
                     src={chowliLogo}
                     alt="Chowli"
-                    style={{ height: 28, width: "auto", objectFit: "contain", mixBlendMode: "multiply", filter: "contrast(1.2) brightness(0.85)" }}
+                    style={{ height: 28, width: "auto", objectFit: "contain" }}
                   />
                   {user ? (
                     <div>
@@ -2173,7 +2173,7 @@ export default function App() {
               </div>
 
               {/* Row 2: category chips */}
-              <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", marginTop: 10 }}>
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none", marginTop: 8, paddingBottom: 10 }}>
                 {dynamicCats.map(c => (
                   <button key={c} onClick={() => setActiveCat(c)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 20, border: "none", background: activeCat === c ? PRIMARY : BG_SOFT, color: activeCat === c ? "#fff" : TEXT_MUTED, fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "background 0.2s", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                     <span style={{ fontSize: 13 }}>{getCatIcon(c)}</span>{c}
