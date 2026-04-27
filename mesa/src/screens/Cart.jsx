@@ -207,6 +207,26 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
     }
     setOrderErr("");
 
+    // Start geo request immediately — resolves with rounded coords or null within 3s.
+    // Does NOT block order placement; both payment flows await this promise only when
+    // they're already past the point of blocking the user.
+    const geoPromise = new Promise((resolve) => {
+      if (!navigator.geolocation) { resolve(null); return; }
+      const timer = setTimeout(() => resolve(null), 3000);
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          clearTimeout(timer);
+          // Round to 2 decimal places (~1-2 km precision) — enough for fraud detection
+          resolve({
+            lat: Math.round(coords.latitude  * 100) / 100,
+            lng: Math.round(coords.longitude * 100) / 100,
+          });
+        },
+        () => { clearTimeout(timer); resolve(null); },
+        { timeout: 3000 }
+      );
+    });
+
     if (effectivePayment === "online") {
       // Open Paystack IMMEDIATELY — must be synchronous from user click
       // Browser blocks popups if there's any async before this point
@@ -231,22 +251,26 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
         ref,
         onSuccess: function(response) {
           // Paystack v1 requires a regular function — not async
-          // Handle async work inside a plain promise
-          cart.placeOrder({
-            fulfillment:       snapFulfillment,
-            paymentMethod:     "online",
-            deliveryAddress:   snapAddress,
-            note:              snapNote,
-            userId:            snapUserId,
-            paystackReference: response.reference,
-            scheduledTime:     snapScheduledTime,
-            promoCode:         snapPromoCode,
-            discountAmount:    snapDiscountAmt,
-            redeemLoyalty:     snapRedeemLoyalty,
-          }).then(function(result) {
-            setPlacingOrder(false);
-            if (result.error) { setOrderErr(result.error); return; }
-            setOrderSuccess({ orderId: result.data?.id, method: "online" });
+          // geo runs in parallel during the payment flow; await it now
+          geoPromise.then(function(geo) {
+            cart.placeOrder({
+              fulfillment:       snapFulfillment,
+              paymentMethod:     "online",
+              deliveryAddress:   snapAddress,
+              note:              snapNote,
+              userId:            snapUserId,
+              paystackReference: response.reference,
+              scheduledTime:     snapScheduledTime,
+              promoCode:         snapPromoCode,
+              discountAmount:    snapDiscountAmt,
+              redeemLoyalty:     snapRedeemLoyalty,
+              customerLat:       geo?.lat ?? null,
+              customerLng:       geo?.lng ?? null,
+            }).then(function(result) {
+              setPlacingOrder(false);
+              if (result.error) { setOrderErr(result.error); return; }
+              setOrderSuccess({ orderId: result.data?.id, method: "online" });
+            });
           });
         },
         onCancel: function() {
@@ -257,6 +281,7 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
       // Cash order — use async IIFE since outer function is sync
       setPlacingOrder(true);
       (async () => {
+        const geo = await geoPromise;
         const { data, error } = await cart.placeOrder({
           fulfillment,
           paymentMethod:  "cash",
@@ -267,6 +292,8 @@ export default function CartScreen({ cart, user, onClose, onSignIn, onOrderPlace
           promoCode:      promoResult?.promo?.code || null,
           discountAmount: totalDiscount,
           redeemLoyalty,
+          customerLat:    geo?.lat ?? null,
+          customerLng:    geo?.lng ?? null,
         });
         setPlacingOrder(false);
         if (error) { setOrderErr(error); return; }

@@ -16,6 +16,27 @@ const TEXT_MUTED = "#666666";
 const BACKEND_URL    = import.meta.env.VITE_BACKEND_URL;
 const BACKEND_SECRET = import.meta.env.VITE_BACKEND_SECRET;
 
+// ── Leaflet single-pin map ────────────────────────────────────
+function LeafletMap({ lat, lng, name, height = 140 }) {
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+
+  useEffect(() => {
+    const L = window.L;
+    if (!L || !containerRef.current || mapRef.current) return;
+    const map = L.map(containerRef.current, { scrollWheelZoom: false, zoomControl: false });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(map);
+    L.marker([lat, lng]).addTo(map).bindPopup(name || "Restaurant").openPopup();
+    map.setView([lat, lng], 15);
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; };
+  }, []);
+
+  return <div ref={containerRef} style={{ height, width: "100%" }} />;
+}
+
 // ── Customer prep countdown ───────────────────────────────────
 function PrepCountdownCard({ order }) {
   const [remaining, setRemaining] = useState(() => Math.max(0, new Date(order.ready_at) - Date.now()));
@@ -208,6 +229,22 @@ function OrderCard({ order, user, onReview, reviewedOrderIds, onReorder, onDispu
         {/* Prep countdown — confirmed or preparing orders with a ready_at time */}
         {["confirmed","preparing"].includes(order.status) && order.ready_at && (
           <PrepCountdownCard order={order} />
+        )}
+
+        {/* Active order map — restaurant pin + directions */}
+        {["confirmed", "preparing", "ready"].includes(order.status) && r?.latitude && r?.longitude && (
+          <div style={{ margin: "8px 0" }}>
+            <div style={{ borderRadius: 12, overflow: "hidden" }}>
+              <LeafletMap key={order.id} lat={r.latitude} lng={r.longitude} name={r.name} height={140} />
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: DARK, marginTop: 8 }}>📍 {r?.name}</div>
+            <button
+              onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${r.latitude},${r.longitude}`, "_blank")}
+              style={{ width: "100%", marginTop: 8, padding: "10px", background: "transparent", color: PRIMARY, border: `1.5px solid ${PRIMARY}`, borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              📍 Get Directions
+            </button>
+          </div>
         )}
 
         {/* Pickup OTP — shown to customer when order is ready for collection */}

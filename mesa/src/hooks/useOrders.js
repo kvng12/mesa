@@ -61,7 +61,7 @@ export function useOrders(userId) {
         prep_time_minutes,
         ready_at,
         restaurant_id,
-        restaurants ( id, name, icon, bg_from, bg_to ),
+        restaurants ( id, name, icon, bg_from, bg_to, latitude, longitude ),
         order_items ( id, menu_item_id, name, price, quantity, line_total )
       `)
       .eq("customer_id", userId)

@@ -76,7 +76,7 @@ export function useCart() {
   const subtotal    = items.reduce((s, i) => s + i.menuItem.price * i.quantity, 0);
 
   // Place the order — inserts into orders + order_items
-  async function placeOrder({ fulfillment, paymentMethod, deliveryAddress, note, userId, paystackReference, scheduledTime, promoCode, discountAmount, redeemLoyalty }) {
+  async function placeOrder({ fulfillment, paymentMethod, deliveryAddress, note, userId, paystackReference, scheduledTime, promoCode, discountAmount, redeemLoyalty, customerLat, customerLng }) {
     if (!items.length || !restaurantId || !userId) return { error: "Missing data" };
 
     setSubmitting(true);
@@ -98,6 +98,8 @@ export function useCart() {
           scheduled_time:    scheduledTime    || null,
           promo_code:        promoCode        || null,
           discount_amount:   discountAmount   || 0,
+          customer_lat:      customerLat      ?? null,
+          customer_lng:      customerLng      ?? null,
         })
         .select()
         .single();

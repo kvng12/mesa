@@ -110,6 +110,46 @@ function greet() {
 const ORDER_STATUS = { pending: { label: "Received", color: "#D97706", bg: "#FFFBEB" }, confirmed: { label: "Confirmed", color: "#2563EB", bg: "#EFF6FF" }, preparing: { label: "Preparing", color: PRIMARY, bg: BG_SOFT }, ready: { label: "Ready!", color: "#16A34A", bg: "#F0FDF4" }, completed: { label: "Completed", color: "#6B7280", bg: "#F3F4F6" }, delivered: { label: "Delivered", color: "#16A34A", bg: "#F0FDF4" }, cancelled: { label: "Cancelled", color: "#DC2626", bg: "#FEF2F2" } };
 const RES_STATUS  = { pending: { label: "Pending", color: "#D97706", bg: "#FFFBEB" }, confirmed: { label: "Confirmed", color: "#16A34A", bg: "#F0FDF4" }, rejected: { label: "Declined", color: "#DC2626", bg: "#FEF2F2" }, completed: { label: "Done", color: "#6B7280", bg: "#F3F4F6" } };
 
+// ── Haversine distance (km) ───────────────────────────────────
+function haversineDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Generic Leaflet map component ────────────────────────────
+// markers: [{ lat, lng, label }]  — 1 pin: centers there; 2+ pins: fitBounds
+function MapView({ markers, zoom = 15, height = 160 }) {
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+
+  useEffect(() => {
+    const L = window.L;
+    if (!L || !containerRef.current || mapRef.current) return;
+    const map = L.map(containerRef.current, { scrollWheelZoom: false });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(map);
+    markers.forEach(({ lat, lng, label }) => {
+      const m = L.marker([lat, lng]).addTo(map);
+      if (label) m.bindPopup(label);
+    });
+    if (markers.length >= 2) {
+      map.fitBounds(window.L.latLngBounds(markers.map(m => [m.lat, m.lng])), { padding: [20, 20] });
+    } else if (markers.length === 1) {
+      map.setView([markers[0].lat, markers[0].lng], zoom);
+    }
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; };
+  }, []);
+
+  return <div ref={containerRef} style={{ height, width: "100%" }} />;
+}
+
 // ════════════════════════════════════════════════════════════
 //  UI COMPONENTS
 // ════════════════════════════════════════════════════════════
@@ -1264,6 +1304,70 @@ function DeliveryToggleCard({ ownerR }) {
           <div style={{ position: "absolute", top: 3, left: enabled ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", transition: "left 0.25s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
         </div>
       </div>
+    </div>
+  );
+}
+
+function RestaurantLocationCard({ ownerR }) {
+  const [saving, setSaving]   = useState(false);
+  const [locErr, setLocErr]   = useState("");
+  const [saved,  setSaved]    = useState(false);
+
+  const hasLocation = !!(ownerR?.latitude && ownerR?.longitude);
+
+  async function setLocation() {
+    if (!navigator.geolocation) { setLocErr("Geolocation not supported by this browser"); return; }
+    setSaving(true); setLocErr(""); setSaved(false);
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        await supabase.from("restaurants").update({
+          latitude:  coords.latitude,
+          longitude: coords.longitude,
+        }).eq("id", ownerR.id);
+        setSaving(false); setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+      },
+      () => {
+        setSaving(false);
+        setLocErr("Location access denied. Please enable location in your browser settings.");
+      },
+      { timeout: 10000 }
+    );
+  }
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, border: "1px solid #F0EDE8", padding: 16, marginBottom: 14 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: DARK, marginBottom: 4 }}>Restaurant Location</div>
+      <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>Set your location so customers can find you</div>
+      {hasLocation && (
+        <>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#2D7D46", marginBottom: 4 }}>✓ Location set</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>
+            Lat: {ownerR.latitude.toFixed(4)}, Lng: {ownerR.longitude.toFixed(4)}
+          </div>
+        </>
+      )}
+      {saved && <div style={{ fontSize: 13, fontWeight: 600, color: "#2D7D46", marginBottom: 8 }}>Location saved ✓</div>}
+      {locErr && <div style={{ fontSize: 12, color: "#DC2626", fontWeight: 600, marginBottom: 8 }}>{locErr}</div>}
+      <button
+        onClick={setLocation}
+        disabled={saving}
+        style={{
+          width: hasLocation ? "auto" : "100%",
+          padding: "10px 20px",
+          background: hasLocation ? "transparent" : PRIMARY,
+          color: hasLocation ? PRIMARY : "#fff",
+          border: `1.5px solid ${PRIMARY}`,
+          borderRadius: 999,
+          fontSize: 13,
+          fontWeight: 700,
+          cursor: saving ? "default" : "pointer",
+          opacity: saving ? 0.6 : 1,
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
+        }}
+      >
+        {saving ? "Getting location..." : hasLocation ? "Update Location" : "📍 Set My Location"}
+      </button>
     </div>
   );
 }
@@ -2490,6 +2594,21 @@ export default function App() {
                 )}
               </div>
 
+              {/* Restaurant location map */}
+              {selected.latitude && selected.longitude && (
+                <>
+                  <div style={{ margin: "0 16px 0", borderRadius: 16, overflow: "hidden", height: 160, border: `1px solid ${BORDER}` }}>
+                    <MapView key={selected.id} markers={[{ lat: selected.latitude, lng: selected.longitude, label: selected.name }]} height={160} />
+                  </div>
+                  <button
+                    onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${selected.latitude},${selected.longitude}`, "_blank")}
+                    style={{ display: "block", width: "calc(100% - 32px)", margin: "8px 16px 16px", padding: "10px", background: "transparent", color: PRIMARY, border: `1.5px solid ${PRIMARY}`, borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  >
+                    📍 Get Directions
+                  </button>
+                </>
+              )}
+
               {/* Tabs */}
               <div style={{ display: "flex", borderBottom: "1.5px solid #F5F5F5", marginBottom: 20 }}>
                 {["menu", "updates", "info"].map(t => (
@@ -2796,6 +2915,30 @@ export default function App() {
                             </div>
                           );
                         })()}
+                        {/* Distance badge + dual-pin map — only when both restaurant and customer coords are known */}
+                        {order.customer_lat != null && ownerR?.latitude != null && (() => {
+                          const dist = haversineDistance(ownerR.latitude, ownerR.longitude, order.customer_lat, order.customer_lng);
+                          const distColor = dist < 10 ? "#2D7D46" : dist < 50 ? "#B8860B" : PRIMARY;
+                          return (
+                            <>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: distColor, marginBottom: 6 }}>
+                                {dist >= 50
+                                  ? `⚠️ Customer appears to be far away — ${dist.toFixed(1)} km`
+                                  : `📍 Customer ~${dist.toFixed(1)} km away`}
+                              </div>
+                              <div style={{ borderRadius: 10, overflow: "hidden", margin: "0 0 8px" }}>
+                                <MapView
+                                  key={order.id + "-map"}
+                                  markers={[
+                                    { lat: ownerR.latitude,   lng: ownerR.longitude,   label: "Your Restaurant" },
+                                    { lat: order.customer_lat, lng: order.customer_lng, label: "Customer area" },
+                                  ]}
+                                  height={120}
+                                />
+                              </div>
+                            </>
+                          );
+                        })()}
                         <div style={{ fontSize: 12, color: "#888", marginBottom: 10 }}>{(order.order_items || []).map(i => `${i.name} x${i.quantity}`).join(", ")}</div>
                         {order.status === "ready" && order.fulfillment === "delivery" && !deliveryPhotos[order.id] && (
                           <DeliveryPhotoUpload
@@ -2983,6 +3126,7 @@ export default function App() {
                   <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Payment</div>
                   <PaymentSettingsCard ownerR={ownerR} togglePaymentMethod={togglePaymentMethod} />
                   <DeliveryToggleCard ownerR={ownerR} />
+                  <RestaurantLocationCard ownerR={ownerR} />
 
                   <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, marginTop: 16 }}>Payouts</div>
                   <PayoutAccountCard ownerR={ownerR} />
